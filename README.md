@@ -1,6 +1,6 @@
 # dmod-boot
 
-Dynamic Modules (dMOD) bootloader - A minimalistic embedded project for STM32 microcontrollers.
+Dynamic Modules (dMOD) bootloader - A minimalistic embedded project for STM32 microcontrollers with integrated DMOD and dmheap support.
 
 ## Overview
 
@@ -8,6 +8,8 @@ dmod-boot is a minimal bootloader framework designed for embedded systems, speci
 
 ### Key Features
 
+- **DMOD Integration**: Full support for dynamic module loading and management
+- **dmheap Memory Manager**: Module-aware heap allocation with automatic cleanup
 - **No External Dependencies**: Pure bare-metal implementation without STM32Cube or other HAL libraries
 - **Memory Ring Buffer Debug Output**: Built-in printf implementation using a memory ring buffer - works across all architectures
 - **Multiple Architecture Support**: Linker scripts and startup code for various STM32 families
@@ -30,17 +32,23 @@ Currently supported STM32 families:
 dmod-boot/
 ├── src/                    # Source files
 │   ├── dmod_printf.c      # Ring buffer based printf implementation
+│   ├── dmod_sal.c         # DMOD System Abstraction Layer
 │   ├── startup_stm32f746.c # Startup code for STM32F746
 │   └── startup_stm32f407.c # Startup code for STM32F407
 ├── include/               # Header files
 │   └── dmod_printf.h     # Printf API definitions
+├── lib/                   # External libraries
+│   ├── dmod/             # DMOD dynamic modules library
+│   └── dmheap/           # dmheap memory manager
 ├── linker/               # Linker scripts
 │   ├── STM32F746xG.ld   # Linker script for STM32F746
 │   └── STM32F407xG.ld   # Linker script for STM32F407
 ├── examples/             # Example applications
-│   └── main.c           # Simple example with ring buffer output
+│   └── main.c           # Example with DMOD and dmheap
 ├── scripts/              # Utility scripts
 │   └── dmod_log_monitor.py # OpenOCD log monitoring script
+├── dmod-cfg.cmake        # DMOD configuration for CMake
+├── dmod-cfg.mk          # DMOD configuration for Make
 ├── Makefile             # Build system (Make)
 ├── CMakeLists.txt       # Build system (CMake)
 └── README.md           # This file
@@ -71,6 +79,14 @@ dmod-boot/
 
 ## Quick Start
 
+**Note**: When cloning this repository, make sure to initialize the submodules:
+
+```bash
+git clone --recursive https://github.com/choco-technologies/dmod-boot.git
+# Or if already cloned:
+git submodule update --init --recursive
+```
+
 ### Using Make
 
 #### 1. Build and Flash Firmware
@@ -87,7 +103,7 @@ make TARGET=STM32F407
 make install TARGET=STM32F407
 ```
 
-### Using CMake
+### Using CMake (Recommended)
 
 #### 1. Build and Flash Firmware
 
@@ -469,6 +485,56 @@ Contributions are welcome! Please feel free to submit pull requests for:
 - Documentation improvements
 - New features
 
+## Integrated Libraries
+
+### DMOD - Dynamic Modules
+
+**dmod-boot** integrates the [DMOD (Dynamic Modules)](https://github.com/choco-technologies/dmod) library, which enables dynamic loading and unloading of modules at runtime. This allows you to:
+
+- **Dynamically load modules**: Load functionality from `.dmf` files without recompiling
+- **Manage dependencies**: Automatically handle module dependencies
+- **Inter-module communication**: Modules can communicate via a common API
+- **Resource management**: Efficiently manage system resources
+- **Safe updates**: Update individual modules without affecting the entire system
+
+DMOD is configured for bare-metal embedded systems with minimal overhead, making it ideal for STM32 microcontrollers.
+
+### dmheap - Module-Aware Memory Manager
+
+**dmod-boot** includes [dmheap](https://github.com/choco-technologies/dmheap), a sophisticated heap memory manager designed specifically for the DMOD framework. Features include:
+
+- **Module-aware allocation**: Track which module owns each memory allocation
+- **Automatic cleanup**: When a module is unloaded, all its allocations are freed automatically
+- **Alignment support**: Allocate memory with specific alignment requirements (critical for DMA and hardware)
+- **Fragmentation management**: Tools to concatenate free blocks and reduce fragmentation
+- **Static buffer management**: Operates on a pre-allocated buffer (no reliance on system malloc)
+- **Thread-safe operations**: Uses DMOD's critical section mechanisms
+
+By default, dmheap is configured with 32KB of heap space, which can be adjusted in `CMakeLists.txt` or via the `DMHEAP_SIZE` configuration parameter.
+
+## Configuration
+
+### DMOD Configuration
+
+The project includes `dmod-cfg.cmake` and `dmod-cfg.mk` files that configure DMOD for bare-metal embedded systems:
+
+- Standard library features disabled (not available on bare-metal)
+- Memory allocation provided by dmheap
+- FastLZ compression enabled for module support
+- Module limits: 10 modules, 5 dependencies
+- Compression API disabled to save flash memory
+
+### Memory Configuration
+
+You can adjust memory allocation sizes:
+
+```cmake
+# In CMakeLists.txt or as CMake arguments
+-DDMOD_LOG_TOTAL_SIZE=8192        # Log buffer size (default: 8KB)
+-DDMOD_LOG_MAX_ENTRY_SIZE=512     # Max log entry size (default: 512 bytes)
+-DDMHEAP_SIZE=32768               # Heap size (default: 32KB)
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -476,6 +542,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Related Projects
 
 - [dmod](https://github.com/choco-technologies/dmod) - Dynamic modules library for embedded architectures
+- [dmheap](https://github.com/choco-technologies/dmheap) - Module-aware heap memory manager for DMOD
 
 ## References
 

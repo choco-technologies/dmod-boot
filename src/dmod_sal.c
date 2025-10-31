@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 /* Heap buffer for dmheap */
 #ifndef DMHEAP_SIZE
