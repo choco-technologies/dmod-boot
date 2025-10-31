@@ -84,8 +84,8 @@ add_subdirectory(lib/dmheap)
 set(SOURCES
     ${STARTUP_SRC}
     ${SRC_DIR}/dmod_printf.c
-    ${SRC_DIR}/dmod_sal.c
-    ${EXAMPLES_DIR}/main.c
+    ${SRC_DIR}/dmod_sal_printf.c
+    ${SRC_DIR}/main.c
 )
 
 # Create executable

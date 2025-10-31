@@ -40,7 +40,7 @@ STM32 RAM:
 ```
 ┌──────────────────────────────────────────────────┐
 │              Your Application                     │
-│          (examples/main.c)                       │
+│          (src/main.c)                            │
 └─────────┬────────────────────────────────────────┘
           │ Uses DMOD API
           ↓
@@ -52,20 +52,14 @@ STM32 RAM:
 └─────────┬────────────────────────────────────────┘
           │ Calls SAL functions
           ↓
-┌──────────────────────────────────────────────────┐
-│    DMOD SAL Implementation (src/dmod_sal.c)      │
-│  - Dmod_MallocEx()                              │
-│  - Dmod_FreeEx()                                │
-│  - Dmod_Printf()                                │
-└─────────┬────────────────────────────────────────┘
-          │ Uses
-          ↓
-┌─────────────────────┐  ┌──────────────────────┐
-│  dmheap             │  │  dmod_printf         │
-│  (lib/dmheap)       │  │  (src/dmod_printf.c) │
-│  - Memory allocation│  │  - Ring buffer log   │
-│  - Module tracking  │  │  - Printf formatting │
-└─────────────────────┘  └──────────────────────┘
+┌─────────────────────┐  ┌──────────────────────────┐
+│  dmheap             │  │  dmod_sal_printf.c       │
+│  (lib/dmheap)       │  │  - Dmod_Printf()         │
+│  - Dmod_MallocEx()  │  │  - Mutex stubs           │
+│  - Dmod_FreeEx()    │  │                          │
+│  - Memory tracking  │  │  dmod_printf.c           │
+│  - Module cleanup   │  │  - Ring buffer log       │
+└─────────────────────┘  └──────────────────────────┘
 ```
 
 ## Configuration
@@ -171,16 +165,25 @@ void example_logging(void) {
 
 ## Example Application
 
-The `examples/main.c` file demonstrates the integration:
+The `src/main.c` file demonstrates the integration:
 
 ```c
 #include "dmod_printf.h"
 #include "dmod.h"
 #include "dmheap.h"
 
+/* Heap buffer for dmheap */
+#define DMHEAP_SIZE 32768
+static char g_heap_buffer[DMHEAP_SIZE] __attribute__((aligned(8)));
+
 int main(void) {
     // Initialize log ring buffer
     Dmod_Log_Init();
+    
+    // Initialize dmheap
+    if (dmheap_init(g_heap_buffer, DMHEAP_SIZE, 8)) {
+        Dmod_Printf("Heap initialized: %d bytes\n", DMHEAP_SIZE);
+    }
     
     Dmod_Printf("=== dmod-boot with DMOD & dmheap ===\n");
     
@@ -209,24 +212,44 @@ int main(void) {
 
 ### DMOD SAL Functions
 
-The System Abstraction Layer (SAL) is implemented in `src/dmod_sal.c`:
+The System Abstraction Layer (SAL) is split between dmheap and local implementation:
+
+**Memory Functions (provided by dmheap library):**
 
 | Function | Purpose | Implementation |
 |----------|---------|----------------|
-| `Dmod_MallocEx` | Allocate memory | Uses `dmheap_malloc()` |
-| `Dmod_FreeEx` | Free memory | Uses `dmheap_free()` |
-| `Dmod_AlignedMallocEx` | Aligned allocation | Uses `dmheap_aligned_alloc()` |
-| `Dmod_ReallocEx` | Reallocate memory | Uses `dmheap_realloc()` |
-| `Dmod_FreeModule` | Free module memory | Uses `dmheap_unregister_module()` |
+| `Dmod_MallocEx` | Allocate memory | Provided by `lib/dmheap` |
+| `Dmod_FreeEx` | Free memory | Provided by `lib/dmheap` |
+| `Dmod_AlignedMallocEx` | Aligned allocation | Provided by `lib/dmheap` |
+| `Dmod_ReallocEx` | Reallocate memory | Provided by `lib/dmheap` |
+| `Dmod_FreeModule` | Free module memory | Provided by `lib/dmheap` |
+
+**Other Functions (implemented in `src/dmod_sal_printf.c`):**
+
+| Function | Purpose | Implementation |
+|----------|---------|----------------|
 | `Dmod_Printf` | Logging | Uses existing `dmod_printf` |
 | `Dmod_Mutex_*` | Mutex operations | No-op (single-threaded) |
 
 ### dmheap Configuration
 
-dmheap is initialized automatically on first use with:
+dmheap must be initialized explicitly in `main.c`:
+```c
+static char g_heap_buffer[DMHEAP_SIZE] __attribute__((aligned(8)));
+
+int main(void) {
+    // Initialize dmheap
+    if (dmheap_init(g_heap_buffer, DMHEAP_SIZE, 8)) {
+        Dmod_Printf("Heap initialized\n");
+    }
+    // ... rest of application
+}
+```
+
+Configuration:
 - **Buffer Size**: 32KB (configurable via `DMHEAP_SIZE`)
 - **Alignment**: 8 bytes (suitable for ARM Cortex-M)
-- **Location**: Static buffer in RAM
+- **Location**: Static buffer in RAM (g_heap_buffer)
 
 ## Memory Usage
 
@@ -269,7 +292,8 @@ This adds the `.inputs` and `.outputs` sections needed by DMOD for API registrat
 
 3. **Undefined references to DMOD functions**:
    - Verify `target_link_libraries` includes both `dmod` and `dmheap`
-   - Check that `dmod_sal.c` is in the sources list
+   - Check that `dmod_sal_printf.c` is in the sources list
+   - Ensure dmheap is properly initialized in `main.c`
 
 ### Runtime Issues
 

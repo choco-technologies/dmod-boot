@@ -54,7 +54,7 @@ This document summarizes the successful integration of the DMOD (Dynamic Modules
   - Added include directories for DMOD and dmheap headers
   - Linked dmod and dmheap libraries to target
   - Added linker option for dmod/scripts (dmod-common.ld)
-  - Added dmod_sal.c to sources
+  - Added dmod_sal_printf.c to sources (Printf and Mutex only)
 
 ### Linker Scripts
 
@@ -68,19 +68,15 @@ This document summarizes the successful integration of the DMOD (Dynamic Modules
 
 ### Source Files
 
-- **`src/dmod_sal.c`** (new): DMOD System Abstraction Layer implementation
-  - Implements all required DMOD SAL functions:
-    - `Dmod_MallocEx()` - Memory allocation via dmheap
-    - `Dmod_FreeEx()` - Memory deallocation via dmheap
-    - `Dmod_AlignedMallocEx()` - Aligned allocation via dmheap
-    - `Dmod_ReallocEx()` - Memory reallocation via dmheap
-    - `Dmod_FreeModule()` - Free all module memory via dmheap
-    - `Dmod_Printf()` - Logging via existing dmod_printf
-    - `Dmod_Mutex_*()` - Mutex stubs (no-op for single-threaded)
-  - Manages 32KB heap buffer (configurable)
-  - Automatic initialization on first use
+- **`src/dmod_sal_printf.c`** (new): DMOD Printf and Mutex implementation
+  - `Dmod_Printf()` - Logging via existing dmod_printf
+  - `Dmod_Mutex_*()` - Mutex stubs (no-op for single-threaded)
+  - Memory functions are provided by dmheap library
 
-- **`examples/main.c`** (modified):
+- **`src/main.c`** (moved from examples/):
+  - Main application file with dmheap initialization
+  - Defines heap buffer (32KB, configurable via DMHEAP_SIZE)
+  - Calls `dmheap_init()` to initialize heap
   - Updated to demonstrate DMOD API usage
   - Shows basic memory allocation with `Dmod_MallocEx()`
   - Shows aligned allocation with `Dmod_AlignedMallocEx()`
@@ -132,9 +128,9 @@ Application Code
       ↓
 DMOD Library (lib/dmod)
       ↓
-DMOD SAL (src/dmod_sal.c)
+dmheap (lib/dmheap - memory) + dmod_sal_printf.c (Printf/Mutex)
       ↓
-dmheap (lib/dmheap) + dmod_printf (src/)
+dmod_printf (src/ - ring buffer logging)
 ```
 
 ### Configuration Options

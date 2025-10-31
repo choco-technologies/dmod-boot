@@ -1,7 +1,7 @@
 /*
- * main.c - Example application for dmod-boot
+ * main.c - Application for dmod-boot
  * 
- * Example demonstrating DMOD and dmheap integration with ring buffer debug output
+ * Demonstrating DMOD and dmheap integration with ring buffer debug output
  */
 
 #include "dmod_printf.h"
@@ -9,6 +9,13 @@
 #include "dmheap.h"
 #include <stdint.h>
 #include <string.h>
+
+/* Heap buffer for dmheap */
+#ifndef DMHEAP_SIZE
+#define DMHEAP_SIZE 32768  /* 32KB default */
+#endif
+
+static char g_heap_buffer[DMHEAP_SIZE] __attribute__((aligned(8)));
 
 /* Simple delay function */
 static void delay(volatile uint32_t count)
@@ -27,6 +34,14 @@ int main(void)
     Dmod_Printf("=== dmod-boot with DMOD & dmheap ===\n");
     Dmod_Printf("System starting...\n");
     Dmod_Printf("Ring buffer debug output enabled\n\n");
+    
+    /* Initialize dmheap */
+    if (dmheap_init(g_heap_buffer, DMHEAP_SIZE, 8)) {
+        Dmod_Printf("Heap initialized: %d bytes\n", DMHEAP_SIZE);
+    } else {
+        Dmod_Printf("ERROR: Failed to initialize heap\n");
+        while (1);  /* Halt on error */
+    }
     
     /* Demonstrate DMOD Printf */
     Dmod_Printf("Testing DMOD Printf API...\n");

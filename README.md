@@ -32,19 +32,18 @@ Currently supported STM32 families:
 dmod-boot/
 ├── src/                    # Source files
 │   ├── dmod_printf.c      # Ring buffer based printf implementation
-│   ├── dmod_sal.c         # DMOD System Abstraction Layer
+│   ├── dmod_sal_printf.c  # DMOD Printf and Mutex SAL implementation
+│   ├── main.c             # Main application with DMOD and dmheap
 │   ├── startup_stm32f746.c # Startup code for STM32F746
 │   └── startup_stm32f407.c # Startup code for STM32F407
 ├── include/               # Header files
 │   └── dmod_printf.h     # Printf API definitions
 ├── lib/                   # External libraries
 │   ├── dmod/             # DMOD dynamic modules library
-│   └── dmheap/           # dmheap memory manager
+│   └── dmheap/           # dmheap memory manager (includes DMOD memory API)
 ├── linker/               # Linker scripts
 │   ├── STM32F746xG.ld   # Linker script for STM32F746
 │   └── STM32F407xG.ld   # Linker script for STM32F407
-├── examples/             # Example applications
-│   └── main.c           # Example with DMOD and dmheap
 ├── scripts/              # Utility scripts
 │   └── dmod_log_monitor.py # OpenOCD log monitoring script
 ├── dmod-cfg.cmake        # DMOD configuration for CMake
