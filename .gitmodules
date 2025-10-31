@@ -1,0 +1,6 @@
+[submodule "lib/dmod"]
+	path = lib/dmod
+	url = https://github.com/choco-technologies/dmod.git
+[submodule "lib/dmheap"]
+	path = lib/dmheap
+	url = https://github.com/choco-technologies/dmheap.git

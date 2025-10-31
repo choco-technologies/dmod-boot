@@ -59,6 +59,9 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
+  /* DMOD sections for dynamic module support */
+  INCLUDE dmod-common.ld
+
   .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
   .ARM : {
     __exidx_start = .;
