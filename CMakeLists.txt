@@ -60,6 +60,19 @@ target_link_libraries(${MODULE_NAME}.elf
         dmboot_startup
 )
 
+# ======================================================================
+#               Memory Report Generation
+# ======================================================================
+add_custom_command(
+    TARGET ${MODULE_NAME}.elf POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "Generating memory usage report..."
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memory_report.py 
+            ${CMAKE_BINARY_DIR}/${MODULE_NAME}.map 
+            ${CMAKE_BINARY_DIR}
+    COMMENT "Analyzing memory usage from ${MODULE_NAME}.map"
+    VERBATIM
+)
+
 
 # ======================================================================
 #               OpenOCD Integration
