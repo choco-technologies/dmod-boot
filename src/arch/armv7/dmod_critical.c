@@ -27,17 +27,30 @@
  * 
  * This file implements critical section functions for ARMv7-M (Cortex-M3/M4/M7)
  * processors by manipulating the PRIMASK register to disable/enable interrupts.
+ * 
+ * The implementation supports nested critical sections by tracking the nesting
+ * level. Interrupts are only re-enabled when exiting the outermost critical
+ * section (nesting level = 0).
+ * 
+ * Note: The nesting counter is safe to modify because interrupts are always
+ * disabled when entering/exiting critical sections. In EnterCritical, we
+ * disable interrupts first, then increment. In ExitCritical, interrupts are
+ * still disabled from the previous EnterCritical call, so the decrement is safe.
  */
 #include "dmod.h"
 #include <stdint.h>
 
-static volatile uint32_t critical_nesting = 0;
+static uint32_t critical_nesting = 0;
 
 /**
  * @brief Enter critical section
  * 
  * This function disables interrupts by setting the PRIMASK register.
  * It supports nested critical sections by tracking the nesting level.
+ * 
+ * The sequence is:
+ * 1. Disable interrupts (atomic operation)
+ * 2. Increment nesting counter (safe because interrupts are now disabled)
  */
 void Dmod_EnterCritical(void)
 {
@@ -53,6 +66,10 @@ void Dmod_EnterCritical(void)
  * 
  * This function re-enables interrupts by clearing the PRIMASK register,
  * but only when exiting the outermost critical section (nesting level = 0).
+ * 
+ * The sequence is:
+ * 1. Decrement nesting counter (safe because interrupts are still disabled)
+ * 2. If counter reaches 0, enable interrupts (atomic operation)
  */
 void Dmod_ExitCritical(void)
 {
