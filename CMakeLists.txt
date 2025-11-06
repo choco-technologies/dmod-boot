@@ -13,6 +13,7 @@ set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 # ======================================================================
 set(DMOD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod")
 include(configs/dmod-cfg.cmake)
+include(configs/dmvfs-cfg.cmake)
 include(configs/mcu/${TARGET}.cmake)
 
 # Include toolchain configuration before project() to set compilers
@@ -42,6 +43,14 @@ add_executable(${MODULE_NAME}.elf
     src/main.c
 )
 
+target_compile_definitions(${MODULE_NAME}.elf
+    PRIVATE 
+        DMBOOT_MCU_SERIES=${DMBOOT_MCU_SERIES}
+        DMBOOT_MCU_NAME=${DMBOOT_MCU_NAME}
+        DMBOOT_MAX_MOUNT_POINTS=${DMBOOT_MAX_MOUNT_POINTS}
+        DMBOOT_MAX_OPEN_FILES=${DMBOOT_MAX_OPEN_FILES}
+)
+
 target_link_options(${MODULE_NAME}.elf
     PRIVATE 
         -L${DMOD_DIR}/scripts
@@ -56,6 +65,7 @@ target_link_libraries(${MODULE_NAME}.elf
         dmod
         dmlog
         dmheap
+        dmvfs
         dmboot_inc
         dmboot_startup
 )

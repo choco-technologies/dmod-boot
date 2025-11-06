@@ -2,6 +2,7 @@
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
+#include "dmvfs.h"
 
 extern void* __logs_start__;
 extern void* __logs_end__;
@@ -54,6 +55,12 @@ int main(int argc, char** argv)
     DMOD_LOG_INFO("Inputs size: %u bytes\n", (unsigned int)inputs_size);
 
     Dmod_Initialize();
+
+    if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
+    {
+        DMOD_LOG_ERROR("VFS initialization failed!\n");
+        while(1);
+    }
 
     int i = 0;
     while(1)
