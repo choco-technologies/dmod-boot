@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdbool.h>
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
@@ -17,7 +18,7 @@ extern char __startup_dmp_end__ __attribute__((weak));
 extern char __user_data_start__ __attribute__((weak));
 extern char __user_data_end__ __attribute__((weak));
 
-// Simple environment variable storage (for user_data info)
+// Environment variable storage for embedded system
 typedef struct {
     char name[32];
     char value[64];
@@ -27,9 +28,25 @@ typedef struct {
 static EnvVar g_envVars[MAX_ENV_VARS];
 static int g_envVarCount = 0;
 
-// Simple SetEnv implementation (note: actual Dmod_SetEnv doesn't work yet per issue)
-static void SetEnv(const char* name, const char* value)
+// Strong implementation of Dmod_SetEnv for embedded system
+bool Dmod_SetEnv(const char* name, const char* value)
 {
+    if(name == NULL || value == NULL)
+        return false;
+        
+    // Check if variable already exists
+    for(int i = 0; i < g_envVarCount; i++)
+    {
+        if(strcmp(g_envVars[i].name, name) == 0)
+        {
+            // Update existing variable
+            strncpy(g_envVars[i].value, value, sizeof(g_envVars[i].value) - 1);
+            g_envVars[i].value[sizeof(g_envVars[i].value) - 1] = '\0';
+            return true;
+        }
+    }
+    
+    // Add new variable
     if(g_envVarCount < MAX_ENV_VARS)
     {
         strncpy(g_envVars[g_envVarCount].name, name, sizeof(g_envVars[g_envVarCount].name) - 1);
@@ -37,7 +54,27 @@ static void SetEnv(const char* name, const char* value)
         strncpy(g_envVars[g_envVarCount].value, value, sizeof(g_envVars[g_envVarCount].value) - 1);
         g_envVars[g_envVarCount].value[sizeof(g_envVars[g_envVarCount].value) - 1] = '\0';
         g_envVarCount++;
+        return true;
     }
+    
+    return false;
+}
+
+// Strong implementation of Dmod_GetEnv for embedded system
+const char* Dmod_GetEnv(const char* name)
+{
+    if(name == NULL)
+        return NULL;
+        
+    for(int i = 0; i < g_envVarCount; i++)
+    {
+        if(strcmp(g_envVars[i].name, name) == 0)
+        {
+            return g_envVars[i].value;
+        }
+    }
+    
+    return NULL;
 }
 
 // Simple helper to convert integer to hex string
@@ -203,14 +240,14 @@ int main(int argc, char** argv)
         DMOD_LOG_INFO("User data: Start=0x%X, Size=%u bytes\n", 
                      (uintptr_t)user_data_start, (unsigned int)user_data_size);
         
-        // Set environment variables for user_data (using our simple SetEnv since Dmod_SetEnv doesn't work)
+        // Set environment variables for user_data using Dmod_SetEnv
         char addr_str[32];
         char size_str[32];
         uint_to_hex_str((unsigned int)(uintptr_t)user_data_start, addr_str, sizeof(addr_str));
         uint_to_dec_str((unsigned int)user_data_size, size_str, sizeof(size_str));
         
-        SetEnv("USER_DATA_ADDR", addr_str);
-        SetEnv("USER_DATA_SIZE", size_str);
+        Dmod_SetEnv("USER_DATA_ADDR", addr_str);
+        Dmod_SetEnv("USER_DATA_SIZE", size_str);
         
         DMOD_LOG_INFO("Environment variables set: USER_DATA_ADDR=%s, USER_DATA_SIZE=%s\n", addr_str, size_str);
     }
