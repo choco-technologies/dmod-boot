@@ -73,6 +73,8 @@ void Dmod_EnterCritical(void)
  */
 void Dmod_ExitCritical(void)
 {
+    DMOD_ASSERT(critical_nesting > 0);
+    
     if (critical_nesting > 0)
     {
         critical_nesting--;
