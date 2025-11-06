@@ -19,7 +19,7 @@ extern char __user_data_end__ __attribute__((weak));
 
 // Simple environment variable storage (for user_data info)
 typedef struct {
-    const char* name;
+    char name[32];
     char value[64];
 } EnvVar;
 
@@ -32,7 +32,8 @@ static void SetEnv(const char* name, const char* value)
 {
     if(g_envVarCount < MAX_ENV_VARS)
     {
-        g_envVars[g_envVarCount].name = name;
+        strncpy(g_envVars[g_envVarCount].name, name, sizeof(g_envVars[g_envVarCount].name) - 1);
+        g_envVars[g_envVarCount].name[sizeof(g_envVars[g_envVarCount].name) - 1] = '\0';
         strncpy(g_envVars[g_envVarCount].value, value, sizeof(g_envVars[g_envVarCount].value) - 1);
         g_envVars[g_envVarCount].value[sizeof(g_envVars[g_envVarCount].value) - 1] = '\0';
         g_envVarCount++;
@@ -45,6 +46,13 @@ static void uint_to_hex_str(unsigned int value, char* buffer, size_t buffer_size
     const char* hex_digits = "0123456789ABCDEF";
     char temp[16];
     int i = 0;
+    
+    // Need at least 4 bytes for "0x0\0"
+    if(buffer_size < 4)
+    {
+        if(buffer_size > 0) buffer[0] = '\0';
+        return;
+    }
     
     if(value == 0)
     {
@@ -78,6 +86,13 @@ static void uint_to_dec_str(unsigned int value, char* buffer, size_t buffer_size
 {
     char temp[16];
     int i = 0;
+    
+    // Need at least 2 bytes for "0\0"
+    if(buffer_size < 2)
+    {
+        if(buffer_size > 0) buffer[0] = '\0';
+        return;
+    }
     
     if(value == 0)
     {
