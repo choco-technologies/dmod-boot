@@ -31,7 +31,9 @@ jobs:
 
     - name: Set up Git safe directories
       run: |
-        git config --global --add safe.directory 'lib/*'
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmlog"
 
     - name: Initialize and update submodules
       run: |
