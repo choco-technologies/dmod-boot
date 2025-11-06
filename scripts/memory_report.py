@@ -226,6 +226,9 @@ def generate_json_report(rom_usage: Dict[str, int], ram_usage: Dict[str, int],
         }
     }
     
+    # Ensure output directory exists
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    
     with open(output_path, 'w') as f:
         json.dump(report, f, indent=2)
     
