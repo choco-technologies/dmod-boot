@@ -69,6 +69,7 @@ add_custom_command(
     COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memory_report.py 
             ${CMAKE_BINARY_DIR}/${MODULE_NAME}.map 
             ${CMAKE_BINARY_DIR}
+            --lib-dir ${CMAKE_CURRENT_SOURCE_DIR}/lib
     COMMENT "Analyzing memory usage from ${MODULE_NAME}.map"
     VERBATIM
 )

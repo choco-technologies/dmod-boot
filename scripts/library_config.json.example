@@ -1,0 +1,9 @@
+{
+  "libdmlog": "dmlog",
+  "libdmheap": "dmheap",
+  "libdmod": "DMOD Library",
+  "libdmboot_startup": "startup",
+  "main.c.o": "main",
+  "/libc.a": "libc/libgcc",
+  "/libgcc": "libc/libgcc"
+}

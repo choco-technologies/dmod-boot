@@ -17,12 +17,25 @@ from collections import defaultdict
 class MemoryMapParser:
     """Parser for GCC ARM linker map files"""
     
-    def __init__(self, map_file_path: str):
+    def __init__(self, map_file_path: str, library_config: Dict[str, str] = None):
         self.map_file_path = map_file_path
         self.sections = {}
         self.symbols = {}
         self.object_contributions = defaultdict(lambda: {'text': 0, 'data': 0, 'bss': 0, 'rodata': 0})
         self.memory_regions = {}
+        self.library_config = library_config or self._get_default_library_config()
+    
+    def _get_default_library_config(self) -> Dict[str, str]:
+        """Get default library configuration with common patterns"""
+        return {
+            'libdmlog': 'dmlog',
+            'libdmheap': 'dmheap',
+            'libdmod': 'DMOD Library',
+            'libdmboot_startup': 'startup',
+            'main.c.o': 'main',
+            '/libc.a': 'libc/libgcc',
+            '/libgcc': 'libc/libgcc',
+        }
         
     def parse(self):
         """Parse the map file"""
@@ -123,21 +136,14 @@ class MemoryMapParser:
                     self.object_contributions[object_file][section] += size
     
     def get_library_name(self, object_path: str) -> str:
-        """Extract library name from object file path"""
-        if 'libdmlog' in object_path:
-            return 'dmlog'
-        elif 'libdmheap' in object_path:
-            return 'dmheap'
-        elif 'libdmod' in object_path:
-            return 'DMOD Library'
-        elif 'libdmboot_startup' in object_path:
-            return 'startup'
-        elif 'main.c.o' in object_path:
-            return 'main'
-        elif '/libc.a' in object_path or '/libgcc' in object_path:
-            return 'libc/libgcc'
-        else:
-            return 'other'
+        """Extract library name from object file path using configuration"""
+        # Check each pattern in the configuration
+        for pattern, lib_name in self.library_config.items():
+            if pattern in object_path:
+                return lib_name
+        
+        # If no match found, return 'other'
+        return 'other'
     
     def aggregate_by_library(self) -> Dict[str, Dict[str, int]]:
         """Aggregate memory usage by library"""
@@ -309,20 +315,69 @@ def generate_json_report(rom_usage: Dict[str, int], ram_usage: Dict[str, int],
     print(f"\nJSON report saved to: {output_path}")
 
 
+def load_library_config(config_path: str = None, auto_detect_dir: str = None) -> Dict[str, str]:
+    """Load library configuration from JSON file or auto-detect from directory
+    
+    Args:
+        config_path: Path to JSON configuration file
+        auto_detect_dir: Directory to auto-detect libraries from (e.g., 'lib/')
+    
+    Returns:
+        Dictionary mapping library patterns to display names
+    """
+    config = {}
+    
+    # Load from JSON file if provided
+    if config_path and Path(config_path).exists():
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+    
+    # Auto-detect libraries from directory
+    if auto_detect_dir and Path(auto_detect_dir).exists():
+        lib_dir = Path(auto_detect_dir)
+        for item in lib_dir.iterdir():
+            if item.is_dir():
+                lib_name = item.name
+                # Add library pattern mapping
+                pattern = f'lib{lib_name}'
+                if pattern not in config:
+                    config[pattern] = lib_name
+    
+    return config
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: memory_report.py <map_file> [output_dir]")
+        print("Usage: memory_report.py <map_file> [output_dir] [--lib-config <config.json>] [--lib-dir <lib_directory>]")
         sys.exit(1)
     
     map_file = sys.argv[1]
-    output_dir = sys.argv[2] if len(sys.argv) > 2 else str(Path(map_file).parent)
+    output_dir = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].startswith('--') else str(Path(map_file).parent)
+    
+    # Parse optional arguments
+    config_file = None
+    lib_dir = None
+    
+    i = 2 if not sys.argv[2].startswith('--') else 1
+    while i < len(sys.argv) - 1:
+        if sys.argv[i] == '--lib-config':
+            config_file = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == '--lib-dir':
+            lib_dir = sys.argv[i + 1]
+            i += 2
+        else:
+            i += 1
     
     if not Path(map_file).exists():
         print(f"Error: Map file not found: {map_file}")
         sys.exit(1)
     
+    # Load library configuration
+    library_config = load_library_config(config_file, lib_dir)
+    
     # Parse the map file
-    parser = MemoryMapParser(map_file)
+    parser = MemoryMapParser(map_file, library_config if library_config else None)
     parser.parse()
     
     # Get memory usage
