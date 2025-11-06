@@ -103,9 +103,9 @@ if(STARTUP_DMP_FILE AND EXISTS "${STARTUP_DMP_FILE}")
             -O elf32-littlearm
             -B arm
             --rename-section .data=.startup_dmp,alloc,load,readonly,data,contents
-            --redefine-sym _binary_startup_dmp_bin_start=__startup_dmp_data_start
-            --redefine-sym _binary_startup_dmp_bin_end=__startup_dmp_data_end
-            --redefine-sym _binary_startup_dmp_bin_size=__startup_dmp_data_size
+            --redefine-sym _binary_startup_dmp_bin_start=__startup_dmp_start__
+            --redefine-sym _binary_startup_dmp_bin_end=__startup_dmp_end__
+            --redefine-sym _binary_startup_dmp_bin_size=__startup_dmp_size__
             ${STARTUP_DMP_BIN} ${STARTUP_DMP_OBJ}
         DEPENDS ${STARTUP_DMP_BIN}
         COMMENT "Converting startup.dmp to object file"
@@ -144,9 +144,9 @@ if(USER_DATA_FILE AND EXISTS "${USER_DATA_FILE}")
             -O elf32-littlearm
             -B arm
             --rename-section .data=.user_data,alloc,load,readonly,data,contents
-            --redefine-sym _binary_user_data_bin_start=__user_data_data_start
-            --redefine-sym _binary_user_data_bin_end=__user_data_data_end
-            --redefine-sym _binary_user_data_bin_size=__user_data_data_size
+            --redefine-sym _binary_user_data_bin_start=__user_data_start__
+            --redefine-sym _binary_user_data_bin_end=__user_data_end__
+            --redefine-sym _binary_user_data_bin_size=__user_data_size__
             ${USER_DATA_BIN} ${USER_DATA_OBJ}
         DEPENDS ${USER_DATA_BIN}
         COMMENT "Converting user_data to object file"
