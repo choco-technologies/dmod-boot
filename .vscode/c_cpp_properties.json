@@ -9,8 +9,10 @@
                 "${workspaceFolder}/lib/dmod/inc/**",
                 "${workspaceFolder}/lib/dmod/src/**",
                 "${workspaceFolder}/lib/dmlog/include/**",
+                "${workspaceFolder}/lib/dmheap/include/**",
                 "${workspaceFolder}/build/lib/dmod/**",
-                "${workspaceFolder}/build/lib/dmlog/**"
+                "${workspaceFolder}/build/lib/dmlog/**",
+                "${workspaceFolder}/build/lib/dmheap/**"
             ],
             "defines": [
                 "_DEBUG"

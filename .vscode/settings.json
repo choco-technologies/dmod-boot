@@ -9,7 +9,9 @@
         "*.ld": "linkerscript",
         "*.s": "arm",
         "*.S": "arm",
-        "dmod.h": "c"
+        "dmod.h": "c",
+        "dmlog.h": "c",
+        "dmheap.h": "c"
     },
     "cortex-debug.openocdPath": "/usr/bin/openocd",
     "cortex-debug.armToolchainPath": "/usr/bin",

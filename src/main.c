@@ -1,11 +1,14 @@
 #include <string.h>
 #include "dmod.h"
 #include "dmlog.h"
+#include "dmheap.h"
 
 extern void* __logs_start__;
 extern void* __logs_end__;
 extern void* __dmod_inputs_start;
 extern void* __dmod_inputs_end;
+extern void* __heap_start__;
+extern void* __heap_end__;
 
 void delay(int cycles)
 {
@@ -32,6 +35,17 @@ int main(int argc, char** argv)
 
     dmlog_puts(ctx, "DMOD-Boot started\n");
 
+    void* heap_start = &__heap_start__;
+    void* heap_end = &__heap_end__;
+    size_t heap_size = (size_t)((uintptr_t)heap_end - (uintptr_t)heap_start);
+
+    if(!dmheap_init(heap_start, heap_size, sizeof(void*)))
+    {
+        DMOD_LOG_ERROR("Heap initialization failed!\n");
+        while(1);
+    }
+    DMOD_LOG_INFO("Heap initialized: Start=0x%X, Size=%u bytes\n", (uintptr_t)heap_start, (unsigned int)heap_size);
+
     void* inputs_start = &__dmod_inputs_start;
     void* inputs_end = &__dmod_inputs_end;
     size_t inputs_size = (size_t)((uintptr_t)inputs_end - (uintptr_t)inputs_start);
@@ -40,7 +54,6 @@ int main(int argc, char** argv)
     DMOD_LOG_INFO("Inputs size: %u bytes\n", (unsigned int)inputs_size);
 
     Dmod_Initialize();
-    Dmod_LoadModule("dmod-sample-module");
 
     int i = 0;
     while(1)

@@ -55,6 +55,7 @@ target_link_libraries(${MODULE_NAME}.elf
     PRIVATE 
         dmod
         dmlog
+        dmheap
         dmboot_inc
         dmboot_startup
 )
