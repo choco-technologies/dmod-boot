@@ -38,7 +38,11 @@ class MemoryMapParser:
         self._parse_object_contributions(content)
         
     def _parse_sections(self, content: str):
-        """Parse section headers to get total sizes"""
+        """Parse section headers to get total sizes
+        
+        Matches lines like: .text  0x08000000  0xefa0
+        Also handles subsections like .text.startup by extracting the base section name.
+        """
         # Pattern: .text           0x08000000     0xefa0
         pattern = r'^\.(\w+)\s+(0x[0-9a-fA-F]+)\s+(0x[0-9a-fA-F]+)'
         
@@ -56,19 +60,14 @@ class MemoryMapParser:
     def _parse_symbols(self, content: str):
         """Parse important symbols like stack, heap, logs"""
         # Pattern for symbols like: 0x00001000    __stack_size__ = 0x1000
-        patterns = [
-            r'^\s*(0x[0-9a-fA-F]+)\s+(__\w+__)\s*=',
-            r'^\s*\[!provide\]\s+PROVIDE\s*\((\w+)\s*=\s*([^)]+)\)',
-        ]
+        pattern = r'^\s*(0x[0-9a-fA-F]+)\s+(__\w+__)\s*='
         
         for line in content.split('\n'):
-            # First pattern
-            match = re.match(patterns[0], line)
+            match = re.match(pattern, line)
             if match:
                 value = int(match.group(1), 16)
                 name = match.group(2)
                 self.symbols[name] = value
-                
     def _parse_object_contributions(self, content: str):
         """Parse contributions from object files to each section"""
         # Pattern: .text  0x08000040  0x88  /path/to/file.o
@@ -186,16 +185,22 @@ def format_size(size_bytes: int) -> str:
 
 
 def print_memory_table(title: str, usage_dict: Dict[str, int], total: int, heap_size: int = 0):
-    """Print a formatted memory usage table"""
+    """Print a formatted memory usage table
+    
+    Args:
+        title: Table title
+        usage_dict: Dictionary of component names and sizes
+        total: Total memory used (for percentage calculations)
+        heap_size: Optional heap size to display separately (not included in percentages)
+    """
     print(f"\n{'=' * 60}")
     print(f"{title:^60}")
     print(f"{'=' * 60}")
     print(f"{'Component':<30} {'Size':>15} {'%':>10}")
     print(f"{'-' * 60}")
     
-    # Sort by size descending, but keep heap at the end if present
-    items_without_heap = [(k, v) for k, v in usage_dict.items() if k != 'heap']
-    sorted_items = sorted(items_without_heap, key=lambda x: x[1], reverse=True)
+    # Sort by size descending; heap should not be in usage_dict
+    sorted_items = sorted(usage_dict.items(), key=lambda x: x[1], reverse=True)
     
     for name, size in sorted_items:
         percentage = (size / total * 100) if total > 0 else 0
@@ -204,7 +209,7 @@ def print_memory_table(title: str, usage_dict: Dict[str, int], total: int, heap_
     print(f"{'-' * 60}")
     print(f"{'Summary':<30} {format_size(total):>15} {'100.0%':>10}")
     
-    # Show heap separately if provided
+    # Show heap separately as available space, not used space
     if heap_size > 0:
         print(f"{'-' * 60}")
         print(f"{'heap (available)':<30} {format_size(heap_size):>15} {'':>10}")
