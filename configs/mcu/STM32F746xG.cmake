@@ -9,7 +9,7 @@ set(DMBOOT_ARCH_FAMILY "cortex-m7" CACHE STRING "Microcontroller family")
 # ======================================================================
 #               OpenOCD Configuration
 # ======================================================================
-find_program(OPENOCD openocd REQUIRED)
+find_program(OPENOCD openocd)
 set(OPENOCD_INTERFACE "interface/stlink.cfg" CACHE STRING "OpenOCD interface configuration file")
 set(OPENOCD_TARGET "target/stm32f7x.cfg" CACHE STRING "OpenOCD target configuration file")
 
