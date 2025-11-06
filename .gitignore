@@ -21,6 +21,12 @@ build-cmake*/
 *.dis
 *_dmod_addresses.txt
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
 # Test artifacts
 test/dmod_test_x86
 test/*.o
