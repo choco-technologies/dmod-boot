@@ -31,6 +31,7 @@ jobs:
 
     - name: Set up Git safe directories
       run: |
+        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod"
         git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmlog"
