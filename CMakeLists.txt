@@ -68,6 +68,7 @@ target_link_libraries(${MODULE_NAME}.elf
         dmvfs
         dmboot_inc
         dmboot_startup
+        dmboot_arch
 )
 
 # ======================================================================
