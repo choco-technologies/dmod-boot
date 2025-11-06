@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ master, main, develop, feature/* ]
+    branches: [ master, main, develop]
   pull_request:
     branches: [ master, main, develop, feature/* ]
   workflow_dispatch:
@@ -31,7 +31,7 @@ jobs:
 
     - name: Set up Git safe directories
       run: |
-        chown -R $USER:$USER .
+        git config --global --add safe.directory 'lib/*'
 
     - name: Initialize and update submodules
       run: |
