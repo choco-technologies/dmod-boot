@@ -8,6 +8,10 @@ cmake_minimum_required(VERSION 3.10)
 # ======================================================================
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 
+# Optional files to embed in ROM
+set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
+set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
+
 # ======================================================================
 #               Early DMOD Configuration (before project())
 # ======================================================================
@@ -70,6 +74,92 @@ target_link_libraries(${MODULE_NAME}.elf
         dmboot_startup
         dmboot_arch
 )
+
+# ======================================================================
+#               Embedded Files
+# ======================================================================
+
+# Process startup.dmp file if provided
+if(STARTUP_DMP_FILE AND EXISTS "${STARTUP_DMP_FILE}")
+    message(STATUS "Embedding startup.dmp file: ${STARTUP_DMP_FILE}")
+    
+    set(STARTUP_DMP_BIN "${CMAKE_BINARY_DIR}/startup_dmp.bin")
+    set(STARTUP_DMP_OBJ "${CMAKE_BINARY_DIR}/startup_dmp.o")
+    
+    # Copy file to build directory with known name
+    add_custom_command(
+        OUTPUT ${STARTUP_DMP_BIN}
+        COMMAND ${CMAKE_COMMAND} -E copy "${STARTUP_DMP_FILE}" ${STARTUP_DMP_BIN}
+        DEPENDS "${STARTUP_DMP_FILE}"
+        COMMENT "Copying startup.dmp file"
+        VERBATIM
+    )
+    
+    # Convert binary to object file
+    add_custom_command(
+        OUTPUT ${STARTUP_DMP_OBJ}
+        COMMAND ${CMAKE_OBJCOPY}
+            -I binary
+            -O elf32-littlearm
+            -B arm
+            --rename-section .data=.startup_dmp,alloc,load,readonly,data,contents
+            --redefine-sym _binary_startup_dmp_bin_start=__startup_dmp_data_start
+            --redefine-sym _binary_startup_dmp_bin_end=__startup_dmp_data_end
+            --redefine-sym _binary_startup_dmp_bin_size=__startup_dmp_data_size
+            ${STARTUP_DMP_BIN} ${STARTUP_DMP_OBJ}
+        DEPENDS ${STARTUP_DMP_BIN}
+        COMMENT "Converting startup.dmp to object file"
+        VERBATIM
+    )
+    
+    add_custom_target(startup_dmp_obj DEPENDS ${STARTUP_DMP_OBJ})
+    add_dependencies(${MODULE_NAME}.elf startup_dmp_obj)
+    
+    target_link_options(${MODULE_NAME}.elf PRIVATE ${STARTUP_DMP_OBJ})
+else()
+    message(STATUS "No startup.dmp file provided")
+endif()
+
+# Process user_data file if provided
+if(USER_DATA_FILE AND EXISTS "${USER_DATA_FILE}")
+    message(STATUS "Embedding user_data file: ${USER_DATA_FILE}")
+    
+    set(USER_DATA_BIN "${CMAKE_BINARY_DIR}/user_data.bin")
+    set(USER_DATA_OBJ "${CMAKE_BINARY_DIR}/user_data.o")
+    
+    # Copy file to build directory with known name
+    add_custom_command(
+        OUTPUT ${USER_DATA_BIN}
+        COMMAND ${CMAKE_COMMAND} -E copy "${USER_DATA_FILE}" ${USER_DATA_BIN}
+        DEPENDS "${USER_DATA_FILE}"
+        COMMENT "Copying user_data file"
+        VERBATIM
+    )
+    
+    # Convert binary to object file
+    add_custom_command(
+        OUTPUT ${USER_DATA_OBJ}
+        COMMAND ${CMAKE_OBJCOPY}
+            -I binary
+            -O elf32-littlearm
+            -B arm
+            --rename-section .data=.user_data,alloc,load,readonly,data,contents
+            --redefine-sym _binary_user_data_bin_start=__user_data_data_start
+            --redefine-sym _binary_user_data_bin_end=__user_data_data_end
+            --redefine-sym _binary_user_data_bin_size=__user_data_data_size
+            ${USER_DATA_BIN} ${USER_DATA_OBJ}
+        DEPENDS ${USER_DATA_BIN}
+        COMMENT "Converting user_data to object file"
+        VERBATIM
+    )
+    
+    add_custom_target(user_data_obj DEPENDS ${USER_DATA_OBJ})
+    add_dependencies(${MODULE_NAME}.elf user_data_obj)
+    
+    target_link_options(${MODULE_NAME}.elf PRIVATE ${USER_DATA_OBJ})
+else()
+    message(STATUS "No user_data file provided")
+endif()
 
 # ======================================================================
 #               Memory Report Generation

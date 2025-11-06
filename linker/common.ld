@@ -90,6 +90,34 @@ SECTIONS
    __exidx_end__ = .;
    PROVIDE(__exidx_end__ = __exidx_end__);
 
+   /* Startup DMP section */
+   . = ALIGN(16);
+   .startup_dmp :
+   {
+      __startup_dmp_start__ = .;
+      PROVIDE(__startup_dmp_start__ = __startup_dmp_start__);
+      KEEP(*(.startup_dmp))
+      . = ALIGN(16);
+      __startup_dmp_end__ = .;
+      PROVIDE(__startup_dmp_end__ = __startup_dmp_end__);
+      __startup_dmp_size__ = __startup_dmp_end__ - __startup_dmp_start__;
+      PROVIDE(__startup_dmp_size__ = __startup_dmp_size__);
+   } > rom AT > rom
+
+   /* User Data section */
+   . = ALIGN(16);
+   .user_data :
+   {
+      __user_data_start__ = .;
+      PROVIDE(__user_data_start__ = __user_data_start__);
+      KEEP(*(.user_data))
+      . = ALIGN(16);
+      __user_data_end__ = .;
+      PROVIDE(__user_data_end__ = __user_data_end__);
+      __user_data_size__ = __user_data_end__ - __user_data_start__;
+      PROVIDE(__user_data_size__ = __user_data_size__);
+   } > rom AT > rom
+
    .data :
    {
       . = ALIGN(4);
