@@ -19,14 +19,14 @@ extern char __user_data_start__ __attribute__((weak));
 extern char __user_data_end__ __attribute__((weak));
 
 // Environment variable storage for embedded system
-typedef struct {
-    char name[32];
-    char value[64];
-} EnvVar;
-
 #define MAX_ENV_VARS 10
 #define ENV_NAME_SIZE 32
 #define ENV_VALUE_SIZE 64
+
+typedef struct {
+    char name[ENV_NAME_SIZE];
+    char value[ENV_VALUE_SIZE];
+} EnvVar;
 
 static EnvVar g_envVars[MAX_ENV_VARS];
 static int g_envVarCount = 0;
@@ -41,7 +41,7 @@ static void copy_env_value(char* dest, const char* src, size_t dest_size)
 // Strong implementation of Dmod_SetEnv for embedded system
 bool Dmod_SetEnv(const char* name, const char* value)
 {
-    if(name == NULL || value == NULL || name[0] == '\0')
+    if(name == NULL || value == NULL || name[0] == '\0' || value[0] == '\0')
         return false;
         
     // Check if variable already exists
