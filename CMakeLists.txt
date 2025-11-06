@@ -16,7 +16,14 @@ include(configs/dmod-cfg.cmake)
 include(configs/mcu/${TARGET}.cmake)
 
 # Include toolchain configuration before project() to set compilers
-include(${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake)
+# Check for tools-cfg.cmake in main repo first, then fall back to submodule
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
+    include(configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake)
+elseif(EXISTS "${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
+    include(${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake)
+else()
+    message(FATAL_ERROR "Could not find tools-cfg.cmake for ${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}")
+endif()
 
 # ======================================================================
 #               DMOD Boot Project Configuration
