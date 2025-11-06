@@ -25,13 +25,23 @@ typedef struct {
 } EnvVar;
 
 #define MAX_ENV_VARS 10
+#define ENV_NAME_SIZE 32
+#define ENV_VALUE_SIZE 64
+
 static EnvVar g_envVars[MAX_ENV_VARS];
 static int g_envVarCount = 0;
+
+// Helper function to copy string to environment variable value
+static void copy_env_value(char* dest, const char* src, size_t dest_size)
+{
+    strncpy(dest, src, dest_size - 1);
+    dest[dest_size - 1] = '\0';
+}
 
 // Strong implementation of Dmod_SetEnv for embedded system
 bool Dmod_SetEnv(const char* name, const char* value)
 {
-    if(name == NULL || value == NULL)
+    if(name == NULL || value == NULL || name[0] == '\0')
         return false;
         
     // Check if variable already exists
@@ -40,8 +50,7 @@ bool Dmod_SetEnv(const char* name, const char* value)
         if(strcmp(g_envVars[i].name, name) == 0)
         {
             // Update existing variable
-            strncpy(g_envVars[i].value, value, sizeof(g_envVars[i].value) - 1);
-            g_envVars[i].value[sizeof(g_envVars[i].value) - 1] = '\0';
+            copy_env_value(g_envVars[i].value, value, ENV_VALUE_SIZE);
             return true;
         }
     }
@@ -49,10 +58,8 @@ bool Dmod_SetEnv(const char* name, const char* value)
     // Add new variable
     if(g_envVarCount < MAX_ENV_VARS)
     {
-        strncpy(g_envVars[g_envVarCount].name, name, sizeof(g_envVars[g_envVarCount].name) - 1);
-        g_envVars[g_envVarCount].name[sizeof(g_envVars[g_envVarCount].name) - 1] = '\0';
-        strncpy(g_envVars[g_envVarCount].value, value, sizeof(g_envVars[g_envVarCount].value) - 1);
-        g_envVars[g_envVarCount].value[sizeof(g_envVars[g_envVarCount].value) - 1] = '\0';
+        copy_env_value(g_envVars[g_envVarCount].name, name, ENV_NAME_SIZE);
+        copy_env_value(g_envVars[g_envVarCount].value, value, ENV_VALUE_SIZE);
         g_envVarCount++;
         return true;
     }
