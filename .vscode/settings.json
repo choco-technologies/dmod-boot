@@ -1,0 +1,22 @@
+{
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureOnOpen": true,
+    "cmake.generator": "Unix Makefiles",
+    "cmake.configureArgs": [
+        "-DCMAKE_BUILD_TYPE=Debug"
+    ],
+    "files.associations": {
+        "*.ld": "linkerscript",
+        "*.s": "arm",
+        "*.S": "arm",
+        "dmod.h": "c"
+    },
+    "cortex-debug.openocdPath": "/usr/bin/openocd",
+    "cortex-debug.armToolchainPath": "/usr/bin",
+    "cortex-debug.gdbPath": "/usr/bin/arm-none-eabi-gdb",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "files.exclude": {
+        "**/build": false
+    },
+    "cortex-debug.variableUseNaturalFormat": true
+}

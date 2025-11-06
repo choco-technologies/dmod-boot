@@ -1,0 +1,25 @@
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "ARM Embedded",
+            "includePath": [
+                "${workspaceFolder}/src/**",
+                "${workspaceFolder}/inc/**",
+                "${workspaceFolder}/lib/dmod/inc/**",
+                "${workspaceFolder}/lib/dmod/src/**",
+                "${workspaceFolder}/lib/dmlog/include/**",
+                "${workspaceFolder}/build/lib/dmod/**",
+                "${workspaceFolder}/build/lib/dmlog/**"
+            ],
+            "defines": [
+                "_DEBUG"
+            ],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-arm",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ]
+}

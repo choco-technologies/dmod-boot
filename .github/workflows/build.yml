@@ -2,86 +2,51 @@ name: Build
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ master, main, develop]
   pull_request:
-    branches: [ master, main, develop ]
+    branches: [ master, main, develop, feature/* ]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build-make:
-    name: Build with Make
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-    
-    strategy:
-      matrix:
-        target: [STM32F746, STM32F407]
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    
-    - name: Install ARM GCC toolchain
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
-    
-    - name: Verify toolchain installation
-      run: |
-        arm-none-eabi-gcc --version
-        arm-none-eabi-objcopy --version
-        arm-none-eabi-size --version
-    
-    - name: Build ${{ matrix.target }} with Make
-      run: |
-        make TARGET=${{ matrix.target }}
-    
-    - name: Check output files
-      run: |
-        ls -lh build/
-        file build/${{ matrix.target }}.elf
-        file build/${{ matrix.target }}.bin
-        file build/${{ matrix.target }}.hex
-    
-    - name: Display memory usage
-      run: |
-        arm-none-eabi-size build/${{ matrix.target }}.elf
-    
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: make-${{ matrix.target }}-firmware
-        path: |
-          build/${{ matrix.target }}.elf
-          build/${{ matrix.target }}.bin
-          build/${{ matrix.target }}.hex
-          build/${{ matrix.target }}.map
-        retention-days: 30
-
   build-cmake:
     name: Build with CMake
     runs-on: ubuntu-latest
+    container:
+      image: chocotechnologies/dmod:1.0.2
     
     permissions:
       contents: read
     
     strategy:
       matrix:
-        target: [STM32F746, STM32F407]
-    
+        target: [STM32F407G, STM32F746xG, STM32F746ZG]
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
-    
-    - name: Install ARM GCC toolchain and CMake
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up Git safe directories
       run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi cmake
+        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmlog"
+
+    - name: Initialize and update submodules
+      run: |
+        git submodule init
+        git submodule update --recursive
+    
+    - name: Verify submodules
+      run: |
+        git submodule status
+        ls -la lib/
+        ls -la lib/dmod/
+        ls -la lib/dmod/configs/arch/armv7/cortex-m4/
     
     - name: Verify toolchain installation
       run: |
@@ -90,89 +55,41 @@ jobs:
         arm-none-eabi-size --version
         cmake --version
     
+    - name: Configure CMake for ${{ matrix.target }}
+      run: |
+        cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=${{ matrix.target }} -S . -B build
+    
     - name: Build ${{ matrix.target }} with CMake
       run: |
-        mkdir -p build-cmake
-        cd build-cmake
-        cmake .. -DTARGET=${{ matrix.target }}
-        cmake --build .
+        cmake --build build --config Debug
     
     - name: Check output files
       run: |
-        ls -lh build-cmake/
-        file build-cmake/${{ matrix.target }}.elf
-        file build-cmake/${{ matrix.target }}.bin
-        file build-cmake/${{ matrix.target }}.hex
+        ls -lh build/
+        file build/dmboot.elf
+        if [ -f build/dmboot.map ]; then file build/dmboot.map; fi
     
     - name: Display memory usage
       run: |
-        arm-none-eabi-size build-cmake/${{ matrix.target }}.elf
+        arm-none-eabi-size build/dmboot.elf
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: cmake-${{ matrix.target }}-firmware
         path: |
-          build-cmake/${{ matrix.target }}.elf
-          build-cmake/${{ matrix.target }}.bin
-          build-cmake/${{ matrix.target }}.hex
-          build-cmake/${{ matrix.target }}.map
+          build/dmboot.elf
+          build/dmboot.map
         retention-days: 30
 
-  test-make:
-    name: Test with Make
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc python3
-    
-    - name: Run x86 tests with Make
-      run: |
-        cd test
-        make test
-    
-  test-cmake:
-    name: Test with CMake
-    runs-on: ubuntu-latest
-    
-    permissions:
-      contents: read
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc cmake python3
-    
-    - name: Run x86 tests with CMake
-      run: |
-        cd test
-        mkdir -p build-cmake
-        cd build-cmake
-        cmake ..
-        cmake --build .
-        ./dmod_test_x86
-    
   build-all:
     name: All builds completed
     runs-on: ubuntu-latest
-    needs: [build-make, build-cmake, test-make, test-cmake]
+    needs: [build-cmake]
     
     permissions:
       contents: read
     
     steps:
     - name: All targets built successfully
-      run: echo "All targets built successfully with both Make and CMake!"
+      run: echo "All targets built successfully with CMake!"

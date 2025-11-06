@@ -1,0 +1,36 @@
+# GDB initialization script for connecting to OpenOCD
+# This script automatically connects to OpenOCD and sets up debugging environment
+# Generated for target: @TARGET@
+
+# Connect to OpenOCD running on localhost:3333
+target extended-remote localhost:3333
+
+# Monitor reset and halt the target
+monitor reset halt
+
+# Load the ELF file into target memory
+load
+
+# Reset the target and halt at main
+monitor reset halt
+
+# Set a breakpoint at main function
+break main
+
+# Enable semihosting (optional - for printf debugging)
+monitor arm semihosting enable
+
+# Show some useful information
+info registers
+info breakpoints
+
+# Print welcome message
+echo \n=== GDB connected to OpenOCD ===\n
+echo Target: @TARGET@\n
+echo Architecture: @DMBOOT_ARCH@\n
+echo MCU Series: @DMBOOT_MCU_SERIES@\n
+echo Ready for debugging!\n
+echo Type 'continue' or 'c' to start execution\n
+echo Type 'step' or 's' to step through code\n
+echo Type 'next' or 'n' to step over functions\n
+echo ================================\n\n

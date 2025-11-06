@@ -1,0 +1,50 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug DMOD Boot (STM32F746xG)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/dmboot.elf",
+            "servertype": "openocd",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f7x.cfg"
+            ],
+            "searchDir": [],
+            "runToEntryPoint": "main",
+            "showDevDebugOutput": "raw",
+            "device": "STM32F746xG",
+            "svdFile": "${workspaceFolder}/.vscode/STM32F746.svd",
+            "openOCDLaunchCommands": [
+                "telnet_port 4444", 
+                "tcl_port 6666"
+            ],
+            "preLaunchCommands": [
+                "set mem inaccessible-by-default off",
+                "set architecture arm",
+                "monitor arm semihosting enable"
+            ],
+            "postLaunchCommands": [
+                "monitor reset halt",
+                "load",
+                "monitor reset halt"
+            ]
+        },
+        {
+            "name": "Attach to DMOD Boot (OpenOCD running)",
+            "type": "cortex-debug",
+            "request": "attach",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/dmboot.elf",
+            "servertype": "external",
+            "gdbTarget": "localhost:3333",
+            "device": "STM32F746xG",
+            "svdFile": "${workspaceFolder}/.vscode/STM32F746.svd",
+            "runToEntryPoint": "main"
+        }
+    ],
+    "compounds": [],
+    "defaultConfiguration": "Debug DMOD Boot (STM32F746xG)"
+}

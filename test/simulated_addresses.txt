@@ -1,8 +1,0 @@
-# Simulated dmod-boot Symbol Addresses
-# For testing with simulate_openocd.py
-
-DMOD_LOG_RING_ADDR=0x20000224
-DMOD_LOG_RING_START=0x20000224
-DMOD_LOG_RING_END=0x20002238
-DMOD_LOG_TOTAL_SIZE=8192
-DMOD_LOG_MAX_ENTRY_SIZE=512
