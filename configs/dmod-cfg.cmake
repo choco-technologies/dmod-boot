@@ -62,16 +62,16 @@ set(DMOD_BUILD_TEMPLATES OFF CACHE BOOL "Enable to build templates")
 set(DMOD_USE_EXCEPTIONS OFF CACHE BOOL "Enable to use exceptions")
 
 # Directory for DMFC files
-set(DMOD_DMFC_DIR               "${CMAKE_BINARY_DIR}/dmfc"  CACHE STRING "Directory for DMFC files")
+set(DMOD_DMFC_DIR               "/flash/dmfc"  CACHE STRING "Directory for DMFC files")
 
 # Directory for DMF files
-set(DMOD_DMF_DIR                "${CMAKE_BINARY_DIR}/dmf"   CACHE STRING "Directory for DMF files")
+set(DMOD_DMF_DIR                "/flash/dmf"   CACHE STRING "Directory for DMF files")
 
 # Path to the default repository inside the system
 set(DMOD_REPO_DIR               "${DMOD_DMF_DIR}" 			CACHE STRING "Directory for DMF files inside the system")
 
 # Paths to the repositories inside the system in an array
-set(DMOD_REPO_PATHS             "${DMOD_DMF_DIR}${DMOD_ARRAY_SEP}${DMOD_DMFC_DIR}"  CACHE STRING "Paths to the repositories inside the system in an array")    
+set(DMOD_REPO_PATHS             "${DMOD_DMF_DIR}:${DMOD_DMFC_DIR}"  CACHE STRING "Paths to the repositories inside the system in an array")    
 
 # ===========================================================================
 #                       BUILT-IN API

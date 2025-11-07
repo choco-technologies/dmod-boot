@@ -46,7 +46,9 @@ add_executable(${MODULE_NAME}.elf
 target_compile_definitions(${MODULE_NAME}.elf
     PRIVATE 
         DMBOOT_MCU_SERIES=${DMBOOT_MCU_SERIES}
+        DMBOOT_MCU_SERIES_STRING="${DMBOOT_MCU_SERIES}"
         DMBOOT_MCU_NAME=${DMBOOT_MCU_NAME}
+        DMBOOT_MCU_NAME_STRING="${DMBOOT_MCU_NAME}"
         DMBOOT_MAX_MOUNT_POINTS=${DMBOOT_MAX_MOUNT_POINTS}
         DMBOOT_MAX_OPEN_FILES=${DMBOOT_MAX_OPEN_FILES}
 )
@@ -66,6 +68,7 @@ target_link_libraries(${MODULE_NAME}.elf
         dmlog
         dmheap
         dmvfs
+        dmenv
         dmboot_inc
         dmboot_startup
         dmboot_arch

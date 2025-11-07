@@ -10,18 +10,22 @@
                 "${workspaceFolder}/lib/dmod/src/**",
                 "${workspaceFolder}/lib/dmlog/include/**",
                 "${workspaceFolder}/lib/dmheap/include/**",
+                "${workspaceFolder}/lib/dmenv/include/**",
                 "${workspaceFolder}/lib/dmvfs/inc/**",
                 "${workspaceFolder}/build/_deps/dmfsi-src/inc/**",
                 "${workspaceFolder}/build/_deps/dmfsi-build/**",
                 "${workspaceFolder}/build/lib/dmod/**",
                 "${workspaceFolder}/build/lib/dmlog/**",
                 "${workspaceFolder}/build/lib/dmheap/**",
+                "${workspaceFolder}/build/lib/dmenv/**",
                 "${workspaceFolder}/build/lib/dmvfs/**"
             ],
             "defines": [
                 "_DEBUG",
                 "DMBOOT_MCU_SERIES=STM32F4",
+                "DMBOOT_MCU_SERIES_STRING=\"STM32F4\"",
                 "DMBOOT_MCU_NAME=STM32F407VG",
+                "DMBOOT_MCU_NAME_STRING=\"STM32F407VG\"",
                 "DMBOOT_MAX_MOUNT_POINTS=100",
                 "DMBOOT_MAX_OPEN_FILES=1000"
             ],

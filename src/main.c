@@ -3,6 +3,7 @@
 #include "dmlog.h"
 #include "dmheap.h"
 #include "dmvfs.h"
+#include "dmenv.h"
 
 extern void* __logs_start__;
 extern void* __logs_end__;
@@ -47,12 +48,13 @@ int main(int argc, char** argv)
     }
     DMOD_LOG_INFO("Heap initialized: Start=0x%X, Size=%u bytes\n", (uintptr_t)heap_start, (unsigned int)heap_size);
 
-    void* inputs_start = &__dmod_inputs_start;
-    void* inputs_end = &__dmod_inputs_end;
-    size_t inputs_size = (size_t)((uintptr_t)inputs_end - (uintptr_t)inputs_start);
-
-    DMOD_LOG_INFO("Inputs start address: 0x%X\n", (uintptr_t)inputs_start);
-    DMOD_LOG_INFO("Inputs size: %u bytes\n", (unsigned int)inputs_size);
+    dmenv_ctx_t dmenv_ctx = dmenv_create(NULL);
+    if(dmenv_ctx == NULL)
+    {
+        DMOD_LOG_ERROR("DMEnv initialization failed!\n");
+        while(1);
+    }
+    dmenv_set_as_default(dmenv_ctx);
 
     Dmod_Initialize();
 
@@ -62,11 +64,13 @@ int main(int argc, char** argv)
         while(1);
     }
 
-    int i = 0;
-    while(1)
-    {
-        DMOD_LOG_INFO("Waiting for better times... ID: %d\n", i++);
-        delay(1000000);
-    }
+    dmenv_set(dmenv_ctx, "DMOD_VERSION", DMOD_VERSION_STRING);
+    dmenv_set(dmenv_ctx, "DMBOOT_MCU_NAME", DMBOOT_MCU_NAME_STRING);
+    dmenv_set(dmenv_ctx, "DMBOOT_MCU_SERIES", DMBOOT_MCU_SERIES_STRING);
+    dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
+    dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
+    dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
+
+    while(1);
     return 0;
 }
