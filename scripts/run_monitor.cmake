@@ -32,10 +32,14 @@ message(STATUS "Ring buffer address: ${DMLOG_RING_BUFFER_ADDR}")
 message(STATUS "Ring buffer size: ${DMLOG_RING_BUFFER_SIZE}")
 
 # Run dmlog_monitor with the extracted address
-# Note: We don't capture OUTPUT/ERROR so the monitor output goes directly to the terminal
+# Use execute_process without OUTPUT/ERROR capture so output goes directly to terminal
 execute_process(
     COMMAND ${DMLOG_MONITOR_EXECUTABLE} --addr ${DMLOG_RING_BUFFER_ADDR}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    # Don't capture OUTPUT or ERROR - let them pass through to terminal
+    INPUT_FILE /dev/stdin
+    OUTPUT_FILE /dev/stdout 
+    ERROR_FILE /dev/stderr
 )
 
 # Note: We intentionally don't check the exit code because:
