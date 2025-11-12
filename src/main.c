@@ -71,6 +71,32 @@ int main(int argc, char** argv)
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
 
-    while(1);
+    while(1)
+    {
+        dmlog_puts(ctx, "$ ");
+        dmlog_input_request(ctx);
+        while(!dmlog_input_available(ctx))
+        {
+            delay(1000);
+        }
+        char input_buffer[128];
+        if(dmlog_input_gets(ctx, input_buffer, sizeof(input_buffer)))
+        {
+            if(strcmp(input_buffer, "help\n") == 0)
+            {
+                dmlog_puts(ctx, "Available commands:\n");
+                dmlog_puts(ctx, "  help - Show this help message\n");
+                dmlog_puts(ctx, "  version - Show DMOD version\n");
+            }
+            else if(strcmp(input_buffer, "version\n") == 0)
+            {
+                dmlog_puts(ctx, "DMOD Version: " DMOD_VERSION_STRING "\n");
+            }
+            else
+            {
+                Dmod_Printf("Unknown command: %s", input_buffer);
+            }
+        }
+    }
     return 0;
 }
