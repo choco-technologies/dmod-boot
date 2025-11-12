@@ -56,7 +56,11 @@ int main(int argc, char** argv)
     }
     dmenv_set_as_default(dmenv_ctx);
 
-    Dmod_Initialize();
+    if(!Dmod_Initialize())
+    {
+        DMOD_LOG_ERROR("DMOD initialization failed!\n");
+        while(1);
+    }
 
     if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
     {
