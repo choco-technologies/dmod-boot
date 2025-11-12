@@ -32,12 +32,12 @@ message(STATUS "Ring buffer address: ${DMLOG_RING_BUFFER_ADDR}")
 message(STATUS "Ring buffer size: ${DMLOG_RING_BUFFER_SIZE}")
 
 # Run dmlog_monitor with the extracted address
+# Note: We don't capture OUTPUT/ERROR so the monitor output goes directly to the terminal
 execute_process(
     COMMAND ${DMLOG_MONITOR_EXECUTABLE} --addr ${DMLOG_RING_BUFFER_ADDR}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    RESULT_VARIABLE RESULT
 )
 
-if(NOT RESULT EQUAL 0)
-    message(FATAL_ERROR "dmlog_monitor exited with code ${RESULT}")
-endif()
+# Note: We intentionally don't check the exit code because:
+# - dmlog_monitor returns non-zero when user presses Ctrl+C (expected)
+# - dmlog_monitor returns non-zero when OpenOCD is not running (user can see the error message)
