@@ -120,3 +120,54 @@ add_custom_target(debug
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Starting GDB and connecting to OpenOCD..."
 )
+
+# ======================================================================
+#               DMLOG Monitor Tool
+# ======================================================================
+
+# Custom target to build dmlog_monitor for host architecture
+set(DMLOG_HOST_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/dmlog/build_host)
+set(DMLOG_MONITOR_EXECUTABLE ${DMLOG_HOST_BUILD_DIR}/tools/monitor/dmlog_monitor)
+
+add_custom_command(
+    OUTPUT ${DMLOG_MONITOR_EXECUTABLE}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${DMLOG_HOST_BUILD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E chdir ${DMLOG_HOST_BUILD_DIR}
+        ${CMAKE_COMMAND} -DDMLOG_BUILD_TOOLS=ON ${CMAKE_CURRENT_SOURCE_DIR}/lib/dmlog
+    COMMAND ${CMAKE_COMMAND} --build ${DMLOG_HOST_BUILD_DIR}
+    COMMENT "Building dmlog_monitor for host architecture..."
+    VERBATIM
+)
+
+add_custom_target(build_dmlog_monitor
+    DEPENDS ${DMLOG_MONITOR_EXECUTABLE}
+)
+
+# Extract ring buffer configuration after building firmware
+add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/extract_ring_buffer_addr.py 
+            ${CMAKE_BINARY_DIR}/${MODULE_NAME}.map 
+            --output ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake
+            --format cmake
+    DEPENDS ${MODULE_NAME}.elf
+    COMMENT "Extracting dmlog ring buffer configuration from map file..."
+    VERBATIM
+)
+
+add_custom_target(extract_ring_buffer_config
+    DEPENDS ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake
+)
+
+# Custom target for monitoring logs via OpenOCD
+add_custom_target(monitor
+    COMMAND ${CMAKE_COMMAND} -E echo "Starting dmlog monitor..."
+    COMMAND ${CMAKE_COMMAND} -E echo "Ring buffer address will be read from ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake"
+    COMMAND ${CMAKE_COMMAND} 
+        -DPROJECT_BINARY_DIR=${CMAKE_BINARY_DIR}
+        -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monitor.cmake
+    DEPENDS build_dmlog_monitor extract_ring_buffer_config
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Monitoring logs from ${TARGET} via OpenOCD..."
+)
