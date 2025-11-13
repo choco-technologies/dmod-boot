@@ -14,10 +14,13 @@ Build DMOD modules and create a test DMP package:
 
 ```bash
 mkdir -p tests/data
-# Build dmod modules
+# Build dmod - first in SYSTEM mode to build tools (including todmp)
 cd lib/dmod
-mkdir -p build_modules
-cd build_modules
+mkdir -p build
+cd build
+cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMOD_TOOLS_NAME=arch/x86_64
+cmake --build .
+# Now reconfigure to MODULE mode to build DMF files (reusing same build directory)
 cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
 cmake --build .
 # Create DMP package

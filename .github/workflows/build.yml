@@ -58,13 +58,16 @@ jobs:
     - name: Build dmod examples and create test DMP package
       run: |
         mkdir -p tests/data
-        # Build dmod in module mode to generate DMF files
+        # Build dmod - first in SYSTEM mode to build tools (including todmp)
         cd lib/dmod
-        mkdir -p build_modules
-        cd build_modules
+        mkdir -p build
+        cd build
+        cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMOD_TOOLS_NAME=arch/x86_64
+        cmake --build .
+        # Now reconfigure to MODULE mode to build DMF files (reusing same build directory)
         cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
         cmake --build .
-        # Create DMP package from DMF files
+        # Create DMP package from DMF files using the todmp tool built earlier
         ./bin/tools/todmp test_startup ./dmf ./test_startup.dmp
         # Copy to tests/data directory
         cp test_startup.dmp ../../../tests/data/
@@ -73,7 +76,7 @@ jobs:
         echo "Test User Data Content" > tests/data/test_user_data.dat
         ls -lh tests/data/
         # Verify the DMP file was created correctly
-        lib/dmod/build_modules/bin/tools/todmp -l tests/data/test_startup.dmp
+        lib/dmod/build/bin/tools/todmp -l tests/data/test_startup.dmp
 
     - name: Configure CMake for ${{ matrix.target }}
       run: |

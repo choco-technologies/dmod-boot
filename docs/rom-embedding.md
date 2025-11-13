@@ -63,18 +63,30 @@ cmake --build build
 
 To create a `.dmp` package file, you need to build DMOD modules and package them using the `todmp` tool:
 
-### 1. Build DMOD Modules
+### 1. Build DMOD Tools (SYSTEM mode)
+First, build DMOD in SYSTEM mode to compile the `todmp` tool:
+
 ```bash
 cd lib/dmod
-mkdir -p build_modules
-cd build_modules
+mkdir -p build
+cd build
+cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMOD_TOOLS_NAME=arch/x86_64
+cmake --build .
+```
+
+### 2. Build DMOD Modules (MODULE mode)
+Reconfigure the same build directory to MODULE mode to generate `.dmf` files:
+
+```bash
 cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
 cmake --build .
 ```
 
 This creates `.dmf` (DMOD Module Format) files in the `dmf/` directory.
 
-### 2. Create DMP Package
+### 3. Create DMP Package
+Use the `todmp` tool (built in step 1) to package the DMF files:
+
 ```bash
 # Create package with a specific main module
 ./bin/tools/todmp package_name ./dmf ./output.dmp main_module_name
@@ -83,7 +95,7 @@ This creates `.dmf` (DMOD Module Format) files in the `dmf/` directory.
 ./bin/tools/todmp package_name ./dmf ./output.dmp
 ```
 
-### 3. List Package Contents
+### 4. List Package Contents
 ```bash
 ./bin/tools/todmp -l ./output.dmp
 ```
