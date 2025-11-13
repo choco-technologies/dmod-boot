@@ -49,28 +49,16 @@ function(embed_binary_file)
 
     # Get absolute path
     get_filename_component(EMBED_INPUT_FILE_ABS "${EMBED_INPUT_FILE}" ABSOLUTE)
-
-    # Create a linker script that embeds the binary
-    set(EMBED_LINKER_SCRIPT "${CMAKE_BINARY_DIR}/${EMBED_SYMBOL_PREFIX}_embed.ld")
     
-    file(WRITE "${EMBED_LINKER_SCRIPT}"
-"SECTIONS
-{
-    ${EMBED_SECTION_NAME} :
-    {
-        ${EMBED_SYMBOL_PREFIX}_start = .;
-        PROVIDE(${EMBED_SYMBOL_PREFIX}_start = .);
-        KEEP(*(.embedded_data))
-        ${EMBED_SYMBOL_PREFIX}_end = .;
-        PROVIDE(${EMBED_SYMBOL_PREFIX}_end = .);
-        ${EMBED_SYMBOL_PREFIX}_size = ${EMBED_SYMBOL_PREFIX}_end - ${EMBED_SYMBOL_PREFIX}_start;
-        PROVIDE(${EMBED_SYMBOL_PREFIX}_size = ${EMBED_SYMBOL_PREFIX}_end - ${EMBED_SYMBOL_PREFIX}_start);
-    }
-}
-")
+    # Get the filename for default symbol names created by objcopy
+    # objcopy creates symbols like _binary_<sanitized_filename>_start/end/size
+    get_filename_component(EMBED_FILENAME "${EMBED_INPUT_FILE_ABS}" NAME)
+    string(REGEX REPLACE "[^a-zA-Z0-9]" "_" EMBED_FILENAME_SANITIZED "${EMBED_FILENAME}")
 
     # Create object file using objcopy
     # This converts the binary file into an ELF object with the data in a section
+    # Note: objcopy will create symbols _binary_<filename>_start, _binary_<filename>_end, _binary_<filename>_size
+    # but we'll rely on the linker script to create our custom symbols based on the section
     add_custom_command(
         OUTPUT "${EMBED_OUTPUT_OBJECT}"
         COMMAND ${CMAKE_OBJCOPY}
