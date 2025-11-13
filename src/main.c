@@ -80,6 +80,112 @@ static void load_embedded_startup_dmp(void)
     }
 }
 
+/**
+ * @brief Read module name from input command
+ * 
+ * @param input Input command string
+ * @param module_name Buffer to store the module name
+ * @param module_name_size Size of the module name buffer
+ * 
+ * @return true if module name was read successfully, false otherwise
+ */
+static bool read_module_name_from_input(const char* input, char* module_name, size_t module_name_size)
+{
+    while(*input != ' ') input++; // Skip leading spaces
+    while(*input == ' ') input++; // Skip leading spaces
+
+    const char* name_start = input;
+    size_t name_len = strcspn(name_start, "\n");
+    if(name_len == 0 || name_len >= module_name_size)
+    {
+        return false;
+    }
+
+    strncpy(module_name, name_start, name_len);
+    module_name[name_len] = '\0';
+    return true;
+}
+
+/**
+ * @brief Prepare argv array from input command
+ * 
+ * @param input Input command string
+ * @param argv_out Pointer to store the allocated argv array
+ * @param argc_out Pointer to store the argument count
+ * @param module_name Buffer to store the module name
+ * @param module_name_len Size of the module name buffer
+ * 
+ * @return true if argv was prepared successfully, false otherwise
+ */
+static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_out, char* module_name, size_t module_name_len)
+{
+    // skip command
+    while(*input != ' ') input++; // Skip leading spaces
+    while(*input == ' ') input++; // Skip leading spaces
+
+    // Read module name
+    const char* name_start = input;
+    size_t name_len = strcspn(name_start, " \n");
+    if(name_len == 0 || name_len >= module_name_len)
+    {
+        return false;
+    }
+    strncpy(module_name, name_start, name_len);
+    module_name[name_len] = '\0';
+
+    // Count arguments
+    int argc = 0;
+    const char* ptr = input;
+    while(*ptr != '\0' && *ptr != '\n')
+    {
+        while(*ptr == ' ') ptr++;
+        if(*ptr != '\0' && *ptr != '\n')
+        {
+            argc++;
+            while(*ptr != ' ' && *ptr != '\0' && *ptr != '\n') ptr++;
+        }
+    }
+
+    // Allocate argv array
+    char** argv = (char**)dmheap_malloc(sizeof(char*) * argc, module_name);
+    if(argv == NULL)
+    {
+        return false;
+    }
+
+    // Fill argv array
+    ptr = input;
+    int index = 0;
+    while(*ptr != '\0' && *ptr != '\n' && index < argc)
+    {
+        while(*ptr == ' ') ptr++;
+        if(*ptr != '\0' && *ptr != '\n')
+        {
+            const char* arg_start = ptr;
+            while(*ptr != ' ' && *ptr != '\0' && *ptr != '\n') ptr++;
+            size_t arg_len = (size_t)(ptr - arg_start);
+            argv[index] = (char*)dmheap_malloc(arg_len + 1, module_name);
+            if(argv[index] == NULL)
+            {
+                // Free previously allocated args
+                for(int j = 0; j < index; j++)
+                {
+                    dmheap_free(argv[j], false);
+                }
+                dmheap_free(argv, false);
+                return false;
+            }
+            strncpy(argv[index], arg_start, arg_len);
+            argv[index][arg_len] = '\0';
+            index++;
+        }
+    }
+
+    *argv_out = argv;
+    *argc_out = argc;
+    return true;
+}
+
 static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
 {
     void* user_data_start = &__user_data_start;
@@ -157,6 +263,8 @@ int main(int argc, char** argv)
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
 
+    Dmod_Printf("Entering interactive shell. Type 'help' for commands.\n");
+
     while(1)
     {
         dmlog_puts(ctx, "$ ");
@@ -173,10 +281,93 @@ int main(int argc, char** argv)
                 dmlog_puts(ctx, "Available commands:\n");
                 dmlog_puts(ctx, "  help - Show this help message\n");
                 dmlog_puts(ctx, "  version - Show DMOD version\n");
+                dmlog_puts(ctx, "  load <module_name> - Load module by name\n");
+                dmlog_puts(ctx, "  unload <module_name> - Unload module by name\n");
+                dmlog_puts(ctx, "  run <module_name> args ... - Run application module by name\n");
+                dmlog_puts(ctx, "  list - List loaded modules\n");
+                dmlog_puts(ctx, "  exit - Exit the shell\n");
             }
             else if(strcmp(input_buffer, "version\n") == 0)
             {
                 dmlog_puts(ctx, "DMOD Version: " DMOD_VERSION_STRING "\n");
+            }
+            else if(strncmp(input_buffer, "load", 4) == 0)
+            {
+                char module_name[64];
+                if(!read_module_name_from_input(input_buffer, module_name, sizeof(module_name)))
+                {
+                    dmlog_puts(ctx, "Usage: load <module_name>\n");
+                    continue;
+                }
+                
+                if(Dmod_LoadModuleByName(module_name))
+                {
+                    dmlog_puts(ctx, "Module loaded successfully.\n");
+                }
+                else
+                {
+                    dmlog_puts(ctx, "Failed to load module.\n");
+                }
+            }
+            else if(strncmp(input_buffer, "unload", 6) == 0)
+            {
+                char module_name[64];
+                if(!read_module_name_from_input(input_buffer, module_name, sizeof(module_name)))
+                {
+                    dmlog_puts(ctx, "Usage: unload <module_name>\n");
+                    continue;
+                }
+
+                if(Dmod_UnloadModule(module_name, false))
+                {
+                    dmlog_puts(ctx, "Module unloaded successfully.\n");
+                }
+                else
+                {
+                    dmlog_puts(ctx, "Failed to unload module.\n");
+                }
+            }
+            else if(strncmp(input_buffer, "run", 3) == 0)
+            {
+                if(strlen(input_buffer) <= 4 || input_buffer[3] != ' ')
+                {
+                    dmlog_puts(ctx, "Usage: run <module_name> args ...\n");
+                    continue;
+                }
+                char module_name[64];
+                char** run_argv = NULL;
+                int run_argc = 0;
+                if(!prepare_argv_for_run(input_buffer, &run_argv, &run_argc, module_name, sizeof(module_name)))
+                {
+                    dmlog_puts(ctx, "Failed to prepare arguments for run command.\n");
+                    continue;
+                }
+
+                if(Dmod_RunModule(module_name, run_argc, run_argv) == 0)
+                {
+                    dmlog_puts(ctx, "Module ran successfully.\n");
+                }
+                else
+                {
+                    dmlog_puts(ctx, "Failed to run module.\n");
+                }
+
+                // Free allocated argv
+                for(int i = 0; i < run_argc; i++)
+                {
+                    dmheap_free(run_argv[i], false);
+                }
+                dmheap_free(run_argv, false);
+
+            }
+            else if(strncmp(input_buffer, "list", 4) == 0)
+            {
+                DMOD_LOG_WARN("Listing loaded modules is not implemented yet.\n");
+            }
+            else if(strcmp(input_buffer, "exit\n") == 0)
+            {
+                dmlog_puts(ctx, "Exiting shell.\n");
+                break;
             }
             else
             {
