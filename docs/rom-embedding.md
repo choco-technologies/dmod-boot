@@ -1,67 +1,37 @@
-# ROM File Embedding Implementation Summary
+# ROM File Embedding Feature
 
 ## Overview
-This implementation adds the ability to embed binary files into ROM during build time, with two optional files:
-1. `startup.dmp` - Startup package automatically loaded at boot
-2. `user_data` - User data file with address/size exposed via environment variables
+DMOD Boot supports embedding binary files into ROM at build time. This allows you to package your application modules and custom data directly into the bootloader image.
 
-## Implementation Details
+### Supported Files
 
-### 1. Helper Script (`scripts/embed_binary.cmake`)
-- **Purpose**: Provides `embed_binary_file()` function to convert binary files into ELF object files
-- **How it works**: 
-  - Uses `objcopy` to convert binary data into ARM ELF object files
-  - Places data in custom sections (e.g., `.embedded.startup_dmp`)
-  - Relies on linker script to create proper symbols
+1. **`startup.dmp`** (optional) - A DMOD package file containing startup modules
+   - Automatically loaded and executed during boot
+   - Can contain multiple DMF (DMOD Module Format) modules
+   - Useful for preloading essential system modules or application code
 
-### 2. Build Configuration (`CMakeLists.txt`)
-- **New CMake variables**:
-  - `STARTUP_DMP_FILE` (optional) - Path to startup.dmp file
-  - `USER_DATA_FILE` (optional) - Path to user_data file
-- **Build process**:
-  - Checks if files exist
-  - Calls `embed_binary_file()` to create object files
-  - Links object files into final executable
+2. **`user_data`** (optional) - Custom binary data file
+   - Embedded in ROM and accessible via environment variables
+   - Address available as `USER_DATA_ADDR` environment variable
+   - Size available as `USER_DATA_SIZE` environment variable
+   - Can contain configuration, assets, or any custom data
 
-### 3. Linker Script (`linker/common.ld`)
-- **New sections added**:
-  - `.embedded.startup_dmp` - Contains startup.dmp data
-  - `.embedded.user_data` - Contains user_data data
-- **Symbols created** (for each section):
-  - `__startup_dmp_start`, `__startup_dmp_end`, `__startup_dmp_size`
-  - `__user_data_start`, `__user_data_end`, `__user_data_size`
+## How It Works
 
-### 4. Runtime Loading (`src/main.c`)
-- **startup.dmp handling**:
-  - Checks if `__startup_dmp_size > 0`
-  - If yes, calls `Dmod_AddPackageBuffer()` to load the package
-  - Logs success/failure
-- **user_data handling**:
-  - Checks if `__user_data_size > 0`
-  - If yes, sets environment variables:
-    - `USER_DATA_ADDR` - Address of user_data in ROM
-    - `USER_DATA_SIZE` - Size of user_data in bytes
-  - Uses `dmenv_seti()` to set as hex values
+When DMOD Boot starts:
+1. It checks if a `startup.dmp` package is embedded in ROM
+2. If present, the package is automatically loaded using `Dmod_Load()` and its main module (if specified) is executed
+3. User data (if embedded) has its location made available through environment variables for your modules to access
 
-## Usage Examples
+## Building with Embedded Files
 
-### Building without embedded files (default):
+### Basic Build (no embedded files)
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=STM32F746xG -S . -B build
 cmake --build build
 ```
 
-### Building with both files embedded:
-```bash
-cmake -DCMAKE_BUILD_TYPE=Debug \
-      -DTARGET=STM32F746xG \
-      -DSTARTUP_DMP_FILE=path/to/startup.dmp \
-      -DUSER_DATA_FILE=path/to/user_data.dat \
-      -S . -B build
-cmake --build build
-```
-
-### Building with only startup.dmp:
+### Build with Startup Package
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
@@ -70,53 +40,87 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
 cmake --build build
 ```
 
-## Testing
-
-### Test Infrastructure
-- Test data files are **generated**, not committed (see `tests/.gitignore`)
-- CI workflow creates test files before building
-- Tests both configurations: with and without embedded files
-
-### CI Workflow Changes
-- Creates test files: `test_startup.dmp` and `test_user_data.dat`
-- Builds once without embedded files (baseline)
-- Rebuilds with embedded files
-- Verifies sections and symbols in map file
-
-### Manual Testing
+### Build with User Data
 ```bash
-# Create test files
-mkdir -p tests/data
-echo "DMOD Test Startup Package" > tests/data/test_startup.dmp
-echo "Test User Data Content" > tests/data/test_user_data.dat
-
-# Build with test files
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
-      -DSTARTUP_DMP_FILE=tests/data/test_startup.dmp \
-      -DUSER_DATA_FILE=tests/data/test_user_data.dat \
+      -DUSER_DATA_FILE=path/to/config.bin \
       -S . -B build
 cmake --build build
+```
 
-# Verify in map file
+### Build with Both Files
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug \
+      -DTARGET=STM32F746xG \
+      -DSTARTUP_DMP_FILE=path/to/startup.dmp \
+      -DUSER_DATA_FILE=path/to/config.bin \
+      -S . -B build
+cmake --build build
+```
+
+## Creating DMP Packages
+
+To create a `.dmp` package file, you need to build DMOD modules and package them using the `todmp` tool:
+
+### 1. Build DMOD Modules
+```bash
+cd lib/dmod
+mkdir -p build_modules
+cd build_modules
+cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
+cmake --build .
+```
+
+This creates `.dmf` (DMOD Module Format) files in the `dmf/` directory.
+
+### 2. Create DMP Package
+```bash
+# Create package with a specific main module
+./bin/tools/todmp package_name ./dmf ./output.dmp main_module_name
+
+# Or create package without a main module
+./bin/tools/todmp package_name ./dmf ./output.dmp
+```
+
+### 3. List Package Contents
+```bash
+./bin/tools/todmp -l ./output.dmp
+```
+
+## Accessing Embedded User Data
+
+Your modules can access the embedded user data through environment variables:
+
+```c
+#include "dmenv.h"
+
+// Get the default environment context
+dmenv_ctx_t env = dmenv_get_default();
+
+// Read user data address
+uint32_t user_data_addr = 0;
+if (dmenv_geti(env, "USER_DATA_ADDR", &user_data_addr)) {
+    // Read user data size
+    uint32_t user_data_size = 0;
+    if (dmenv_geti(env, "USER_DATA_SIZE", &user_data_size)) {
+        // Access the user data
+        void* data_ptr = (void*)user_data_addr;
+        // Use data_ptr and user_data_size...
+    }
+}
+```
+
+## Verifying Embedded Files
+
+After building, you can verify that files were properly embedded by checking the map file:
+
+```bash
+# Check for startup.dmp symbols
 grep "__startup_dmp" build/dmboot.map
+
+# Check for user_data symbols
 grep "__user_data" build/dmboot.map
 ```
 
-## Design Decisions
-
-1. **Helper script in separate file**: Keeps main CMakeLists.txt clean and allows code reuse
-2. **Common logic**: Both file types use the same `embed_binary_file()` function
-3. **Optional parameters**: Build works with or without files, no breaking changes
-4. **Linker-based symbols**: Relies on linker script for symbol creation, not objcopy's default symbols
-5. **Test files not committed**: Prevents binary bloat in repository, files created on-demand
-
-## Files Changed
-- `CMakeLists.txt` - Added build parameters and embed logic
-- `scripts/embed_binary.cmake` - New helper script
-- `linker/common.ld` - Added embedded data sections
-- `src/main.c` - Added runtime loading logic
-- `.github/workflows/build.yml` - Added test scenarios
-- `README.md` - Added usage documentation
-- `tests/README.md` - Added test documentation
-- `tests/.gitignore` - Prevents test data files from being committed
+Both should show the start, end, and size symbols with their addresses.

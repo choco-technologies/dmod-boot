@@ -4,32 +4,44 @@ This directory contains test files for DMOD Boot features.
 
 ## Test Data Files
 
-Test data files are not committed to the repository. They need to be created before testing:
+Test data files are not committed to the repository. They need to be created before testing.
+
+## Creating Test Data Files
+
+### Create Test DMP Package
+
+Build DMOD modules and create a test DMP package:
 
 ```bash
 mkdir -p tests/data
-# Create a valid DMP package file
-python3 scripts/create_test_dmp.py tests/data/test_startup.dmp startup_test
-# Create test user data file
+# Build dmod modules
+cd lib/dmod
+mkdir -p build_modules
+cd build_modules
+cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
+cmake --build .
+# Create DMP package
+./bin/tools/todmp test_startup ./dmf ./test_startup.dmp
+cp test_startup.dmp ../../../tests/data/
+cd ../../..
+```
+
+### Create Test User Data
+
+```bash
 echo "Test User Data Content" > tests/data/test_user_data.dat
 ```
 
-These files are used for testing ROM embedding:
+## Test Files
 
-- `test_startup.dmp` - Sample startup package file for testing Dmod_AddPackageBuffer
+- `test_startup.dmp` - DMP package with sample modules for testing automatic loading
 - `test_user_data.dat` - Sample user data file for testing environment variable setup
 
 ## Building with Embedded Files
 
-To build DMOD Boot with embedded test files:
+Build DMOD Boot with test files embedded:
 
 ```bash
-# First create test data files
-mkdir -p tests/data
-python3 scripts/create_test_dmp.py tests/data/test_startup.dmp startup_test
-echo "Test User Data Content" > tests/data/test_user_data.dat
-
-# Then build with embedded files
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
       -DSTARTUP_DMP_FILE=tests/data/test_startup.dmp \

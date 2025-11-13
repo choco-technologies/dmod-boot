@@ -30,6 +30,49 @@ void HardFault_Handler(void)
     while(1);
 }
 
+static void load_embedded_startup_dmp(void)
+{
+    size_t startup_dmp_size = (size_t)(uintptr_t)&__startup_dmp_size;
+    if(startup_dmp_size > 0)
+    {
+        void* startup_dmp_start = &__startup_dmp_start;
+        DMOD_LOG_INFO("Loading startup.dmp from ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)startup_dmp_start, (unsigned int)startup_dmp_size);
+        
+        Dmod_Context_t* startup_ctx = Dmod_Load(startup_dmp_start, startup_dmp_size);
+        if(startup_ctx != NULL)
+        {
+            DMOD_LOG_INFO("Startup package loaded and started successfully\n");
+        }
+        else
+        {
+            DMOD_LOG_ERROR("Failed to load startup.dmp package\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No startup.dmp embedded in ROM\n");
+    }
+}
+
+static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
+{
+    size_t user_data_size = (size_t)(uintptr_t)&__user_data_size;
+    if(user_data_size > 0)
+    {
+        void* user_data_start = &__user_data_start;
+        DMOD_LOG_INFO("User data found in ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)user_data_start, (unsigned int)user_data_size);
+        
+        dmenv_seti(dmenv_ctx, "USER_DATA_ADDR", (uint32_t)(uintptr_t)user_data_start);
+        dmenv_seti(dmenv_ctx, "USER_DATA_SIZE", (uint32_t)user_data_size);
+    }
+    else
+    {
+        DMOD_LOG_INFO("No user_data embedded in ROM\n");
+    }
+}
+
 int main(int argc, char** argv) 
 {
     void* logs_start = &__logs_start__;
@@ -82,43 +125,10 @@ int main(int argc, char** argv)
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
 
     // Load startup.dmp if embedded in ROM
-    size_t startup_dmp_size = (size_t)(uintptr_t)&__startup_dmp_size;
-    if(startup_dmp_size > 0)
-    {
-        void* startup_dmp_start = &__startup_dmp_start;
-        DMOD_LOG_INFO("Loading startup.dmp from ROM: addr=0x%X, size=%u bytes\n", 
-                      (uintptr_t)startup_dmp_start, (unsigned int)startup_dmp_size);
-        
-        Dmod_Context_t* startup_ctx = Dmod_Load(startup_dmp_start, startup_dmp_size);
-        if(startup_ctx != NULL)
-        {
-            DMOD_LOG_INFO("Startup package loaded and started successfully\n");
-        }
-        else
-        {
-            DMOD_LOG_ERROR("Failed to load startup.dmp package\n");
-        }
-    }
-    else
-    {
-        DMOD_LOG_INFO("No startup.dmp embedded in ROM\n");
-    }
+    load_embedded_startup_dmp();
 
     // Set user_data environment variables if embedded in ROM
-    size_t user_data_size = (size_t)(uintptr_t)&__user_data_size;
-    if(user_data_size > 0)
-    {
-        void* user_data_start = &__user_data_start;
-        DMOD_LOG_INFO("User data found in ROM: addr=0x%X, size=%u bytes\n", 
-                      (uintptr_t)user_data_start, (unsigned int)user_data_size);
-        
-        dmenv_seti(dmenv_ctx, "USER_DATA_ADDR", (uint32_t)(uintptr_t)user_data_start);
-        dmenv_seti(dmenv_ctx, "USER_DATA_SIZE", (uint32_t)user_data_size);
-    }
-    else
-    {
-        DMOD_LOG_INFO("No user_data embedded in ROM\n");
-    }
+    setup_embedded_user_data(dmenv_ctx);
 
     while(1)
     {
