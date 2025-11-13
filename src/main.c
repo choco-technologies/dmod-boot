@@ -11,6 +11,12 @@ extern void* __dmod_inputs_start;
 extern void* __dmod_inputs_end;
 extern void* __heap_start__;
 extern void* __heap_end__;
+extern void* __startup_dmp_start;
+extern void* __startup_dmp_end;
+extern void* __startup_dmp_size;
+extern void* __user_data_start;
+extern void* __user_data_end;
+extern void* __user_data_size;
 
 void delay(int cycles)
 {
@@ -74,6 +80,46 @@ int main(int argc, char** argv)
     dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
+
+    // Load startup.dmp if embedded in ROM
+    size_t startup_dmp_size = (size_t)(uintptr_t)&__startup_dmp_size;
+    if(startup_dmp_size > 0)
+    {
+        void* startup_dmp_start = &__startup_dmp_start;
+        DMOD_LOG_INFO("Loading startup.dmp from ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)startup_dmp_start, (unsigned int)startup_dmp_size);
+        
+        uint32_t package_index = 0;
+        if(Dmod_AddPackageBuffer(startup_dmp_start, startup_dmp_size, &package_index))
+        {
+            DMOD_LOG_INFO("Startup package loaded successfully (index=%u)\n", package_index);
+        }
+        else
+        {
+            DMOD_LOG_ERROR("Failed to load startup.dmp package\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No startup.dmp embedded in ROM\n");
+    }
+
+    // Set user_data environment variables if embedded in ROM
+    size_t user_data_size = (size_t)(uintptr_t)&__user_data_size;
+    if(user_data_size > 0)
+    {
+        void* user_data_start = &__user_data_start;
+        DMOD_LOG_INFO("User data found in ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)user_data_start, (unsigned int)user_data_size);
+        
+        dmenv_seti(dmenv_ctx, "USER_DATA_ADDR", (uint32_t)(uintptr_t)user_data_start);
+        dmenv_seti(dmenv_ctx, "USER_DATA_SIZE", (uint32_t)user_data_size);
+        DMOD_LOG_INFO("USER_DATA_ADDR and USER_DATA_SIZE environment variables set\n");
+    }
+    else
+    {
+        DMOD_LOG_INFO("No user_data embedded in ROM\n");
+    }
 
     while(1)
     {
