@@ -55,21 +55,62 @@ jobs:
         arm-none-eabi-size --version
         cmake --version
     
+    - name: Create test data files
+      run: |
+        mkdir -p tests/data
+        echo "DMOD Test Startup Package" > tests/data/test_startup.dmp
+        echo "Test User Data Content" > tests/data/test_user_data.bin
+        ls -lh tests/data/
+
     - name: Configure CMake for ${{ matrix.target }}
       run: |
         cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=${{ matrix.target }} -S . -B build
     
-    - name: Build ${{ matrix.target }} with CMake
+    - name: Build ${{ matrix.target }} with CMake (without embedded files)
       run: |
         cmake --build build --config Debug
     
-    - name: Check output files
+    - name: Check output files (without embedded files)
       run: |
         ls -lh build/
         file build/dmboot.elf
         if [ -f build/dmboot.map ]; then file build/dmboot.map; fi
     
-    - name: Display memory usage
+    - name: Display memory usage (without embedded files)
+      run: |
+        arm-none-eabi-size build/dmboot.elf
+
+    - name: Reconfigure CMake with embedded files
+      run: |
+        rm -rf build
+        cmake -DCMAKE_BUILD_TYPE=Debug \
+              -DTARGET=${{ matrix.target }} \
+              -DSTARTUP_DMP_FILE=tests/data/test_startup.dmp \
+              -DUSER_DATA_FILE=tests/data/test_user_data.bin \
+              -S . -B build
+    
+    - name: Build ${{ matrix.target }} with CMake (with embedded files)
+      run: |
+        cmake --build build --config Debug
+    
+    - name: Verify embedded files in map
+      run: |
+        echo "Checking for embedded startup.dmp section..."
+        grep -A 5 "\.embedded\.startup_dmp" build/dmboot.map || echo "startup_dmp section not found"
+        echo "Checking for embedded user_data section..."
+        grep -A 5 "\.embedded\.user_data" build/dmboot.map || echo "user_data section not found"
+        echo "Checking for startup_dmp symbols..."
+        grep "__startup_dmp" build/dmboot.map || echo "startup_dmp symbols not found"
+        echo "Checking for user_data symbols..."
+        grep "__user_data" build/dmboot.map || echo "user_data symbols not found"
+    
+    - name: Check output files (with embedded files)
+      run: |
+        ls -lh build/
+        file build/dmboot.elf
+        if [ -f build/dmboot.map ]; then file build/dmboot.map; fi
+    
+    - name: Display memory usage (with embedded files)
       run: |
         arm-none-eabi-size build/dmboot.elf
     

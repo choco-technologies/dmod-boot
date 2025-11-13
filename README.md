@@ -11,6 +11,25 @@ cmake ..
 cmake --build .
 ```
 
+### Building with Embedded Files
+
+You can optionally embed binary files in ROM during the build:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Debug \
+      -DTARGET=STM32F746xG \
+      -DSTARTUP_DMP_FILE=path/to/startup.dmp \
+      -DUSER_DATA_FILE=path/to/user_data.bin \
+      -S . -B build
+cmake --build build
+```
+
+**Build Parameters:**
+- `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
+- `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
+
+Both parameters are optional. If not specified or if the files don't exist, the build will proceed without embedding them.
+
 ## CMake Targets
 
 ### `install-firmware`
