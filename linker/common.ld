@@ -93,13 +93,6 @@ SECTIONS
    .data :
    {
       . = ALIGN(4);
-      __logs_start__ = .;
-      . = __logs_start__ + __logs_size__;
-      PROVIDE(__logs_start__ = __logs_start__);
-      __logs_end__ = .;
-      PROVIDE(__logs_end__ = __logs_end__);
-
-      . = ALIGN(4);
       __data_init_start__ = LOADADDR (.data);
       PROVIDE(__data_init_start__ = __data_init_start__);
       __data_start__ = .;
@@ -114,6 +107,18 @@ SECTIONS
    } > ram AT > rom
 
    INCLUDE dmod-system.ld
+
+   . = ALIGN(4);
+
+   .logs (NOLOAD) :
+   {
+      . = ALIGN(4);
+      __logs_start__ = .;
+      PROVIDE(__logs_start__ = __logs_start__);
+      . = __logs_start__ + __logs_size__;
+      __logs_end__ = .;
+      PROVIDE(__logs_end__ = __logs_end__);
+   } > ram
 
    . = ALIGN(4);
 
