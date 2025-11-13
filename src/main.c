@@ -18,6 +18,8 @@ extern void* __user_data_start;
 extern void* __user_data_end;
 extern void* __user_data_size;
 
+int my_global_var = 42;
+
 void delay(int cycles)
 {
     for(volatile int i = 0; i < cycles; i++);
@@ -25,24 +27,49 @@ void delay(int cycles)
 
 void HardFault_Handler(void)
 {
-    dmlog_ctx_t ctx = dmlog_get_default();
-    dmlog_puts(ctx, "HardFault detected!\n");
+    DMOD_LOG_ERROR("HardFault_Handler invoked!\n");
     while(1);
 }
 
 static void load_embedded_startup_dmp(void)
 {
-    size_t startup_dmp_size = (size_t)(uintptr_t)&__startup_dmp_size;
+    void* startup_dmp_start = &__startup_dmp_start;
+    void* startup_dmp_end   = &__startup_dmp_end;
+    size_t startup_dmp_size = (size_t)((uintptr_t)startup_dmp_end - (uintptr_t)startup_dmp_start);
     if(startup_dmp_size > 0)
     {
-        void* startup_dmp_start = &__startup_dmp_start;
         DMOD_LOG_INFO("Loading startup.dmp from ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)startup_dmp_start, (unsigned int)startup_dmp_size);
         
         Dmod_Context_t* startup_ctx = Dmod_Load(startup_dmp_start, startup_dmp_size);
         if(startup_ctx != NULL)
         {
-            DMOD_LOG_INFO("Startup package loaded and started successfully\n");
+            DMOD_LOG_INFO("Startup package loaded successfully\n");
+
+            // Check module type and handle accordingly
+            Dmod_ModuleType_t moduleType = Dmod_GetModuleType( startup_ctx );
+            if( moduleType == Dmod_ModuleType_Library )
+            {
+                if( !Dmod_Enable( startup_ctx, false, NULL ) )
+                {
+                    DMOD_LOG_ERROR("Failed to start application module\n");
+                }
+            }
+            else if( moduleType == Dmod_ModuleType_Application )
+            {
+                DMOD_LOG_INFO("Startup module is an application module\n");
+                char argv0[] = "startup.dmp";
+                char* argv[] = { argv0 };
+                int argc = 1;
+                if( Dmod_Run(startup_ctx, argc, argv) != 0 )
+                {
+                    DMOD_LOG_ERROR("Failed to run application module\n");
+                }
+            }
+            else
+            {
+                DMOD_LOG_ERROR("Startup module has unknown module type: %d\n", moduleType);
+            }
         }
         else
         {
@@ -111,6 +138,8 @@ int main(int argc, char** argv)
         while(1);
     }
 
+    Dmod_Printf("Global variable my_global_var = %d\n", my_global_var);
+
     if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
     {
         DMOD_LOG_ERROR("VFS initialization failed!\n");
@@ -123,39 +152,12 @@ int main(int argc, char** argv)
     dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
+    
+    // Set user_data environment variables if embedded in ROM
+    setup_embedded_user_data(dmenv_ctx);
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
 
-    // Set user_data environment variables if embedded in ROM
-    setup_embedded_user_data(dmenv_ctx);
-
-    while(1)
-    {
-        dmlog_puts(ctx, "$ ");
-        dmlog_input_request(ctx);
-        while(!dmlog_input_available(ctx))
-        {
-            delay(1000);
-        }
-        char input_buffer[128];
-        if(dmlog_input_gets(ctx, input_buffer, sizeof(input_buffer)))
-        {
-            if(strcmp(input_buffer, "help\n") == 0)
-            {
-                dmlog_puts(ctx, "Available commands:\n");
-                dmlog_puts(ctx, "  help - Show this help message\n");
-                dmlog_puts(ctx, "  version - Show DMOD version\n");
-            }
-            else if(strcmp(input_buffer, "version\n") == 0)
-            {
-                dmlog_puts(ctx, "DMOD Version: " DMOD_VERSION_STRING "\n");
-            }
-            else
-            {
-                Dmod_Printf("Unknown command: %s", input_buffer);
-            }
-        }
-    }
     return 0;
 }
