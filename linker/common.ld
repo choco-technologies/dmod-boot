@@ -77,6 +77,30 @@ SECTIONS
       PROVIDE(__text_end__ = __text_end__);
    } > rom AT > rom
 
+   . = ALIGN(16);
+   .embedded.startup_dmp :
+   {
+       __startup_dmp_start = .;
+       PROVIDE(__startup_dmp_start = .);
+       KEEP(*(.embedded.startup_dmp))
+       __startup_dmp_end = .;
+       PROVIDE(__startup_dmp_end = .);
+       __startup_dmp_size = __startup_dmp_end - __startup_dmp_start;
+       PROVIDE(__startup_dmp_size = __startup_dmp_end - __startup_dmp_start);
+   } > rom AT > rom
+
+   . = ALIGN(16);
+   .embedded.user_data :
+   {
+       __user_data_start = .;
+       PROVIDE(__user_data_start = .);
+       KEEP(*(.embedded.user_data))
+       __user_data_end = .;
+       PROVIDE(__user_data_end = .);
+       __user_data_size = __user_data_end - __user_data_start;
+       PROVIDE(__user_data_size = __user_data_end - __user_data_start);
+   } > rom AT > rom
+
    . = ALIGN(4);
    __exidx_start__ = .;
    PROVIDE(__exidx_start__ = __exidx_start__);
@@ -93,13 +117,6 @@ SECTIONS
    .data :
    {
       . = ALIGN(4);
-      __logs_start__ = .;
-      . = __logs_start__ + __logs_size__;
-      PROVIDE(__logs_start__ = __logs_start__);
-      __logs_end__ = .;
-      PROVIDE(__logs_end__ = __logs_end__);
-
-      . = ALIGN(4);
       __data_init_start__ = LOADADDR (.data);
       PROVIDE(__data_init_start__ = __data_init_start__);
       __data_start__ = .;
@@ -108,12 +125,23 @@ SECTIONS
       . = ALIGN(4);
       *(.data .data.* .gnu.linkonce.d.*)
 
-      . = ALIGN(4);
-      __data_end__ = .;
-      PROVIDE(__data_end__ = __data_end__);
    } > ram AT > rom
 
    INCLUDE dmod-system.ld
+
+   . = ALIGN(4);
+   __data_end__ = .;
+   PROVIDE(__data_end__ = __data_end__);
+
+    .logs (NOLOAD) :
+   {
+      . = ALIGN(4);
+      __logs_start__ = .;
+      PROVIDE(__logs_start__ = __logs_start__);
+      . = __logs_start__ + __logs_size__;
+      __logs_end__ = .;
+      PROVIDE(__logs_end__ = __logs_end__);
+   } > ram
 
    . = ALIGN(4);
 

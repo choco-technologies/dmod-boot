@@ -7,6 +7,8 @@ cmake_minimum_required(VERSION 3.10)
 #               Configuration
 # ======================================================================
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
+set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
+set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 
 # ======================================================================
 #               Early DMOD Configuration (before project())
@@ -35,12 +37,49 @@ add_subdirectory(inc)
 add_subdirectory(src)
 
 # ======================================================================
+#               Binary File Embedding
+# ======================================================================
+include(scripts/embed_binary.cmake)
+
+# List to hold embedded object files
+set(EMBEDDED_OBJECTS "")
+
+# Embed startup.dmp if provided
+if(STARTUP_DMP_FILE AND EXISTS "${STARTUP_DMP_FILE}")
+    embed_binary_file(
+        INPUT_FILE "${STARTUP_DMP_FILE}"
+        SECTION_NAME ".embedded.startup_dmp"
+        SYMBOL_PREFIX "__startup_dmp"
+    )
+    set(STARTUP_DMP_OBJECT "${CMAKE_BINARY_DIR}/__startup_dmp.o")
+    list(APPEND EMBEDDED_OBJECTS "${STARTUP_DMP_OBJECT}")
+    message(STATUS "Startup DMP file will be embedded: ${STARTUP_DMP_FILE}")
+else()
+    message(STATUS "No startup DMP file provided (STARTUP_DMP_FILE not set or file doesn't exist)")
+endif()
+
+# Embed user_data if provided
+if(USER_DATA_FILE AND EXISTS "${USER_DATA_FILE}")
+    embed_binary_file(
+        INPUT_FILE "${USER_DATA_FILE}"
+        SECTION_NAME ".embedded.user_data"
+        SYMBOL_PREFIX "__user_data"
+    )
+    set(USER_DATA_OBJECT "${CMAKE_BINARY_DIR}/__user_data.o")
+    list(APPEND EMBEDDED_OBJECTS "${USER_DATA_OBJECT}")
+    message(STATUS "User data file will be embedded: ${USER_DATA_FILE}")
+else()
+    message(STATUS "No user data file provided (USER_DATA_FILE not set or file doesn't exist)")
+endif()
+
+# ======================================================================
 #               dmod-boot application
 # ======================================================================
 set(MODULE_NAME dmboot)
 
 add_executable(${MODULE_NAME}.elf
     src/main.c
+    ${EMBEDDED_OBJECTS}
 )
 
 target_compile_definitions(${MODULE_NAME}.elf

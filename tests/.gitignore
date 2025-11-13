@@ -1,0 +1,2 @@
+# Ignore test data files - they should be generated during build/test
+data/

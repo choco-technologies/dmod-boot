@@ -30,6 +30,7 @@
             "args": [
                 "-DCMAKE_BUILD_TYPE=Debug",
                 "-DTARGET=${input:targetSelection}",
+                "-DSTARTUP_DMP_FILE=/home/pkubiak/Projects/choco-technologies/public/dmod/build_armv7/dmf/startup.dmp",
                 "-S",
                 ".",
                 "-B",
