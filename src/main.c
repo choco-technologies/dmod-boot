@@ -18,8 +18,6 @@ extern void* __user_data_start;
 extern void* __user_data_end;
 extern void* __user_data_size;
 
-int my_global_var = 42;
-
 void delay(int cycles)
 {
     for(volatile int i = 0; i < cycles; i++);
@@ -137,8 +135,6 @@ int main(int argc, char** argv)
         DMOD_LOG_ERROR("DMOD initialization failed!\n");
         while(1);
     }
-
-    Dmod_Printf("Global variable my_global_var = %d\n", my_global_var);
 
     if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
     {
