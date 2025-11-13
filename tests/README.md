@@ -7,7 +7,7 @@ This directory contains test files for DMOD Boot features.
 The `data/` directory contains sample files used for testing ROM embedding:
 
 - `test_startup.dmp` - Sample startup package file for testing Dmod_AddPackageBuffer
-- `test_user_data.bin` - Sample user data file for testing environment variable setup
+- `test_user_data.dat` - Sample user data file for testing environment variable setup
 
 ## Building with Embedded Files
 
@@ -17,7 +17,7 @@ To build DMOD Boot with embedded test files:
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
       -DSTARTUP_DMP_FILE=tests/data/test_startup.dmp \
-      -DUSER_DATA_FILE=tests/data/test_user_data.bin \
+      -DUSER_DATA_FILE=tests/data/test_user_data.dat \
       -S . -B build
 cmake --build build
 ```

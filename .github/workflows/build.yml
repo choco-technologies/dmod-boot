@@ -59,7 +59,7 @@ jobs:
       run: |
         mkdir -p tests/data
         echo "DMOD Test Startup Package" > tests/data/test_startup.dmp
-        echo "Test User Data Content" > tests/data/test_user_data.bin
+        echo "Test User Data Content" > tests/data/test_user_data.dat
         ls -lh tests/data/
 
     - name: Configure CMake for ${{ matrix.target }}
@@ -86,7 +86,7 @@ jobs:
         cmake -DCMAKE_BUILD_TYPE=Debug \
               -DTARGET=${{ matrix.target }} \
               -DSTARTUP_DMP_FILE=tests/data/test_startup.dmp \
-              -DUSER_DATA_FILE=tests/data/test_user_data.bin \
+              -DUSER_DATA_FILE=tests/data/test_user_data.dat \
               -S . -B build
     
     - name: Build ${{ matrix.target }} with CMake (with embedded files)

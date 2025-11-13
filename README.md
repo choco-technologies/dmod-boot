@@ -19,7 +19,7 @@ You can optionally embed binary files in ROM during the build:
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
       -DSTARTUP_DMP_FILE=path/to/startup.dmp \
-      -DUSER_DATA_FILE=path/to/user_data.bin \
+      -DUSER_DATA_FILE=path/to/user_data.dat \
       -S . -B build
 cmake --build build
 ```
