@@ -82,7 +82,9 @@ static void load_embedded_startup_dmp(void)
 
 static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
 {
-    size_t user_data_size = (size_t)(uintptr_t)&__user_data_size;
+    void* user_data_start = &__user_data_start;
+    void* user_data_end   = &__user_data_end;
+    size_t user_data_size = (size_t)((uintptr_t)user_data_end - (uintptr_t)user_data_start);
     if(user_data_size > 0)
     {
         void* user_data_start = &__user_data_start;
@@ -154,6 +156,34 @@ int main(int argc, char** argv)
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
+
+    while(1)
+    {
+        dmlog_puts(ctx, "$ ");
+        dmlog_input_request(ctx);
+        while(!dmlog_input_available(ctx))
+        {
+            delay(1000);
+        }
+        char input_buffer[128];
+        if(dmlog_input_gets(ctx, input_buffer, sizeof(input_buffer)))
+        {
+            if(strcmp(input_buffer, "help\n") == 0)
+            {
+                dmlog_puts(ctx, "Available commands:\n");
+                dmlog_puts(ctx, "  help - Show this help message\n");
+                dmlog_puts(ctx, "  version - Show DMOD version\n");
+            }
+            else if(strcmp(input_buffer, "version\n") == 0)
+            {
+                dmlog_puts(ctx, "DMOD Version: " DMOD_VERSION_STRING "\n");
+            }
+            else
+            {
+                Dmod_Printf("Unknown command: %s", input_buffer);
+            }
+        }
+    }
 
     return 0;
 }
