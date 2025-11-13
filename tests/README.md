@@ -8,7 +8,9 @@ Test data files are not committed to the repository. They need to be created bef
 
 ```bash
 mkdir -p tests/data
-echo "DMOD Test Startup Package" > tests/data/test_startup.dmp
+# Create a valid DMP package file
+python3 scripts/create_test_dmp.py tests/data/test_startup.dmp startup_test
+# Create test user data file
 echo "Test User Data Content" > tests/data/test_user_data.dat
 ```
 
@@ -24,7 +26,7 @@ To build DMOD Boot with embedded test files:
 ```bash
 # First create test data files
 mkdir -p tests/data
-echo "DMOD Test Startup Package" > tests/data/test_startup.dmp
+python3 scripts/create_test_dmp.py tests/data/test_startup.dmp startup_test
 echo "Test User Data Content" > tests/data/test_user_data.dat
 
 # Then build with embedded files

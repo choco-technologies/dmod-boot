@@ -58,9 +58,14 @@ jobs:
     - name: Create test data files
       run: |
         mkdir -p tests/data
-        echo "DMOD Test Startup Package" > tests/data/test_startup.dmp
+        # Create a valid DMP package file for testing
+        python3 scripts/create_test_dmp.py tests/data/test_startup.dmp startup_test
+        # Create test user data file
         echo "Test User Data Content" > tests/data/test_user_data.dat
         ls -lh tests/data/
+        # Verify the DMP file was created correctly
+        file tests/data/test_startup.dmp
+        hexdump -C tests/data/test_startup.dmp | head -10
 
     - name: Configure CMake for ${{ matrix.target }}
       run: |

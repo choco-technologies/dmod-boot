@@ -89,10 +89,10 @@ int main(int argc, char** argv)
         DMOD_LOG_INFO("Loading startup.dmp from ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)startup_dmp_start, (unsigned int)startup_dmp_size);
         
-        uint32_t package_index = 0;
-        if(Dmod_AddPackageBuffer(startup_dmp_start, startup_dmp_size, &package_index))
+        Dmod_Context_t* startup_ctx = Dmod_Load(startup_dmp_start, startup_dmp_size);
+        if(startup_ctx != NULL)
         {
-            DMOD_LOG_INFO("Startup package loaded successfully (index=%u)\n", package_index);
+            DMOD_LOG_INFO("Startup package loaded and started successfully\n");
         }
         else
         {
@@ -114,7 +114,6 @@ int main(int argc, char** argv)
         
         dmenv_seti(dmenv_ctx, "USER_DATA_ADDR", (uint32_t)(uintptr_t)user_data_start);
         dmenv_seti(dmenv_ctx, "USER_DATA_SIZE", (uint32_t)user_data_size);
-        DMOD_LOG_INFO("USER_DATA_ADDR and USER_DATA_SIZE environment variables set\n");
     }
     else
     {
