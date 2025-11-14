@@ -68,6 +68,28 @@ cmake --build . --target monitor
 
 The monitor will display logs from the firmware in real-time. Press Ctrl+C to exit.
 
+### `monitor-gdb`
+Monitor logs from the firmware in real-time via GDB server. This target:
+- Automatically builds the `dmlog_monitor` tool for the host architecture
+- Extracts the ring buffer address from the firmware's map file
+- Runs `dmlog_monitor` with GDB backend configuration (connects to OpenOCD's GDB server)
+
+**Usage:**
+
+In one terminal, start OpenOCD:
+```bash
+cmake --build . --target connect
+```
+
+In another terminal, start the monitor using GDB mode:
+```bash
+cmake --build . --target monitor-gdb
+```
+
+The monitor will connect to the GDB server at `localhost:3333` (OpenOCD's GDB server port). Press Ctrl+C to exit.
+
+**Note:** OpenOCD automatically starts a GDB server on port 3333. The `monitor-gdb` target connects to this GDB server interface using the GDB Remote Serial Protocol, which is an alternative to using OpenOCD's telnet interface (port 4444) used by the `monitor` target. Both methods work equally well for monitoring logs.
+
 ### `debug`
 Start GDB and connect to OpenOCD for debugging.
 

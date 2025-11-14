@@ -268,9 +268,9 @@ int main(int argc, char** argv)
     while(1)
     {
         dmlog_puts(ctx, "$ ");
-        dmlog_input_request(ctx);
         while(!dmlog_input_available(ctx))
         {
+            dmlog_input_request(ctx);
             delay(1000);
         }
         char input_buffer[128];
@@ -279,13 +279,13 @@ int main(int argc, char** argv)
             if(strcmp(input_buffer, "help\n") == 0)
             {
                 dmlog_puts(ctx, "Available commands:\n");
-                dmlog_puts(ctx, "  help - Show this help message\n");
-                dmlog_puts(ctx, "  version - Show DMOD version\n");
-                dmlog_puts(ctx, "  load <module_name> - Load module by name\n");
-                dmlog_puts(ctx, "  unload <module_name> - Unload module by name\n");
+                dmlog_puts(ctx, "  help                       - Show this help message\n");
+                dmlog_puts(ctx, "  version                    - Show DMOD version\n");
+                dmlog_puts(ctx, "  load <module_name>         - Load module by name\n");
+                dmlog_puts(ctx, "  unload <module_name>       - Unload module by name\n");
                 dmlog_puts(ctx, "  run <module_name> args ... - Run application module by name\n");
-                dmlog_puts(ctx, "  list - List loaded modules\n");
-                dmlog_puts(ctx, "  exit - Exit the shell\n");
+                dmlog_puts(ctx, "  list                       - List loaded modules\n");
+                dmlog_puts(ctx, "  exit                       - Exit the shell\n");
             }
             else if(strcmp(input_buffer, "version\n") == 0)
             {
