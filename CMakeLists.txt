@@ -210,3 +210,16 @@ add_custom_target(monitor
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Monitoring logs from ${TARGET} via OpenOCD..."
 )
+
+# Custom target for monitoring logs via GDB server
+add_custom_target(monitor-gdb
+    COMMAND ${CMAKE_COMMAND} -E echo "Starting dmlog monitor in GDB mode..."
+    COMMAND ${CMAKE_COMMAND} -E echo "Ring buffer address will be read from ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake"
+    COMMAND ${CMAKE_COMMAND} 
+        -DPROJECT_BINARY_DIR=${CMAKE_BINARY_DIR}
+        -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monitor_gdb.cmake
+    DEPENDS build_dmlog_monitor extract_ring_buffer_config
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Monitoring logs from ${TARGET} via GDB server..."
+)
