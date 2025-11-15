@@ -5,11 +5,16 @@ set(DMBOOT_MCU_NAME "stm32f407g" CACHE STRING "Name of the target microcontrolle
 set(DMBOOT_MCU_SERIES "stm32f4" CACHE STRING "Series of the target microcontroller")
 set(DMBOOT_ARCH "armv7" CACHE STRING "Architecture of the target microcontroller")
 set(DMBOOT_ARCH_FAMILY "cortex-m4" CACHE STRING "Microcontroller family")
+set(DMBOOT_QEMU_MACHINE "netduinoplus2" CACHE STRING "QEMU machine type for emulation")
+set(DMBOOT_QEMU_CPU "cortex-m4" CACHE STRING "QEMU CPU type for emulation")
 
 # ======================================================================
 #               OpenOCD Configuration
 # ======================================================================
-find_program(OPENOCD openocd REQUIRED)
+# OpenOCD is only required when not using QEMU mode
+if(NOT DMBOOT_QEMU)
+    find_program(OPENOCD openocd REQUIRED)
+endif()
 set(OPENOCD_INTERFACE "interface/stlink.cfg" CACHE STRING "OpenOCD interface configuration file")
 set(OPENOCD_TARGET "target/stm32f4x.cfg" CACHE STRING "OpenOCD target configuration file")
 

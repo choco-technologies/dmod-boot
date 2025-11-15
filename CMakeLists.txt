@@ -162,7 +162,11 @@ if(DMBOOT_QEMU)
     # In QEMU mode, connect launches QEMU with GDB server and loads firmware via GDB
     # We use a script that starts QEMU in background and then uses GDB to load the firmware
     add_custom_target(connect
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/qemu_connect.sh ${CMAKE_BINARY_DIR}/qemu_firmware.elf
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/qemu_connect.sh 
+            ${CMAKE_BINARY_DIR}/qemu_firmware.elf 
+            ${DMBOOT_QEMU_MACHINE} 
+            ${DMBOOT_QEMU_CPU}
+            ${TARGET}
         DEPENDS install-firmware
         COMMENT "Starting QEMU for ${TARGET}..."
     )

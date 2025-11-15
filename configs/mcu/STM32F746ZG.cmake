@@ -5,11 +5,16 @@ set(DMBOOT_MCU_NAME "stm32f746zg" CACHE STRING "Name of the target microcontroll
 set(DMBOOT_MCU_SERIES "stm32f7" CACHE STRING "Series of the target microcontroller")
 set(DMBOOT_ARCH "armv7" CACHE STRING "Architecture of the target microcontroller")
 set(DMBOOT_ARCH_FAMILY "cortex-m7" CACHE STRING "Microcontroller family")
+set(DMBOOT_QEMU_MACHINE "mps2-an500" CACHE STRING "QEMU machine type for emulation")
+set(DMBOOT_QEMU_CPU "cortex-m7" CACHE STRING "QEMU CPU type for emulation")
 
 # ======================================================================
 #               OpenOCD Configuration
 # ======================================================================
-find_program(OPENOCD openocd REQUIRED)
+# OpenOCD is only required when not using QEMU mode
+if(NOT DMBOOT_QEMU)
+    find_program(OPENOCD openocd REQUIRED)
+endif()
 set(OPENOCD_INTERFACE "interface/stlink.cfg" CACHE STRING "OpenOCD interface configuration file")
 set(OPENOCD_TARGET "target/stm32f7x.cfg" CACHE STRING "OpenOCD target configuration file")
 

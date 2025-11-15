@@ -1,15 +1,18 @@
 #!/bin/bash
-# Script to launch QEMU with GDB server for STM32F746 emulation
+# Script to launch QEMU with GDB server for ARM Cortex-M emulation
 # This script is called by the 'connect' target when DMBOOT_QEMU=ON
 
-# Check if firmware file is provided
-if [ -z "$1" ]; then
-    echo "Error: No firmware file specified"
-    echo "Usage: $0 <firmware.elf>"
+# Check if all required parameters are provided
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
+    echo "Error: Missing required parameters"
+    echo "Usage: $0 <firmware.elf> <qemu_machine> <qemu_cpu> <target_name>"
     exit 1
 fi
 
 FIRMWARE_FILE="$1"
+QEMU_MACHINE="$2"
+QEMU_CPU="$3"
+TARGET_NAME="$4"
 BUILD_DIR=$(dirname "$FIRMWARE_FILE")
 
 # Check if firmware file exists
@@ -18,21 +21,23 @@ if [ ! -f "$FIRMWARE_FILE" ]; then
     exit 1
 fi
 
-echo "Starting QEMU for STM32F746 emulation..."
+echo "Starting QEMU for ${TARGET_NAME} emulation..."
 echo "Firmware: $FIRMWARE_FILE"
+echo "QEMU Machine: $QEMU_MACHINE"
+echo "QEMU CPU: $QEMU_CPU"
 echo "GDB server will be available on localhost:3333"
 echo ""
 
 # Launch QEMU with:
-# - mps2-an500: ARM MPS2 with AN500 FPGA image for Cortex-M7
+# - Machine and CPU type from configuration
 # - GDB server on port 3333 (compatible with OpenOCD)
 # - No graphics
 # - Serial output to stdio
 # - Semihosting enabled for printf debugging
 # - Halt at startup (-S) to allow GDB to load firmware
 qemu-system-arm \
-    -machine mps2-an500 \
-    -cpu cortex-m7 \
+    -machine ${QEMU_MACHINE} \
+    -cpu ${QEMU_CPU} \
     -nographic \
     -serial mon:stdio \
     -gdb tcp::3333 \

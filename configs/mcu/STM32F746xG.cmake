@@ -5,6 +5,8 @@ set(DMBOOT_MCU_NAME "stm32f746xg" CACHE STRING "Name of the target microcontroll
 set(DMBOOT_MCU_SERIES "stm32f7" CACHE STRING "Series of the target microcontroller")
 set(DMBOOT_ARCH "armv7" CACHE STRING "Architecture of the target microcontroller")
 set(DMBOOT_ARCH_FAMILY "cortex-m7" CACHE STRING "Microcontroller family")
+set(DMBOOT_QEMU_MACHINE "mps2-an500" CACHE STRING "QEMU machine type for emulation")
+set(DMBOOT_QEMU_CPU "cortex-m7" CACHE STRING "QEMU CPU type for emulation")
 
 # ======================================================================
 #               OpenOCD Configuration
