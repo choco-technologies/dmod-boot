@@ -232,7 +232,7 @@ jobs:
           echo ""
           
           # Verify expected logs using the verification script
-          bash scripts/verify_renode_logs.sh monitor.log configs/renode/expected_logs.txt
+          bash "$GITHUB_WORKSPACE"/scripts/verify_renode_logs.sh monitor.log "$GITHUB_WORKSPACE"/configs/renode/expected_logs.txt
         else
           echo "✗ No monitor output captured"
           exit 1

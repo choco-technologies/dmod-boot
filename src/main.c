@@ -256,13 +256,7 @@ int main(int argc, char** argv)
     dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
-    
-    // Set emulation flag if building for emulation mode
-#ifdef DMBOOT_EMULATION
-    dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", 1);
-#else
-    dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", 0);
-#endif
+    dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", DMBOOT_EMULATION_ENABLED);
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
