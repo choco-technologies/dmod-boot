@@ -44,9 +44,24 @@ echo "QEMU started with PID: $QEMU_PID"
 echo "Waiting for QEMU GDB server to be ready..."
 sleep 2
 
-# Use GDB to load the firmware
+# Use GDB to load the firmware and start execution
 echo "Loading firmware via GDB..."
-arm-none-eabi-gdb -batch -x "$BUILD_DIR/gdb_init.gdb" "$FIRMWARE_FILE"
+(
+    # Run GDB in background to load and start firmware
+    arm-none-eabi-gdb -batch -x "$BUILD_DIR/gdb_init.gdb" "$FIRMWARE_FILE" &
+    GDB_PID=$!
+    
+    # Wait a bit for GDB to connect and load
+    sleep 3
+    
+    # Check if GDB is still running (it continues with the firmware)
+    if kill -0 $GDB_PID 2>/dev/null; then
+        echo "GDB connected and continuing execution..."
+    fi
+) &
+
+# Give GDB time to load the firmware
+sleep 5
 
 # Keep the script running and forward signals to QEMU
 echo ""
