@@ -25,42 +25,38 @@ configure_file(
 #               Firmware Installation and Connection Targets
 # ======================================================================
 
+# Configure install-firmware command based on mode
 if(DMBOOT_QEMU)
     message(STATUS "QEMU mode enabled - targets will use QEMU instead of OpenOCD")
-    
-    # In QEMU mode, install-firmware just copies the firmware to a known location
-    add_custom_target(install-firmware
-        COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/qemu_firmware.elf
-        DEPENDS ${MODULE_NAME}.elf
-        COMMENT "Copying firmware for QEMU: ${TARGET}..."
-    )
-    
-    # In QEMU mode, connect launches QEMU with GDB server and loads firmware via GDB
-    # We use a script that starts QEMU in background and then uses GDB to load the firmware
-    add_custom_target(connect
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/qemu_connect.sh 
-            ${CMAKE_BINARY_DIR}/qemu_firmware.elf 
-            ${DMBOOT_QEMU_MACHINE} 
-            ${DMBOOT_QEMU_CPU}
-            ${TARGET}
-        DEPENDS install-firmware
-        COMMENT "Starting QEMU for ${TARGET}..."
-    )
+    set(INSTALL_FIRMWARE_COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/qemu_firmware.elf)
+    set(INSTALL_FIRMWARE_COMMENT "Copying firmware for QEMU: ${TARGET}...")
+    set(CONNECT_COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/qemu_connect.sh 
+        ${CMAKE_BINARY_DIR}/qemu_firmware.elf 
+        ${DMBOOT_QEMU_MACHINE} 
+        ${DMBOOT_QEMU_CPU}
+        ${TARGET})
+    set(CONNECT_COMMENT "Starting QEMU for ${TARGET}...")
 else()
-    # Normal hardware mode with OpenOCD
-    add_custom_target(install-firmware
-        COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
-            -c "program ${MODULE_NAME}.elf verify reset exit"
-        DEPENDS ${MODULE_NAME}.elf
-        COMMENT "Installing firmware on ${TARGET}..."
-    )
-    
-    # Custom target for connecting to target with OpenOCD
-    add_custom_target(connect
-        COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
-        COMMENT "Connecting to ${TARGET} with OpenOCD..."
-    )
+    set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+        -c "program ${MODULE_NAME}.elf verify reset exit")
+    set(INSTALL_FIRMWARE_COMMENT "Installing firmware on ${TARGET}...")
+    set(CONNECT_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET})
+    set(CONNECT_COMMENT "Connecting to ${TARGET} with OpenOCD...")
 endif()
+
+# Define install-firmware target
+add_custom_target(install-firmware
+    COMMAND ${INSTALL_FIRMWARE_COMMAND}
+    DEPENDS ${MODULE_NAME}.elf
+    COMMENT ${INSTALL_FIRMWARE_COMMENT}
+)
+
+# Define connect target
+add_custom_target(connect
+    COMMAND ${CONNECT_COMMAND}
+    DEPENDS install-firmware
+    COMMENT ${CONNECT_COMMENT}
+)
 
 # ======================================================================
 #               Debugging Target (hardware mode only)

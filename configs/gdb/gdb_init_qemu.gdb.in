@@ -8,5 +8,7 @@ target extended-remote localhost:3333
 # Load the ELF file into target memory
 load
 
-# Continue execution
-continue
+# Set the program counter to entry point (already done by load)
+# Continue execution in background and detach so monitor-gdb can connect
+continue &
+detach

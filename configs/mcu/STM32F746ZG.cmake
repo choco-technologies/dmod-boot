@@ -27,8 +27,3 @@ set(DMOD_CPU_NAME   ${DMBOOT_MCU_NAME} CACHE STRING "Name of the target cpu, if 
 # ======================================================================
 include(configs/arch/${DMBOOT_ARCH}/cfg.cmake)
 include(configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/cfg.cmake)
-
-# Include QEMU configuration if QEMU mode is enabled
-if(DMBOOT_QEMU)
-    include(configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/qemu-cfg.cmake)
-endif()
