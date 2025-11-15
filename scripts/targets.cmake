@@ -9,7 +9,7 @@
 # ======================================================================
 # Generate GDB init script from template with target-specific variables
 # Use emulation-specific template in emulation mode, otherwise use hardware template
-if(DMBOOT_QEMU)
+if(DMBOOT_EMULATION)
     set(GDB_INIT_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init_renode.gdb.in")
 else()
     set(GDB_INIT_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init.gdb.in")
@@ -26,7 +26,7 @@ configure_file(
 # ======================================================================
 
 # Configure install-firmware command based on mode
-if(DMBOOT_QEMU)
+if(DMBOOT_EMULATION)
     message(STATUS "Emulation mode enabled - targets will use Renode instead of OpenOCD")
     set(INSTALL_FIRMWARE_COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/renode_firmware.elf)
     set(INSTALL_FIRMWARE_COMMENT "Copying firmware for Renode: ${TARGET}...")

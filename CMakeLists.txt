@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.10)
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
-option(DMBOOT_QEMU "Enable QEMU simulation mode" OFF)
+option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================
 #               Early DMOD Configuration (before project())

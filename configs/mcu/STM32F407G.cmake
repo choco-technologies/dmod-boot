@@ -10,7 +10,7 @@ set(DMBOOT_ARCH_FAMILY "cortex-m4" CACHE STRING "Microcontroller family")
 #               OpenOCD Configuration
 # ======================================================================
 # OpenOCD is only required when not using QEMU mode
-if(NOT DMBOOT_QEMU)
+if(NOT DMBOOT_EMULATION)
     find_program(OPENOCD openocd REQUIRED)
 endif()
 set(OPENOCD_INTERFACE "interface/stlink.cfg" CACHE STRING "OpenOCD interface configuration file")

@@ -20,7 +20,7 @@ To build for Renode simulation (useful for automated testing without hardware):
 ```bash
 mkdir build
 cd build
-cmake -DDMBOOT_QEMU=ON ..
+cmake -DDMBOOT_EMULATION=ON ..
 cmake --build .
 ```
 
@@ -44,7 +44,7 @@ cmake --build build
 **Build Parameters:**
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
-- `DMBOOT_QEMU` (optional) - Enable Renode simulation mode instead of hardware mode (kept as QEMU for backward compatibility)
+- `DMBOOT_EMULATION` (optional) - Enable Renode simulation mode instead of hardware mode
 
 All parameters are optional. If not specified, the build will proceed with default settings.
 
