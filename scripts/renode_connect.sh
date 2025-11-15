@@ -50,11 +50,23 @@ EOF
 
 echo "Renode script created at: $TEMP_SCRIPT"
 
+# Find Renode executable in PATH
+RENODE_BIN=$(which renode 2>/dev/null)
+if [ -z "$RENODE_BIN" ]; then
+    echo "Error: renode not found in PATH"
+    echo "Please ensure Renode is installed and in your PATH"
+    exit 1
+fi
+
+# Get Renode installation directory (renode is typically a script)
+RENODE_DIR=$(dirname "$RENODE_BIN")
+
 # Launch Renode with the temporary script
 # --disable-xwt: no GUI
 # --console: interactive console
 # --port -2: random telnet port (we don't use telnet)
-renode --disable-xwt --console -e "include @${TEMP_SCRIPT}" &
+# Change to Renode directory so platform files can be found
+cd "$RENODE_DIR" && renode --disable-xwt --console -e "include @${TEMP_SCRIPT}" &
 
 RENODE_PID=$!
 echo "Renode started with PID: $RENODE_PID"
