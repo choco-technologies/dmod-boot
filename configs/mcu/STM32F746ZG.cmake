@@ -23,6 +23,14 @@ set(OPENOCD_TARGET "target/stm32f7x.cfg" CACHE STRING "OpenOCD target configurat
 set(DMOD_CPU_NAME   ${DMBOOT_MCU_NAME} CACHE STRING "Name of the target cpu, if empty, the target is generic")
 
 # ======================================================================
+#               Renode Configuration
+# ======================================================================
+if(DMBOOT_EMULATION)
+    # Use STM32F7 Discovery board - includes full peripheral emulation
+    set(DMBOOT_RENODE_PLATFORM "platforms/boards/stm32f7_discovery-bb.repl" CACHE STRING "Renode platform for STM32F746ZG")
+endif()
+
+# ======================================================================
 #               Include architecture configuration
 # ======================================================================
 include(configs/arch/${DMBOOT_ARCH}/cfg.cmake)

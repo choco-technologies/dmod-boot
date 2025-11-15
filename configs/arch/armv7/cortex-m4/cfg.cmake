@@ -8,8 +8,4 @@ set(DMOD_TOOLS_NAME	"arch/armv7/cortex-m4" CACHE STRING "Name of the tools confi
 # ======================================================================
 # This configuration is used when DMBOOT_EMULATION=ON
 # Renode provides excellent STM32 emulation with full peripheral support
-if(DMBOOT_EMULATION)
-    # Use STM32F4 Discovery board - includes full peripheral emulation
-    set(DMBOOT_RENODE_PLATFORM "platforms/boards/stm32f4_discovery.repl" CACHE STRING "Renode platform for Cortex-M4 emulation")
-    set(DMBOOT_RENODE_MACHINE_NAME "stm32f4_discovery" CACHE STRING "Renode machine name")
-endif()
+# Note: DMBOOT_RENODE_PLATFORM is defined in MCU-specific config files

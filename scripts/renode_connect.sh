@@ -43,7 +43,7 @@ RENODE_DIR=$(dirname "$RENODE_BIN")
 
 # Launch Renode with the temporary script
 # --disable-xwt: no GUI
-# --console: interactive console
+# --hide-monitor: no console (headless mode)
 # --port -2: random telnet port (we don't use telnet)
 # Change to Renode directory so platform files can be found
 cd "$RENODE_DIR" && renode --disable-xwt --hide-monitor -e "include @${RENODE_SCRIPT}" &

@@ -229,24 +229,10 @@ jobs:
         if [ -f monitor.log ]; then
           echo "Monitor output:"
           cat monitor.log
+          echo ""
           
-          # Check for "DMOD-Boot started" message
-          if grep -q "DMOD-Boot started" monitor.log; then
-            echo ""
-            echo "✓✓✓ SUCCESS: Found 'DMOD-Boot started' in firmware logs!"
-            echo "✓ Firmware executed successfully in Renode"
-            echo "✓ monitor-gdb successfully read logs via GDB"
-          else
-            echo ""
-            echo "⚠ 'DMOD-Boot started' not found in logs"
-            echo "Checking if monitor connected to GDB..."
-            if grep -qi "connect\|gdb\|target" monitor.log; then
-              echo "Monitor connected but may need more time for firmware to log"
-            else
-              echo "✗ Monitor may have failed to connect"
-              exit 1
-            fi
-          fi
+          # Verify expected logs using the verification script
+          bash scripts/verify_renode_logs.sh monitor.log configs/renode/expected_logs.txt
         else
           echo "✗ No monitor output captured"
           exit 1
