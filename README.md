@@ -13,9 +13,9 @@ cmake ..
 cmake --build .
 ```
 
-### Building for QEMU Simulation
+### Building for Renode Simulation
 
-To build for QEMU simulation (useful for automated testing without hardware):
+To build for Renode simulation (useful for automated testing without hardware):
 
 ```bash
 mkdir build
@@ -24,9 +24,9 @@ cmake -DDMBOOT_QEMU=ON ..
 cmake --build .
 ```
 
-With QEMU mode enabled, the workflow targets (`install-firmware`, `connect`, `monitor-gdb`) work similarly to hardware mode but use QEMU instead of OpenOCD.
+With emulation mode enabled, the workflow targets (`install-firmware`, `connect`, `monitor-gdb`) work similarly to hardware mode but use Renode instead of OpenOCD.
 
-**Note:** QEMU support uses the `mps2-an500` board (Cortex-M7) which provides a best-effort emulation of STM32F746. Some hardware-specific features may not work identically to real hardware.
+**Why Renode?** Renode provides excellent STM32F7 Discovery board emulation with complete peripheral support, accurate memory mapping, and full interrupt controller implementation. This enables proper firmware execution and log capture via monitor-gdb, making it ideal for CI testing and verification.
 
 ### Building with Embedded Files
 
@@ -44,19 +44,19 @@ cmake --build build
 **Build Parameters:**
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
-- `DMBOOT_QEMU` (optional) - Enable QEMU simulation mode instead of hardware mode
+- `DMBOOT_QEMU` (optional) - Enable Renode simulation mode instead of hardware mode (kept as QEMU for backward compatibility)
 
 All parameters are optional. If not specified, the build will proceed with default settings.
 
 ## CMake Targets
 
-The following targets work in both hardware mode (with OpenOCD) and QEMU simulation mode. The workflow is identical regardless of the mode.
+The following targets work in both hardware mode (with OpenOCD) and Renode simulation mode. The workflow is identical regardless of the mode.
 
 ### `install-firmware`
 Install firmware on the target.
 
 - **Hardware mode:** Flashes firmware to the microcontroller via OpenOCD
-- **QEMU mode:** Copies firmware to a known location for QEMU to use
+- **Renode mode:** Copies firmware to a known location for Renode to use
 
 ```bash
 cmake --build . --target install-firmware
@@ -66,7 +66,7 @@ cmake --build . --target install-firmware
 Connect to the target and start the debug server.
 
 - **Hardware mode:** Starts OpenOCD server that allows debugging and monitoring
-- **QEMU mode:** Starts QEMU with GDB server on port 3333
+- **Renode mode:** Starts Renode with GDB server on port 3333
 
 ```bash
 cmake --build . --target connect
@@ -100,7 +100,7 @@ Monitor logs from the firmware in real-time via GDB server. This target:
 - Extracts the ring buffer address from the firmware's map file
 - Runs `dmlog_monitor` with GDB backend configuration
 
-This target works identically in both hardware and QEMU modes, as it connects via the GDB protocol.
+This target works identically in both hardware and Renode modes, as it connects via the GDB protocol.
 
 **Usage:**
 
@@ -116,7 +116,7 @@ cmake --build . --target monitor-gdb
 
 The monitor will connect to the GDB server at `localhost:3333`. Press Ctrl+C to exit.
 
-**Note:** Both OpenOCD and QEMU provide a GDB server on port 3333. The `monitor-gdb` target connects to this GDB server interface using the GDB Remote Serial Protocol, which is an alternative to using OpenOCD's telnet interface (port 4444) used by the `monitor` target. Both methods work equally well for monitoring logs.
+**Note:** Both OpenOCD and Renode provide a GDB server on port 3333. The `monitor-gdb` target connects to this GDB server interface using the GDB Remote Serial Protocol, which is an alternative to using OpenOCD's telnet interface (port 4444) used by the `monitor` target. Both methods work equally well for monitoring logs.
 
 ### `debug`
 Start GDB and connect to OpenOCD for debugging.

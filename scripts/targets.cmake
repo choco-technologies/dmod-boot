@@ -8,9 +8,9 @@
 #               GDB Init Script Configuration
 # ======================================================================
 # Generate GDB init script from template with target-specific variables
-# Use QEMU-specific template in QEMU mode, otherwise use hardware template
+# Use emulation-specific template in emulation mode, otherwise use hardware template
 if(DMBOOT_QEMU)
-    set(GDB_INIT_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init_qemu.gdb.in")
+    set(GDB_INIT_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init_renode.gdb.in")
 else()
     set(GDB_INIT_TEMPLATE "${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init.gdb.in")
 endif()
@@ -27,15 +27,13 @@ configure_file(
 
 # Configure install-firmware command based on mode
 if(DMBOOT_QEMU)
-    message(STATUS "QEMU mode enabled - targets will use QEMU instead of OpenOCD")
-    set(INSTALL_FIRMWARE_COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/qemu_firmware.elf)
-    set(INSTALL_FIRMWARE_COMMENT "Copying firmware for QEMU: ${TARGET}...")
-    set(CONNECT_COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/qemu_connect.sh 
-        ${CMAKE_BINARY_DIR}/qemu_firmware.elf 
-        ${DMBOOT_QEMU_MACHINE} 
-        ${DMBOOT_QEMU_CPU}
+    message(STATUS "Emulation mode enabled - targets will use Renode instead of OpenOCD")
+    set(INSTALL_FIRMWARE_COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/renode_firmware.elf)
+    set(INSTALL_FIRMWARE_COMMENT "Copying firmware for Renode: ${TARGET}...")
+    set(CONNECT_COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/renode_connect.sh 
+        ${CMAKE_BINARY_DIR}/renode_firmware.elf 
         ${TARGET})
-    set(CONNECT_COMMENT "Starting QEMU for ${TARGET}...")
+    set(CONNECT_COMMENT "Starting Renode for ${TARGET}...")
 else()
     set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
         -c "program ${MODULE_NAME}.elf verify reset exit")
