@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.10)
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
+option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================
 #               Early DMOD Configuration (before project())
@@ -90,6 +91,7 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_MCU_NAME_STRING="${DMBOOT_MCU_NAME}"
         DMBOOT_MAX_MOUNT_POINTS=${DMBOOT_MAX_MOUNT_POINTS}
         DMBOOT_MAX_OPEN_FILES=${DMBOOT_MAX_OPEN_FILES}
+        DMBOOT_EMULATION_ENABLED=${DMBOOT_EMULATION}
 )
 
 target_link_options(${MODULE_NAME}.elf
@@ -129,36 +131,10 @@ add_custom_command(
 
 
 # ======================================================================
-#               OpenOCD Integration
+#               Target Configuration
 # ======================================================================
-
-# Generate GDB init script from template with target-specific variables
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init.gdb.in
-    ${CMAKE_BINARY_DIR}/gdb_init.gdb
-    @ONLY
-)
-
-add_custom_target(install-firmware
-    COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
-        -c "program ${MODULE_NAME}.elf verify reset exit"
-    DEPENDS ${MODULE_NAME}.elf
-    COMMENT "Installing firmware on ${TARGET}..."
-)
-
-# Custom target for connecting to target with OpenOCD
-add_custom_target(connect
-    COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
-    COMMENT "Connecting to ${TARGET} with OpenOCD..."
-)
-
-# Custom target for debugging with GDB (connects to OpenOCD)
-add_custom_target(debug
-    COMMAND ${ARM_GDB} -x ${CMAKE_BINARY_DIR}/gdb_init.gdb ${MODULE_NAME}.elf
-    DEPENDS ${MODULE_NAME}.elf
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Starting GDB and connecting to OpenOCD..."
-)
+# Include separate targets configuration script
+include(scripts/targets.cmake)
 
 # ======================================================================
 #               DMLOG Monitor Tool

@@ -1,0 +1,5 @@
+# Expected log messages from DMOD-Boot firmware running in Renode
+# Each line is a pattern that must appear in the monitor-gdb output
+# Lines starting with # are comments and empty lines are ignored
+
+DMOD-Boot started

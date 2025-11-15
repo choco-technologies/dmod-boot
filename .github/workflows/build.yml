@@ -139,10 +139,121 @@ jobs:
           build/dmboot.map
         retention-days: 30
 
+  test-renode:
+    name: Test Renode Simulation
+    runs-on: ubuntu-latest
+    container:
+      image: chocotechnologies/dmod:1.0.2
+    
+    permissions:
+      contents: read
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Set up Git safe directories
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmlog"
+
+    - name: Initialize and update submodules
+      run: |
+        git submodule init
+        git submodule update --recursive
+    
+    - name: Install Renode and dependencies
+      run: |
+        apt-get update -qq
+        # Install required dependencies
+        apt-get install -y wget libncurses5 policykit-1 libgtk2.0-0 screen uml-utilities libc6-dev gcc python3 python3-pip
+        
+        # Download and install Renode
+        RENODE_VERSION="1.15.3"
+        wget -q https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/renode_${RENODE_VERSION}_amd64.deb
+        dpkg -i ./renode_${RENODE_VERSION}_amd64.deb || apt-get install -f -y
+        rm renode_${RENODE_VERSION}_amd64.deb
+        
+        # Verify Renode installation
+        which renode
+        renode --version || echo "Renode installed successfully"
+    
+    - name: Build with emulation mode enabled
+      run: |
+        cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=STM32F746xG -DDMBOOT_EMULATION=ON -S . -B build
+        cmake --build build --config Debug
+    
+    - name: Test install-firmware target
+      run: |
+        cd build
+        cmake --build . --target install-firmware
+        ls -lh renode_firmware.elf
+        echo "✓ install-firmware target works correctly"
+    
+    - name: Test Renode workflow and monitor-gdb
+      run: |
+        cd build
+        
+        echo "Starting Renode emulation test..."
+        
+        # Start Renode with connect target in background
+        echo "Launching Renode..."
+        timeout 60 cmake --build . --target connect > connect.log 2>&1 &
+        CONNECT_PID=$!
+        
+        # Wait for Renode to start and GDB server to be ready
+        echo "Waiting for Renode GDB server to start..."
+        sleep 15
+        
+        # Check if Renode is still running
+        if ! ps -p $CONNECT_PID > /dev/null 2>&1; then
+          echo "✗ Renode failed to start"
+          cat connect.log
+          exit 1
+        fi
+        
+        echo "✓ Renode started successfully"
+        
+        # Now test monitor-gdb to read logs
+        echo "Testing monitor-gdb to read firmware logs..."
+        timeout 20 cmake --build . --target monitor-gdb > monitor.log 2>&1 &
+        MONITOR_PID=$!
+        
+        # Wait for monitor to capture some output
+        sleep 10
+        
+        # Check monitor output
+        if [ -f monitor.log ]; then
+          echo "Monitor output:"
+          cat monitor.log
+          echo ""
+          
+          # Verify expected logs using the verification script
+          bash "$GITHUB_WORKSPACE"/scripts/verify_renode_logs.sh monitor.log "$GITHUB_WORKSPACE"/configs/renode/expected_logs.txt
+        else
+          echo "✗ No monitor output captured"
+          exit 1
+        fi
+        
+        # Cleanup
+        echo ""
+        echo "Cleaning up processes..."
+        kill $MONITOR_PID 2>/dev/null || true
+        kill $CONNECT_PID 2>/dev/null || true
+        sleep 2
+        pkill -9 -f renode || true
+        pkill -9 -f mono || true
+        
+        echo ""
+        echo "Renode workflow test completed!"
+    
   build-all:
     name: All builds completed
     runs-on: ubuntu-latest
-    needs: [build-cmake]
+    needs: [build-cmake, test-renode]
     
     permissions:
       contents: read

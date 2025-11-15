@@ -1,0 +1,9 @@
+mach create "@DMBOOT_MCU_NAME@"
+
+machine LoadPlatformDescription @@DMBOOT_RENODE_PLATFORM@
+
+sysbus LoadELF @@CMAKE_BINARY_DIR@/renode_firmware.elf
+
+machine StartGdbServer 3333
+
+start
