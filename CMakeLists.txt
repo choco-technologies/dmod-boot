@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.10)
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
+option(DMBOOT_QEMU "Enable QEMU simulation mode" OFF)
 
 # ======================================================================
 #               Early DMOD Configuration (before project())
@@ -129,28 +130,57 @@ add_custom_command(
 
 
 # ======================================================================
-#               OpenOCD Integration
+#               OpenOCD/QEMU Integration
 # ======================================================================
 
 # Generate GDB init script from template with target-specific variables
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init.gdb.in
-    ${CMAKE_BINARY_DIR}/gdb_init.gdb
-    @ONLY
-)
+if(DMBOOT_QEMU)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init_qemu.gdb.in
+        ${CMAKE_BINARY_DIR}/gdb_init.gdb
+        @ONLY
+    )
+else()
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/gdb/gdb_init.gdb.in
+        ${CMAKE_BINARY_DIR}/gdb_init.gdb
+        @ONLY
+    )
+endif()
 
-add_custom_target(install-firmware
-    COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
-        -c "program ${MODULE_NAME}.elf verify reset exit"
-    DEPENDS ${MODULE_NAME}.elf
-    COMMENT "Installing firmware on ${TARGET}..."
-)
-
-# Custom target for connecting to target with OpenOCD
-add_custom_target(connect
-    COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
-    COMMENT "Connecting to ${TARGET} with OpenOCD..."
-)
+# Conditional target configuration based on QEMU mode
+if(DMBOOT_QEMU)
+    message(STATUS "QEMU mode enabled - targets will use QEMU instead of OpenOCD")
+    
+    # In QEMU mode, install-firmware just copies the firmware to a known location
+    add_custom_target(install-firmware
+        COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/qemu_firmware.elf
+        DEPENDS ${MODULE_NAME}.elf
+        COMMENT "Copying firmware for QEMU: ${TARGET}..."
+    )
+    
+    # In QEMU mode, connect launches QEMU with GDB server and loads firmware via GDB
+    # We use a script that starts QEMU in background and then uses GDB to load the firmware
+    add_custom_target(connect
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/qemu_connect.sh ${CMAKE_BINARY_DIR}/qemu_firmware.elf
+        DEPENDS install-firmware
+        COMMENT "Starting QEMU for ${TARGET}..."
+    )
+else()
+    # Normal hardware mode with OpenOCD
+    add_custom_target(install-firmware
+        COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+            -c "program ${MODULE_NAME}.elf verify reset exit"
+        DEPENDS ${MODULE_NAME}.elf
+        COMMENT "Installing firmware on ${TARGET}..."
+    )
+    
+    # Custom target for connecting to target with OpenOCD
+    add_custom_target(connect
+        COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+        COMMENT "Connecting to ${TARGET} with OpenOCD..."
+    )
+endif()
 
 # Custom target for debugging with GDB (connects to OpenOCD)
 add_custom_target(debug

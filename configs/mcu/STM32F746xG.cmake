@@ -9,7 +9,10 @@ set(DMBOOT_ARCH_FAMILY "cortex-m7" CACHE STRING "Microcontroller family")
 # ======================================================================
 #               OpenOCD Configuration
 # ======================================================================
-find_program(OPENOCD openocd REQUIRED)
+# OpenOCD is only required when not using QEMU mode
+if(NOT DMBOOT_QEMU)
+    find_program(OPENOCD openocd REQUIRED)
+endif()
 set(OPENOCD_INTERFACE "interface/stlink.cfg" CACHE STRING "OpenOCD interface configuration file")
 set(OPENOCD_TARGET "target/stm32f7x.cfg" CACHE STRING "OpenOCD target configuration file")
 
