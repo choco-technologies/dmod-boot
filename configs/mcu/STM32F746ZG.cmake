@@ -5,8 +5,6 @@ set(DMBOOT_MCU_NAME "stm32f746zg" CACHE STRING "Name of the target microcontroll
 set(DMBOOT_MCU_SERIES "stm32f7" CACHE STRING "Series of the target microcontroller")
 set(DMBOOT_ARCH "armv7" CACHE STRING "Architecture of the target microcontroller")
 set(DMBOOT_ARCH_FAMILY "cortex-m7" CACHE STRING "Microcontroller family")
-set(DMBOOT_QEMU_MACHINE "mps2-an500" CACHE STRING "QEMU machine type for emulation")
-set(DMBOOT_QEMU_CPU "cortex-m7" CACHE STRING "QEMU CPU type for emulation")
 
 # ======================================================================
 #               OpenOCD Configuration
@@ -29,3 +27,8 @@ set(DMOD_CPU_NAME   ${DMBOOT_MCU_NAME} CACHE STRING "Name of the target cpu, if 
 # ======================================================================
 include(configs/arch/${DMBOOT_ARCH}/cfg.cmake)
 include(configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/cfg.cmake)
+
+# Include QEMU configuration if QEMU mode is enabled
+if(DMBOOT_QEMU)
+    include(configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/qemu-cfg.cmake)
+endif()
