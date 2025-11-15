@@ -1,17 +1,18 @@
 #!/bin/bash
 # Script to launch Renode with GDB server for ARM Cortex-M emulation
-# This script is called by the 'connect' target when DMBOOT_QEMU=ON
+# This script is called by the 'connect' target when DMBOOT_EMULATION=ON
 
 # Check if required parameters are provided
-if [ -z "$1" ] || [ -z "$2" ]; then
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
     echo "Error: Missing required parameters"
-    echo "Usage: $0 <firmware.elf> <target_name> [platform_file]"
+    echo "Usage: $0 <firmware.elf> <target_name> <platform_repl> <machine_name>"
     exit 1
 fi
 
 FIRMWARE_FILE="$1"
 TARGET_NAME="$2"
-PLATFORM_FILE="${3:-$(dirname $0)/renode_platform.resc}"
+PLATFORM_REPL="$3"
+MACHINE_NAME="$4"
 BUILD_DIR=$(dirname "$FIRMWARE_FILE")
 
 # Check if firmware file exists
@@ -22,7 +23,8 @@ fi
 
 echo "Starting Renode for ${TARGET_NAME} emulation..."
 echo "Firmware: $FIRMWARE_FILE"
-echo "Platform: $PLATFORM_FILE"
+echo "Platform: ${PLATFORM_REPL}"
+echo "Machine: ${MACHINE_NAME}"
 echo "GDB server will be available on localhost:3333"
 echo ""
 
@@ -30,8 +32,8 @@ echo ""
 TEMP_SCRIPT=$(mktemp)
 cat > "$TEMP_SCRIPT" << EOF
 # Renode script for ${TARGET_NAME}
-mach create "stm32f746"
-machine LoadPlatformDescription @platforms/boards/stm32f7_discovery-kit.repl
+mach create "${MACHINE_NAME}"
+machine LoadPlatformDescription @${PLATFORM_REPL}
 
 # Load firmware
 sysbus LoadELF @${FIRMWARE_FILE}
