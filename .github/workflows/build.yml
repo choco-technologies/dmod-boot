@@ -264,25 +264,6 @@ jobs:
         echo ""
         echo "Renode workflow test completed!"
     
-    - name: Verify workflow similarity
-      run: |
-        echo "Verifying that emulation workflow is similar to hardware workflow..."
-        echo "✓ install-firmware target: copies firmware (Renode) vs flashes firmware (hardware)"
-        echo "✓ connect target: starts Renode with GDB server vs starts OpenOCD (hardware)"
-        echo "✓ monitor-gdb target: connects identically in both modes via GDB protocol"
-        echo ""
-        echo "All workflow targets maintain consistent interface!"
-        echo ""
-        echo "=== Why Renode? ==="
-        echo "Renode provides superior STM32 emulation compared to QEMU:"
-        echo "  ✓ Native STM32F7 Discovery board support"
-        echo "  ✓ Complete peripheral emulation (GPIO, UART, timers, DMA, etc.)"
-        echo "  ✓ Accurate memory map matching real hardware"
-        echo "  ✓ Full interrupt controller support"
-        echo "  ✓ Better suited for firmware testing and validation"
-        echo ""
-        echo "This enables full firmware execution including monitor-gdb log capture!"
-
   build-all:
     name: All builds completed
     runs-on: ubuntu-latest
