@@ -20,6 +20,11 @@ configure_file(
     ${CMAKE_BINARY_DIR}/gdb_init.gdb
     @ONLY
 )
+configure_file(
+    ${CMAKE_SOURCE_DIR}/configs/renode/renode.resc.in
+    ${CMAKE_BINARY_DIR}/renode.resc
+    @ONLY
+)
 
 # ======================================================================
 #               Firmware Installation and Connection Targets
@@ -36,7 +41,8 @@ if(DMBOOT_EMULATION)
         ${CMAKE_BINARY_DIR}/renode_firmware.elf 
         ${TARGET}
         ${DMBOOT_RENODE_PLATFORM}
-        ${DMBOOT_RENODE_MACHINE_NAME})
+        ${DMBOOT_RENODE_MACHINE_NAME}
+        ${CMAKE_BINARY_DIR}/renode.resc)
     set(CONNECT_COMMENT "Starting Renode for ${TARGET}...")
 else()
     set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}

@@ -13,6 +13,7 @@ FIRMWARE_FILE="$1"
 TARGET_NAME="$2"
 PLATFORM_REPL="$3"
 MACHINE_NAME="$4"
+RENODE_SCRIPT="$5"
 BUILD_DIR=$(dirname "$FIRMWARE_FILE")
 
 # Check if firmware file exists
@@ -25,30 +26,9 @@ echo "Starting Renode for ${TARGET_NAME} emulation..."
 echo "Firmware: $FIRMWARE_FILE"
 echo "Platform: ${PLATFORM_REPL}"
 echo "Machine: ${MACHINE_NAME}"
+echo "Renode script: ${RENODE_SCRIPT}"
 echo "GDB server will be available on localhost:3333"
 echo ""
-
-# Create a temporary Renode script that loads the firmware
-TEMP_SCRIPT=$(mktemp)
-cat > "$TEMP_SCRIPT" << EOF
-# Renode script for ${TARGET_NAME}
-mach create "${MACHINE_NAME}"
-machine LoadPlatformDescription @${PLATFORM_REPL}
-
-# Load firmware
-sysbus LoadELF @${FIRMWARE_FILE}
-
-# Set up GDB server on port 3333 (compatible with OpenOCD)
-machine StartGdbServer 3333 true
-
-# Show analyzer for UART output
-showAnalyzer sysbus.usart1
-
-# Start emulation
-start
-EOF
-
-echo "Renode script created at: $TEMP_SCRIPT"
 
 # Find Renode executable in PATH
 RENODE_BIN=$(which renode 2>/dev/null)
@@ -66,7 +46,7 @@ RENODE_DIR=$(dirname "$RENODE_BIN")
 # --console: interactive console
 # --port -2: random telnet port (we don't use telnet)
 # Change to Renode directory so platform files can be found
-cd "$RENODE_DIR" && renode --disable-xwt --console -e "include @${TEMP_SCRIPT}" &
+cd "$RENODE_DIR" && renode --disable-xwt --hide-monitor -e "include @${RENODE_SCRIPT}" &
 
 RENODE_PID=$!
 echo "Renode started with PID: $RENODE_PID"
@@ -79,17 +59,5 @@ echo "Firmware loaded and running in Renode."
 echo "Press Ctrl+C to exit"
 echo ""
 
-# Cleanup on exit
-cleanup() {
-    echo "Stopping Renode..."
-    kill $RENODE_PID 2>/dev/null
-    rm -f "$TEMP_SCRIPT"
-    exit
-}
-
-# Forward SIGINT and SIGTERM to Renode
-trap cleanup INT TERM
-
 # Wait for Renode to exit
 wait $RENODE_PID
-rm -f "$TEMP_SCRIPT"
