@@ -35,11 +35,23 @@ endif()
 set(MODULES_DMP_OUTPUT "${CMAKE_BINARY_DIR}/modules.dmp")
 set(MODULES_DMF_DIR "${CMAKE_BINARY_DIR}/dmf")
 
-add_custom_target(package_modules ALL
+# List all .dmf files that should be packaged
+set(MODULE_DMF_FILES
+    ${MODULES_DMF_DIR}/dmffs.dmf
+    ${MODULES_DMF_DIR}/make_dmffs.dmf
+    ${MODULES_DMF_DIR}/dmfsi.dmf
+)
+
+add_custom_command(
+    OUTPUT ${MODULES_DMP_OUTPUT}
     COMMAND ${TODMP_EXECUTABLE} modules ${MODULES_DMF_DIR} ${MODULES_DMP_OUTPUT}
-    DEPENDS dmffs
+    DEPENDS dmffs make_dmffs dmfsi ${MODULE_DMF_FILES}
     COMMENT "Packaging modules into modules.dmp..."
     VERBATIM
+)
+
+add_custom_target(package_modules ALL
+    DEPENDS ${MODULES_DMP_OUTPUT}
 )
 
 # Make modules.dmp available to parent project

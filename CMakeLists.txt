@@ -76,27 +76,34 @@ if(DMBOOT_ROMFS_DIR AND EXISTS "${DMBOOT_ROMFS_DIR}")
     if(NOT DMBOOT_DMOD_LOADER)
         find_program(DMBOOT_DMOD_LOADER dmod_loader)
         if(NOT DMBOOT_DMOD_LOADER)
-            message(STATUS "dmod_loader not found, will build it from dmod repository")
-            set(DMOD_TOOLS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod/build_tools")
-            set(DMBOOT_DMOD_LOADER "${DMOD_TOOLS_BUILD_DIR}/bin/tools/dmod_loader")
-            
-            # Build dmod_loader for x86
-            add_custom_command(
-                OUTPUT ${DMBOOT_DMOD_LOADER}
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${DMOD_TOOLS_BUILD_DIR}
-                COMMAND ${CMAKE_COMMAND} -E chdir ${DMOD_TOOLS_BUILD_DIR}
-                    ${CMAKE_COMMAND} 
-                    -DDMOD_MODE=DMOD_SYSTEM
-                    -DDMOD_BUILD_TOOLS=ON
-                    ${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod
-                COMMAND ${CMAKE_COMMAND} --build ${DMOD_TOOLS_BUILD_DIR}
-                COMMENT "Building dmod_loader tool..."
-                VERBATIM
-            )
-            
-            add_custom_target(build_dmod_loader
-                DEPENDS ${DMBOOT_DMOD_LOADER}
-            )
+            message(STATUS "dmod_loader not found in PATH")
+            # Check if we're likely in Docker environment
+            if(EXISTS "/tools/dmf/make_dmffs.dmf")
+                message(STATUS "Docker environment detected, dmod_loader should be available at build time")
+                set(DMBOOT_DMOD_LOADER "dmod_loader")
+            else()
+                message(STATUS "Will build dmod_loader from dmod repository")
+                set(DMOD_TOOLS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod/build_tools")
+                set(DMBOOT_DMOD_LOADER "${DMOD_TOOLS_BUILD_DIR}/bin/tools/dmod_loader")
+                
+                # Build dmod_loader for x86
+                add_custom_command(
+                    OUTPUT ${DMBOOT_DMOD_LOADER}
+                    COMMAND ${CMAKE_COMMAND} -E make_directory ${DMOD_TOOLS_BUILD_DIR}
+                    COMMAND ${CMAKE_COMMAND} -E chdir ${DMOD_TOOLS_BUILD_DIR}
+                        ${CMAKE_COMMAND} 
+                        -DDMOD_MODE=DMOD_SYSTEM
+                        -DDMOD_BUILD_TOOLS=ON
+                        ${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod
+                    COMMAND ${CMAKE_COMMAND} --build ${DMOD_TOOLS_BUILD_DIR}
+                    COMMENT "Building dmod_loader tool..."
+                    VERBATIM
+                )
+                
+                add_custom_target(build_dmod_loader
+                    DEPENDS ${DMBOOT_DMOD_LOADER}
+                )
+            endif()
         endif()
     endif()
     
@@ -130,7 +137,7 @@ if(DMBOOT_ROMFS_DIR AND EXISTS "${DMBOOT_ROMFS_DIR}")
     # Set up dependencies
     set(ROMFS_DEPENDS ${DMBOOT_ROMFS_DIR})
     if(TARGET build_dmod_loader)
-        list(APPEND ROMFS_DEPENDS build_dmod_loader)
+        list(APPEND ROMFS_DEPENDS ${DMBOOT_DMOD_LOADER})
     endif()
     if(ROMFS_EXTRA_DEPENDS)
         list(APPEND ROMFS_DEPENDS ${ROMFS_EXTRA_DEPENDS})
