@@ -27,7 +27,8 @@
                 "DMBOOT_MCU_NAME=STM32F407VG",
                 "DMBOOT_MCU_NAME_STRING=\"STM32F407VG\"",
                 "DMBOOT_MAX_MOUNT_POINTS=100",
-                "DMBOOT_MAX_OPEN_FILES=1000"
+                "DMBOOT_MAX_OPEN_FILES=1000",
+                "DMBOOT_EMULATION_ENABLED=1"
             ],
             "compilerPath": "/usr/bin/arm-none-eabi-gcc",
             "cStandard": "c11",

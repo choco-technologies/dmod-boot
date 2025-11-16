@@ -271,7 +271,7 @@ int main(int argc, char** argv)
         dmlog_puts(ctx, "$ ");
         while(!dmlog_input_available(ctx))
         {
-            dmlog_input_request(ctx);
+            dmlog_input_request(ctx, DMLOG_INPUT_REQUEST_FLAG_LINE_MODE);
             delay(1000);
         }
         char input_buffer[128];
@@ -286,11 +286,16 @@ int main(int argc, char** argv)
                 dmlog_puts(ctx, "  unload <module_name>       - Unload module by name\n");
                 dmlog_puts(ctx, "  run <module_name> args ... - Run application module by name\n");
                 dmlog_puts(ctx, "  list                       - List loaded modules\n");
+                dmlog_puts(ctx, "  clear                      - Clear the screen\n");
                 dmlog_puts(ctx, "  exit                       - Exit the shell\n");
             }
             else if(strcmp(input_buffer, "version\n") == 0)
             {
                 dmlog_puts(ctx, "DMOD Version: " DMOD_VERSION_STRING "\n");
+            }
+            else if(strcmp(input_buffer, "clear\n") == 0)
+            {
+                dmlog_puts(ctx, "\033[2J\033[H"); // ANSI escape codes to clear terminal
             }
             else if(strncmp(input_buffer, "load", 4) == 0)
             {
