@@ -1,0 +1,33 @@
+{
+  "rom": {
+    "components": {
+      "other": 8722,
+      "dmlog": 3673,
+      "dmheap": 3789,
+      "dmvfs": 18620,
+      "dmenv": 3511,
+      "dmod": 49549
+    },
+    "used": 91284,
+    "capacity": 1048576,
+    "free": 957292,
+    "usage_percent": 8.705520629882812
+  },
+  "ram": {
+    "components": {
+      "other": 1136,
+      "dmlog": 4,
+      "dmheap": 24,
+      "dmvfs": 28,
+      "dmenv": 4,
+      "dmod": 828,
+      "main stack": 4096,
+      "log buffer": 8192,
+      "heap": 247232
+    },
+    "used": 14288,
+    "capacity": 262144,
+    "free": 247856,
+    "usage_percent": 5.450439453125
+  }
+}

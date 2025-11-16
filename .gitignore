@@ -43,3 +43,6 @@ _codeql_detected_source_root
 
 # Modules build artifacts
 modules/build/
+
+# Test ROM filesystem directory
+test-romfs/

@@ -37,6 +37,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
       -DSTARTUP_DMP_FILE=path/to/startup.dmp \
       -DUSER_DATA_FILE=path/to/user_data.dat \
+      -DDMBOOT_ROMFS_DIR=./rom-fs \
       -S . -B build
 cmake --build build
 ```
@@ -44,9 +45,35 @@ cmake --build build
 **Build Parameters:**
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
+- `DMBOOT_ROMFS_DIR` (optional) - Path to a directory that will be converted to a read-only ROM filesystem using dmffs and embedded in the firmware. The filesystem will be automatically mounted at `/romfs/` during boot.
 - `DMBOOT_EMULATION` (optional) - Enable Renode simulation mode instead of hardware mode
 
 All parameters are optional. If not specified, the build will proceed with default settings.
+
+### ROM File System (ROMFS) Support
+
+The bootloader includes built-in support for the [dmffs](https://github.com/choco-technologies/dmffs) module, which provides a read-only file system stored in flash memory. When you specify `-DDMBOOT_ROMFS_DIR=<path>` during the build:
+
+1. The specified directory is converted to a binary filesystem image using the `make_dmffs` tool
+2. The filesystem binary is embedded in the firmware ROM
+3. At boot, the `modules.dmp` package (containing dmffs, dmfsi, and make_dmffs modules) is automatically loaded
+4. The ROM filesystem is mounted at `/romfs/` and accessible via the DMVFS API
+
+**Example:**
+```bash
+# Create a directory with files to embed
+mkdir rom-fs
+echo "Configuration data" > rom-fs/config.txt
+echo "Static content" > rom-fs/readme.txt
+
+# Build with ROM filesystem
+cmake -DDMBOOT_ROMFS_DIR=./rom-fs -S . -B build
+cmake --build build
+
+# The files will be accessible at /romfs/config.txt and /romfs/readme.txt at runtime
+```
+
+**Note:** The ROM filesystem is read-only. For runtime file modifications, use other filesystem modules like FatFS on SD card or RamFS in RAM.
 
 ## CMake Targets
 
