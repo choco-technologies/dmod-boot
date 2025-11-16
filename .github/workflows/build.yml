@@ -15,7 +15,7 @@ jobs:
     name: Build with CMake
     runs-on: ubuntu-latest
     container:
-      image: chocotechnologies/dmod:1.0.2
+      image: chocotechnologies/dmboot:1.0.0
     
     permissions:
       contents: read
@@ -143,7 +143,7 @@ jobs:
     name: Test Renode Simulation
     runs-on: ubuntu-latest
     container:
-      image: chocotechnologies/dmod:1.0.2
+      image: chocotechnologies/dmboot:1.0.0
     
     permissions:
       contents: read
@@ -164,22 +164,6 @@ jobs:
       run: |
         git submodule init
         git submodule update --recursive
-    
-    - name: Install Renode and dependencies
-      run: |
-        apt-get update -qq
-        # Install required dependencies
-        apt-get install -y wget libncurses5 policykit-1 libgtk2.0-0 screen uml-utilities libc6-dev gcc python3 python3-pip
-        
-        # Download and install Renode
-        RENODE_VERSION="1.15.3"
-        wget -q https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/renode_${RENODE_VERSION}_amd64.deb
-        dpkg -i ./renode_${RENODE_VERSION}_amd64.deb || apt-get install -f -y
-        rm renode_${RENODE_VERSION}_amd64.deb
-        
-        # Verify Renode installation
-        which renode
-        renode --version || echo "Renode installed successfully"
     
     - name: Build with emulation mode enabled
       run: |
