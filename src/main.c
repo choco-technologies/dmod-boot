@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdio.h>
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
@@ -17,6 +18,12 @@ extern void* __startup_dmp_size;
 extern void* __user_data_start;
 extern void* __user_data_end;
 extern void* __user_data_size;
+extern void* __modules_dmp_start;
+extern void* __modules_dmp_end;
+extern void* __modules_dmp_size;
+extern void* __romfs_start;
+extern void* __romfs_end;
+extern void* __romfs_size;
 
 void delay(int cycles)
 {
@@ -77,6 +84,70 @@ static void load_embedded_startup_dmp(void)
     else
     {
         DMOD_LOG_INFO("No startup.dmp embedded in ROM\n");
+    }
+}
+
+static void load_embedded_modules_dmp(void)
+{
+    void* modules_dmp_start = &__modules_dmp_start;
+    void* modules_dmp_end   = &__modules_dmp_end;
+    size_t modules_dmp_size = (size_t)((uintptr_t)modules_dmp_end - (uintptr_t)modules_dmp_start);
+    if(modules_dmp_size > 0)
+    {
+        DMOD_LOG_INFO("Loading modules.dmp from ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)modules_dmp_start, (unsigned int)modules_dmp_size);
+        
+        if(!Dmod_AddPackageBuffer(modules_dmp_start, modules_dmp_size))
+        {
+            DMOD_LOG_ERROR("Failed to load modules.dmp package\n");
+        }
+        else
+        {
+            DMOD_LOG_INFO("Modules package loaded successfully\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No modules.dmp embedded in ROM\n");
+    }
+}
+
+static void mount_embedded_romfs(void)
+{
+    void* romfs_start = &__romfs_start;
+    void* romfs_end   = &__romfs_end;
+    size_t romfs_size = (size_t)((uintptr_t)romfs_end - (uintptr_t)romfs_start);
+    if(romfs_size > 0)
+    {
+        DMOD_LOG_INFO("Mounting ROMFS from ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)romfs_start, (unsigned int)romfs_size);
+        
+        // Load dmffs module
+        if(!Dmod_LoadModuleByName("dmffs"))
+        {
+            DMOD_LOG_ERROR("Failed to load dmffs module\n");
+            return;
+        }
+        
+        // Mount the ROMFS at /romfs/
+        // The dmffs module expects parameters: <binary_data_addr> <mount_point>
+        char addr_str[32];
+        snprintf(addr_str, sizeof(addr_str), "0x%X", (uintptr_t)romfs_start);
+        char* argv[] = { "dmffs", addr_str, "/romfs/" };
+        int argc = 3;
+        
+        if(Dmod_RunModule("dmffs", argc, argv) != 0)
+        {
+            DMOD_LOG_ERROR("Failed to mount ROMFS at /romfs/\n");
+        }
+        else
+        {
+            DMOD_LOG_INFO("ROMFS mounted successfully at /romfs/\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No ROMFS embedded in ROM\n");
     }
 }
 
@@ -260,6 +331,12 @@ int main(int argc, char** argv)
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
+
+    // Load modules.dmp package if embedded in ROM
+    load_embedded_modules_dmp();
+
+    // Mount ROMFS if embedded in ROM
+    mount_embedded_romfs();
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();

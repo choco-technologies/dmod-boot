@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.10)
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
+set(DMBOOT_ROMFS_DIR "" CACHE PATH "Optional directory to create ROM filesystem from")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================
@@ -36,6 +37,56 @@ project(dmboot
 add_subdirectory(lib)
 add_subdirectory(inc)
 add_subdirectory(src)
+
+# ======================================================================
+#               Modules Build and Packaging
+# ======================================================================
+# Build modules in a separate build directory with DMOD_MODULE mode
+set(MODULES_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/build")
+set(MODULES_DMP_FILE "${CMAKE_BINARY_DIR}/modules.dmp")
+
+# Custom target to build modules
+add_custom_command(
+    OUTPUT ${MODULES_DMP_FILE}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${MODULES_BUILD_DIR}
+    COMMAND ${CMAKE_COMMAND} -E chdir ${MODULES_BUILD_DIR}
+        ${CMAKE_COMMAND} 
+        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DCMAKE_TOOLCHAIN_FILE=${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/toolchain.cmake
+        -DDMOD_MODE=DMOD_MODULE
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules
+    COMMAND ${CMAKE_COMMAND} --build ${MODULES_BUILD_DIR}
+    COMMAND todmp ${MODULES_BUILD_DIR} -o ${MODULES_DMP_FILE}
+    COMMENT "Building and packaging DMOD modules..."
+    VERBATIM
+)
+
+add_custom_target(build_modules
+    DEPENDS ${MODULES_DMP_FILE}
+)
+
+# ======================================================================
+#               ROMFS Generation (if DMBOOT_ROMFS_DIR is set)
+# ======================================================================
+if(DMBOOT_ROMFS_DIR AND EXISTS "${DMBOOT_ROMFS_DIR}")
+    set(ROMFS_BIN_FILE "${CMAKE_BINARY_DIR}/romfs.bin")
+    
+    add_custom_command(
+        OUTPUT ${ROMFS_BIN_FILE}
+        COMMAND dmod_loader /tools/dmf/make_dmffs.dmf --args ${DMBOOT_ROMFS_DIR} ${ROMFS_BIN_FILE}
+        DEPENDS ${DMBOOT_ROMFS_DIR}
+        COMMENT "Generating ROMFS from ${DMBOOT_ROMFS_DIR}..."
+        VERBATIM
+    )
+    
+    add_custom_target(build_romfs
+        DEPENDS ${ROMFS_BIN_FILE}
+    )
+    
+    message(STATUS "ROMFS will be generated from: ${DMBOOT_ROMFS_DIR}")
+else()
+    message(STATUS "No ROMFS directory provided (DMBOOT_ROMFS_DIR not set or directory doesn't exist)")
+endif()
 
 # ======================================================================
 #               Binary File Embedding
@@ -71,6 +122,30 @@ if(USER_DATA_FILE AND EXISTS "${USER_DATA_FILE}")
     message(STATUS "User data file will be embedded: ${USER_DATA_FILE}")
 else()
     message(STATUS "No user data file provided (USER_DATA_FILE not set or file doesn't exist)")
+endif()
+
+# Embed modules.dmp (always built)
+embed_binary_file(
+    INPUT_FILE "${MODULES_DMP_FILE}"
+    SECTION_NAME ".embedded.modules_dmp"
+    SYMBOL_PREFIX "__modules_dmp"
+)
+set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
+list(APPEND EMBEDDED_OBJECTS "${MODULES_DMP_OBJECT}")
+message(STATUS "Modules DMP file will be embedded: ${MODULES_DMP_FILE}")
+
+# Embed romfs.bin if DMBOOT_ROMFS_DIR is set
+if(DMBOOT_ROMFS_DIR AND EXISTS "${DMBOOT_ROMFS_DIR}")
+    embed_binary_file(
+        INPUT_FILE "${ROMFS_BIN_FILE}"
+        SECTION_NAME ".embedded.romfs"
+        SYMBOL_PREFIX "__romfs"
+    )
+    set(ROMFS_OBJECT "${CMAKE_BINARY_DIR}/__romfs.o")
+    list(APPEND EMBEDDED_OBJECTS "${ROMFS_OBJECT}")
+    message(STATUS "ROMFS binary will be embedded: ${ROMFS_BIN_FILE}")
+else()
+    message(STATUS "No ROMFS binary to embed")
 endif()
 
 # ======================================================================

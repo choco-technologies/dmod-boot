@@ -101,6 +101,30 @@ SECTIONS
        PROVIDE(__user_data_size = __user_data_end - __user_data_start);
    } > rom AT > rom
 
+   . = ALIGN(16);
+   .embedded.modules_dmp :
+   {
+       __modules_dmp_start = .;
+       PROVIDE(__modules_dmp_start = .);
+       KEEP(*(.embedded.modules_dmp))
+       __modules_dmp_end = .;
+       PROVIDE(__modules_dmp_end = .);
+       __modules_dmp_size = __modules_dmp_end - __modules_dmp_start;
+       PROVIDE(__modules_dmp_size = __modules_dmp_end - __modules_dmp_start);
+   } > rom AT > rom
+
+   . = ALIGN(16);
+   .embedded.romfs :
+   {
+       __romfs_start = .;
+       PROVIDE(__romfs_start = .);
+       KEEP(*(.embedded.romfs))
+       __romfs_end = .;
+       PROVIDE(__romfs_end = .);
+       __romfs_size = __romfs_end - __romfs_start;
+       PROVIDE(__romfs_size = __romfs_end - __romfs_start);
+   } > rom AT > rom
+
    . = ALIGN(4);
    __exidx_start__ = .;
    PROVIDE(__exidx_start__ = __exidx_start__);

@@ -40,3 +40,6 @@ test/../src/*.o
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #cmake-build-*
 _codeql_detected_source_root
+
+# Modules build artifacts
+modules/build/

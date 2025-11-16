@@ -13,3 +13,6 @@
 [submodule "lib/dmenv"]
 	path = lib/dmenv
 	url = https://github.com/choco-technologies/dmenv.git
+[submodule "modules/dmffs"]
+	path = modules/dmffs
+	url = https://github.com/choco-technologies/dmffs.git
