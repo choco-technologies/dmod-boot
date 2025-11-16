@@ -10,6 +10,8 @@ set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_ROMFS_DIR "" CACHE PATH "Optional directory to create ROM filesystem from")
+set(DMBOOT_MAKE_DMFFS_MODULE "" CACHE FILEPATH "Path to make_dmffs.dmf module (auto-detected if not specified)")
+set(DMBOOT_DMOD_LOADER "" CACHE FILEPATH "Path to dmod_loader executable (auto-detected if not specified)")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================
@@ -42,12 +44,11 @@ add_subdirectory(src)
 #               Modules Build and Packaging
 # ======================================================================
 # Build modules in a separate build directory with DMOD_MODULE mode
+# Treat modules/ as a separate CMake project
 set(MODULES_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/build")
-set(MODULES_DMP_FILE "${CMAKE_BINARY_DIR}/modules.dmp")
+set(MODULES_DMP_FILE "${MODULES_BUILD_DIR}/modules.dmp")
 
-# Custom target to build modules
-# Note: Each module's CMakeLists.txt is responsible for setting up its own toolchain
-# via FetchContent or other means, so we just configure and build them
+# Custom target to configure and build modules as a separate project
 add_custom_command(
     OUTPUT ${MODULES_DMP_FILE}
     COMMAND ${CMAKE_COMMAND} -E remove_directory ${MODULES_BUILD_DIR}
@@ -55,9 +56,8 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E chdir ${MODULES_BUILD_DIR}
         ${CMAKE_COMMAND} 
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules/dmffs
-    COMMAND ${CMAKE_COMMAND} --build ${MODULES_BUILD_DIR}
-    COMMAND todmp modules ${MODULES_BUILD_DIR}/dmf ${MODULES_DMP_FILE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules
+    COMMAND ${CMAKE_COMMAND} --build ${MODULES_BUILD_DIR} --target package_modules
     COMMENT "Building and packaging DMOD modules..."
     VERBATIM
 )
@@ -72,10 +72,74 @@ add_custom_target(build_modules
 if(DMBOOT_ROMFS_DIR AND EXISTS "${DMBOOT_ROMFS_DIR}")
     set(ROMFS_BIN_FILE "${CMAKE_BINARY_DIR}/romfs.bin")
     
+    # Auto-detect or validate dmod_loader
+    if(NOT DMBOOT_DMOD_LOADER)
+        find_program(DMBOOT_DMOD_LOADER dmod_loader)
+        if(NOT DMBOOT_DMOD_LOADER)
+            message(STATUS "dmod_loader not found, will build it from dmod repository")
+            set(DMOD_TOOLS_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod/build_tools")
+            set(DMBOOT_DMOD_LOADER "${DMOD_TOOLS_BUILD_DIR}/bin/tools/dmod_loader")
+            
+            # Build dmod_loader for x86
+            add_custom_command(
+                OUTPUT ${DMBOOT_DMOD_LOADER}
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${DMOD_TOOLS_BUILD_DIR}
+                COMMAND ${CMAKE_COMMAND} -E chdir ${DMOD_TOOLS_BUILD_DIR}
+                    ${CMAKE_COMMAND} 
+                    -DDMOD_MODE=DMOD_SYSTEM
+                    -DDMOD_BUILD_TOOLS=ON
+                    ${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod
+                COMMAND ${CMAKE_COMMAND} --build ${DMOD_TOOLS_BUILD_DIR}
+                COMMENT "Building dmod_loader tool..."
+                VERBATIM
+            )
+            
+            add_custom_target(build_dmod_loader
+                DEPENDS ${DMBOOT_DMOD_LOADER}
+            )
+        endif()
+    endif()
+    
+    # Auto-detect or validate make_dmffs module
+    if(NOT DMBOOT_MAKE_DMFFS_MODULE)
+        # Try common locations
+        set(MAKE_DMFFS_SEARCH_PATHS
+            "/tools/dmf/make_dmffs.dmf"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod/build_tools/dmf/make_dmffs.dmf"
+            "${MODULES_BUILD_DIR}/dmf/make_dmffs.dmf"
+        )
+        
+        foreach(SEARCH_PATH ${MAKE_DMFFS_SEARCH_PATHS})
+            if(EXISTS ${SEARCH_PATH})
+                set(DMBOOT_MAKE_DMFFS_MODULE ${SEARCH_PATH})
+                break()
+            endif()
+        endforeach()
+        
+        if(NOT DMBOOT_MAKE_DMFFS_MODULE)
+            message(STATUS "make_dmffs.dmf not found, will use module from modules build")
+            set(DMBOOT_MAKE_DMFFS_MODULE "${MODULES_BUILD_DIR}/dmf/make_dmffs.dmf")
+            # Depend on modules build to ensure make_dmffs is available
+            set(ROMFS_EXTRA_DEPENDS build_modules)
+        endif()
+    endif()
+    
+    message(STATUS "Using dmod_loader: ${DMBOOT_DMOD_LOADER}")
+    message(STATUS "Using make_dmffs module: ${DMBOOT_MAKE_DMFFS_MODULE}")
+    
+    # Set up dependencies
+    set(ROMFS_DEPENDS ${DMBOOT_ROMFS_DIR})
+    if(TARGET build_dmod_loader)
+        list(APPEND ROMFS_DEPENDS build_dmod_loader)
+    endif()
+    if(ROMFS_EXTRA_DEPENDS)
+        list(APPEND ROMFS_DEPENDS ${ROMFS_EXTRA_DEPENDS})
+    endif()
+    
     add_custom_command(
         OUTPUT ${ROMFS_BIN_FILE}
-        COMMAND dmod_loader /tools/dmf/make_dmffs.dmf --args ${DMBOOT_ROMFS_DIR} ${ROMFS_BIN_FILE}
-        DEPENDS ${DMBOOT_ROMFS_DIR}
+        COMMAND ${DMBOOT_DMOD_LOADER} ${DMBOOT_MAKE_DMFFS_MODULE} --args ${DMBOOT_ROMFS_DIR} ${ROMFS_BIN_FILE}
+        DEPENDS ${ROMFS_DEPENDS}
         COMMENT "Generating ROMFS from ${DMBOOT_ROMFS_DIR}..."
         VERBATIM
     )

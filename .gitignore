@@ -12,7 +12,7 @@ CMakeUserPresets.json
 
 # Build artifacts
 build/
-build-cmake*/
+build-*/
 build_host/
 *.o
 *.elf
