@@ -46,17 +46,18 @@ set(MODULES_BUILD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/modules/build")
 set(MODULES_DMP_FILE "${CMAKE_BINARY_DIR}/modules.dmp")
 
 # Custom target to build modules
+# Note: Each module's CMakeLists.txt is responsible for setting up its own toolchain
+# via FetchContent or other means, so we just configure and build them
 add_custom_command(
     OUTPUT ${MODULES_DMP_FILE}
+    COMMAND ${CMAKE_COMMAND} -E remove_directory ${MODULES_BUILD_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${MODULES_BUILD_DIR}
     COMMAND ${CMAKE_COMMAND} -E chdir ${MODULES_BUILD_DIR}
         ${CMAKE_COMMAND} 
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-        -DCMAKE_TOOLCHAIN_FILE=${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/toolchain.cmake
-        -DDMOD_MODE=DMOD_MODULE
-        ${CMAKE_CURRENT_SOURCE_DIR}/modules
+        ${CMAKE_CURRENT_SOURCE_DIR}/modules/dmffs
     COMMAND ${CMAKE_COMMAND} --build ${MODULES_BUILD_DIR}
-    COMMAND todmp ${MODULES_BUILD_DIR} -o ${MODULES_DMP_FILE}
+    COMMAND todmp modules ${MODULES_BUILD_DIR}/dmf ${MODULES_DMP_FILE}
     COMMENT "Building and packaging DMOD modules..."
     VERBATIM
 )
@@ -129,6 +130,7 @@ embed_binary_file(
     INPUT_FILE "${MODULES_DMP_FILE}"
     SECTION_NAME ".embedded.modules_dmp"
     SYMBOL_PREFIX "__modules_dmp"
+    ALLOW_MISSING
 )
 set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
 list(APPEND EMBEDDED_OBJECTS "${MODULES_DMP_OBJECT}")
@@ -140,6 +142,7 @@ if(DMBOOT_ROMFS_DIR AND EXISTS "${DMBOOT_ROMFS_DIR}")
         INPUT_FILE "${ROMFS_BIN_FILE}"
         SECTION_NAME ".embedded.romfs"
         SYMBOL_PREFIX "__romfs"
+        ALLOW_MISSING
     )
     set(ROMFS_OBJECT "${CMAKE_BINARY_DIR}/__romfs.o")
     list(APPEND EMBEDDED_OBJECTS "${ROMFS_OBJECT}")

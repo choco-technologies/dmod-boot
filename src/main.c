@@ -1,5 +1,4 @@
 #include <string.h>
-#include <stdio.h>
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
@@ -34,6 +33,28 @@ void HardFault_Handler(void)
 {
     DMOD_LOG_ERROR("HardFault_Handler invoked!\n");
     while(1);
+}
+
+/**
+ * @brief Convert unsigned integer to hex string
+ * 
+ * @param value Value to convert
+ * @param buffer Buffer to store the result (must be at least 11 bytes: "0x" + 8 hex digits + null)
+ * @param buffer_size Size of the buffer
+ */
+static void uint_to_hex_string(uint32_t value, char* buffer, size_t buffer_size)
+{
+    if(buffer_size < 11) return; // Need at least 11 bytes
+    
+    buffer[0] = '0';
+    buffer[1] = 'x';
+    
+    const char hex_chars[] = "0123456789ABCDEF";
+    for(int i = 7; i >= 0; i--)
+    {
+        buffer[2 + (7 - i)] = hex_chars[(value >> (i * 4)) & 0xF];
+    }
+    buffer[10] = '\0';
 }
 
 static void load_embedded_startup_dmp(void)
@@ -97,13 +118,14 @@ static void load_embedded_modules_dmp(void)
         DMOD_LOG_INFO("Loading modules.dmp from ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)modules_dmp_start, (unsigned int)modules_dmp_size);
         
-        if(!Dmod_AddPackageBuffer(modules_dmp_start, modules_dmp_size))
+        uint32_t package_index;
+        if(!Dmod_AddPackageBuffer(modules_dmp_start, modules_dmp_size, &package_index))
         {
             DMOD_LOG_ERROR("Failed to load modules.dmp package\n");
         }
         else
         {
-            DMOD_LOG_INFO("Modules package loaded successfully\n");
+            DMOD_LOG_INFO("Modules package loaded successfully (index=%u)\n", package_index);
         }
     }
     else
@@ -132,7 +154,7 @@ static void mount_embedded_romfs(void)
         // Mount the ROMFS at /romfs/
         // The dmffs module expects parameters: <binary_data_addr> <mount_point>
         char addr_str[32];
-        snprintf(addr_str, sizeof(addr_str), "0x%X", (uintptr_t)romfs_start);
+        uint_to_hex_string((uint32_t)(uintptr_t)romfs_start, addr_str, sizeof(addr_str));
         char* argv[] = { "dmffs", addr_str, "/romfs/" };
         int argc = 3;
         

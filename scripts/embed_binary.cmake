@@ -20,7 +20,7 @@
 # Function to convert a binary file into an object file with linker symbols
 function(embed_binary_file)
     # Parse arguments
-    set(options "")
+    set(options "ALLOW_MISSING")
     set(oneValueArgs INPUT_FILE SECTION_NAME SYMBOL_PREFIX OUTPUT_OBJECT)
     set(multiValueArgs "")
     cmake_parse_arguments(EMBED "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
@@ -42,8 +42,8 @@ function(embed_binary_file)
         set(EMBED_OUTPUT_OBJECT "${CMAKE_BINARY_DIR}/${EMBED_SYMBOL_PREFIX}.o")
     endif()
 
-    # Check if input file exists
-    if(NOT EXISTS "${EMBED_INPUT_FILE}")
+    # Check if input file exists (skip check if ALLOW_MISSING is set for generated files)
+    if(NOT EMBED_ALLOW_MISSING AND NOT EXISTS "${EMBED_INPUT_FILE}")
         message(FATAL_ERROR "embed_binary_file: Input file '${EMBED_INPUT_FILE}' does not exist")
     endif()
 
