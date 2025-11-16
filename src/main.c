@@ -151,14 +151,41 @@ static void mount_embedded_romfs(void)
             return;
         }
         
-        // Mount the ROMFS at /romfs/
-        // The dmffs module expects parameters: <binary_data_addr> <mount_point>
+        // Mount the ROMFS at /romfs/ using dmvfs
+        // Build config string: "flash_addr=0xXXXXXXXX;flash_size=0xXXXXXXXX"
         char addr_str[32];
-        uint_to_hex_string((uint32_t)(uintptr_t)romfs_start, addr_str, sizeof(addr_str));
-        char* argv[] = { "dmffs", addr_str, "/romfs/" };
-        int argc = 3;
+        char size_str[32];
+        char config[128];
         
-        if(Dmod_RunModule("dmffs", argc, argv) != 0)
+        uint_to_hex_string((uint32_t)(uintptr_t)romfs_start, addr_str, sizeof(addr_str));
+        uint_to_hex_string((uint32_t)romfs_size, size_str, sizeof(size_str));
+        
+        // Manually build config string
+        const char* prefix = "flash_addr=";
+        const char* separator = ";flash_size=";
+        size_t pos = 0;
+        
+        // Copy "flash_addr="
+        for(size_t i = 0; prefix[i] != '\0' && pos < sizeof(config) - 1; i++, pos++)
+            config[pos] = prefix[i];
+        
+        // Copy address
+        for(size_t i = 0; addr_str[i] != '\0' && pos < sizeof(config) - 1; i++, pos++)
+            config[pos] = addr_str[i];
+        
+        // Copy ";flash_size="
+        for(size_t i = 0; separator[i] != '\0' && pos < sizeof(config) - 1; i++, pos++)
+            config[pos] = separator[i];
+        
+        // Copy size
+        for(size_t i = 0; size_str[i] != '\0' && pos < sizeof(config) - 1; i++, pos++)
+            config[pos] = size_str[i];
+        
+        config[pos] = '\0';
+        
+        DMOD_LOG_INFO("ROMFS config: %s\n", config);
+        
+        if(!dmvfs_mount_fs("dmffs", "/romfs", config))
         {
             DMOD_LOG_ERROR("Failed to mount ROMFS at /romfs/\n");
         }

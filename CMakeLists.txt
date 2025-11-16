@@ -56,6 +56,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E chdir ${MODULES_BUILD_DIR}
         ${CMAKE_COMMAND} 
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+        -DDMOD_TOOLS_NAME=arch/x86_64
         ${CMAKE_CURRENT_SOURCE_DIR}/modules
     COMMAND ${CMAKE_COMMAND} --build ${MODULES_BUILD_DIR} --target package_modules
     COMMENT "Building and packaging DMOD modules..."
