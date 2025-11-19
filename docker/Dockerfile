@@ -1,4 +1,4 @@
-FROM chocotechnologies/dmod:1.0.3
+FROM chocotechnologies/dmod:1.0.4
 
 RUN apt-get update -qq && apt-get install -y \
         wget \
@@ -19,9 +19,6 @@ RUN dpkg -i ./renode_${RENODE_VERSION}_amd64.deb || apt-get install -f -y
 RUN rm ./renode_${RENODE_VERSION}_amd64.deb
 
 # Install dmffs
-RUN wget -q https://github.com/choco-technologies/dmffs/releases/download/v1.0/dmffs-v1.0-x86_64.zip
-RUN unzip dmffs-v1.0-x86_64.zip -d /tmp/dmffs
-RUN mv /tmp/dmffs/*.dmf ${DMOD_DMF_DIR}
-RUN mv /tmp/dmffs/*.dmfc ${DMOD_DMFC_DIR}
+RUN dmf-get make_dmffs --type dmf
 RUN echo "alias make_dmffs='dmod_loader ${DMOD_DMF_DIR}/make_dmffs.dmf --args'" >> ~/.bashrc
 
