@@ -2,9 +2,9 @@
 #               Modules Package Builder
 # =====================================================================
 # This CMake script:
-# 1. Reads module list from modules.dmd
-# 2. Downloads modules for target architecture using dmf-get
-# 3. Packages them using todmp
+# 1. Builds DMOD tools (dmf-get and todmp) in SYSTEM mode
+# 2. Uses dmf-get to download modules from modules.dmd for target architecture
+# 3. Packages modules using todmp
 # 4. Makes the package available for embedding in firmware
 # =====================================================================
 
@@ -18,52 +18,32 @@ if(NOT EXISTS "${MODULES_DMD_FILE}")
     return()
 endif()
 
-# Read and parse modules.dmd file
-file(STRINGS "${MODULES_DMD_FILE}" MODULES_LIST)
-
-# Filter out empty lines and comments
-set(MODULES_TO_FETCH "")
-foreach(LINE ${MODULES_LIST})
-    string(STRIP "${LINE}" LINE_STRIPPED)
-    if(NOT LINE_STRIPPED STREQUAL "" AND NOT LINE_STRIPPED MATCHES "^#")
-        list(APPEND MODULES_TO_FETCH "${LINE_STRIPPED}")
-    endif()
-endforeach()
-
-# If no modules to fetch, skip
-if(NOT MODULES_TO_FETCH)
-    message(STATUS "No modules found in modules.dmd")
-    return()
-endif()
-
-list(LENGTH MODULES_TO_FETCH MODULES_COUNT)
-message(STATUS "Found ${MODULES_COUNT} modules to fetch from modules.dmd")
-
-# Determine target architecture for dmf-get
-# Map DMBOOT_ARCH to dmf-get architecture names
+# Determine target architecture for dmf-get --tools-name parameter
+# dmf-get uses DMOD_TOOLS_NAME format like "arch/armv7/cortex-m4"
 if(DMBOOT_ARCH STREQUAL "armv7")
     if(DMBOOT_ARCH_FAMILY STREQUAL "cortex-m4")
-        set(DMF_ARCH "arch/armv7/cortex-m4")
+        set(DMOD_TARGET_TOOLS_NAME "arch/armv7/cortex-m4")
     elseif(DMBOOT_ARCH_FAMILY STREQUAL "cortex-m7")
-        set(DMF_ARCH "arch/armv7/cortex-m7")
+        set(DMOD_TARGET_TOOLS_NAME "arch/armv7/cortex-m7")
     else()
         message(WARNING "Unknown ARM family: ${DMBOOT_ARCH_FAMILY}, defaulting to arch/armv7/cortex-m4")
-        set(DMF_ARCH "arch/armv7/cortex-m4")
+        set(DMOD_TARGET_TOOLS_NAME "arch/armv7/cortex-m4")
     endif()
 else()
     message(WARNING "Unknown architecture: ${DMBOOT_ARCH}, defaulting to arch/armv7/cortex-m4")
-    set(DMF_ARCH "arch/armv7/cortex-m4")
+    set(DMOD_TARGET_TOOLS_NAME "arch/armv7/cortex-m4")
 endif()
 
-message(STATUS "Target architecture for modules: ${DMF_ARCH}")
+message(STATUS "Target architecture for modules: ${DMOD_TARGET_TOOLS_NAME}")
 
-# First, we need to build dmod tools (todmp) in SYSTEM mode
+# Build DMOD tools (dmf-get and todmp) in SYSTEM mode for host architecture
 set(DMOD_TOOLS_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/dmod_tools_build")
+set(DMF_GET_TOOL "${DMOD_TOOLS_BUILD_DIR}/bin/tools/dmf-get")
 set(TODMP_TOOL "${DMOD_TOOLS_BUILD_DIR}/bin/tools/todmp")
 
-# Custom command to build todmp tool
+# Custom command to build DMOD tools
 add_custom_command(
-    OUTPUT "${TODMP_TOOL}"
+    OUTPUT "${DMF_GET_TOOL}" "${TODMP_TOOL}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${DMOD_TOOLS_BUILD_DIR}"
     COMMAND ${CMAKE_COMMAND} -E chdir "${DMOD_TOOLS_BUILD_DIR}"
         ${CMAKE_COMMAND} "${DMOD_DIR}" 
@@ -71,35 +51,27 @@ add_custom_command(
             -DDMOD_BUILD_TOOLS=ON
             -DDMOD_TOOLS_NAME=arch/x86_64
     COMMAND ${CMAKE_COMMAND} --build "${DMOD_TOOLS_BUILD_DIR}"
-    COMMENT "Building todmp tool for host architecture..."
+    COMMENT "Building DMOD tools (dmf-get and todmp) for host architecture..."
     VERBATIM
 )
 
-add_custom_target(build_todmp
-    DEPENDS "${TODMP_TOOL}"
-)
-
-# Create download directory
-add_custom_command(
-    OUTPUT "${MODULES_DOWNLOAD_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${MODULES_DOWNLOAD_DIR}"
-    COMMENT "Creating modules download directory..."
+add_custom_target(build_dmod_tools
+    DEPENDS "${DMF_GET_TOOL}" "${TODMP_TOOL}"
 )
 
 # Custom command to download modules using dmf-get
+# dmf-get reads modules.dmd and downloads modules for the target architecture
 set(DOWNLOAD_STAMP "${CMAKE_CURRENT_BINARY_DIR}/modules_downloaded.stamp")
 
 add_custom_command(
     OUTPUT "${DOWNLOAD_STAMP}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${MODULES_DOWNLOAD_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E echo "Downloading modules for ${DMF_ARCH}..."
-    # Download each module
-    COMMAND ${CMAKE_COMMAND} -E env DMOD_DMF_DIR="${MODULES_DOWNLOAD_DIR}"
-        ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/download_modules.cmake"
-        "${MODULES_DMD_FILE}" "${DMF_ARCH}" "${MODULES_DOWNLOAD_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Downloading modules from modules.dmd using dmf-get..."
+    COMMAND ${CMAKE_COMMAND} -E chdir "${MODULES_DOWNLOAD_DIR}"
+        "${DMF_GET_TOOL}" --file "${MODULES_DMD_FILE}" --tools-name "${DMOD_TARGET_TOOLS_NAME}" --type dmf
     COMMAND ${CMAKE_COMMAND} -E touch "${DOWNLOAD_STAMP}"
-    DEPENDS "${MODULES_DMD_FILE}"
-    COMMENT "Downloading modules from modules.dmd for ${DMF_ARCH}..."
+    DEPENDS "${DMF_GET_TOOL}" "${MODULES_DMD_FILE}"
+    COMMENT "Downloading modules for ${DMOD_TARGET_TOOLS_NAME}..."
     VERBATIM
 )
 

@@ -35,21 +35,17 @@ some_module
 
 During the build:
 
-1. **CMake reads** `modules.dmd` and parses the module list
-2. **Architecture detection**: Determines the target architecture (e.g., `arch/armv7/cortex-m4`)
-3. **Tool building**: Builds the `todmp` tool from DMOD in SYSTEM mode
-4. **Module download**: For each module:
-   - Calls `dmf-get module_name --arch <target_arch> --type dmf`
-   - Downloads the `.dmf` file to `build/modules/dmf/`
-5. **Packaging**: Creates `build/modules/modules.dmp` containing all downloaded modules
-6. **Embedding**: Embeds the package in ROM at section `.embedded.modules_dmp`
-7. **Runtime loading**: At boot, the bootloader loads and enables all modules
+1. **Architecture detection**: Determines the target architecture (e.g., `arch/armv7/cortex-m4`)
+2. **Tool building**: Builds DMOD tools (`dmf-get` and `todmp`) in SYSTEM mode for host architecture
+3. **Module download**: Uses `dmf-get` with `--file modules.dmd --tools-name <target_arch> --type dmf` to download all modules
+4. **Packaging**: Creates `build/modules/modules.dmp` containing all downloaded modules using `todmp`
+5. **Embedding**: Embeds the package in ROM at section `.embedded.modules_dmp`
+6. **Runtime loading**: At boot, the bootloader loads and enables all modules
 
 ## Requirements
 
-- **dmf-get**: Must be available in PATH or use the Docker container
-- **todmp**: Built automatically from DMOD library
-- **Target architecture**: Detected from CMake configuration
+- **DMOD library**: Required to build `dmf-get` and `todmp` tools
+- **Target architecture**: Detected from CMake configuration (DMBOOT_ARCH and DMBOOT_ARCH_FAMILY)
 
 ## Accessing Modules at Runtime
 
@@ -86,16 +82,16 @@ If you don't want to use the module packaging feature:
 
 ## Troubleshooting
 
-### dmf-get not found
-If `dmf-get` is not in your PATH, the build will show a warning but continue. To fix:
-- Install dmf-get
-- Or use the Docker container: `docker run -it chocotechnologies/dmboot:1.0.0`
+### Tool build fails
+If DMOD tools fail to build:
+- Ensure DMOD library submodule is properly initialized
+- Check that the build system has necessary compilers for host architecture
 
 ### Module download fails
 Check:
 - Internet connection
-- Module name and version are correct
-- dmf-get has access to the module repository
+- Module names and versions in modules.dmd are correct
+- Module repository is accessible
 
 ### Package creation fails
 Check:
@@ -109,7 +105,7 @@ Check:
 - `build/modules/dmf/*.dmf` - Downloaded module files
 - `build/modules/modules.dmp` - Final package
 - `build/modules/modules_downloaded.stamp` - Download completion marker
-- `build/modules/dmod_tools_build/` - todmp tool build directory
+- `build/modules/dmod_tools_build/` - DMOD tools (dmf-get and todmp) build directory
 
 ### Linker Symbols
 The embedded package provides these symbols:
