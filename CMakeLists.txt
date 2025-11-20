@@ -36,6 +36,7 @@ project(dmboot
 add_subdirectory(lib)
 add_subdirectory(inc)
 add_subdirectory(src)
+add_subdirectory(modules)
 
 # ======================================================================
 #               Binary File Embedding
@@ -71,6 +72,25 @@ if(USER_DATA_FILE AND EXISTS "${USER_DATA_FILE}")
     message(STATUS "User data file will be embedded: ${USER_DATA_FILE}")
 else()
     message(STATUS "No user data file provided (USER_DATA_FILE not set or file doesn't exist)")
+endif()
+
+# Embed modules package if modules.dmd exists
+# The actual embedding is done via a dependency on build_modules_package target
+if(EXISTS "${CMAKE_SOURCE_DIR}/modules/modules.dmd")
+    set(MODULES_DMP_FILE "${CMAKE_BINARY_DIR}/modules/modules.dmp")
+    
+    # Create embedding commands for modules package
+    # This will be generated during the build when build_modules_package creates the DMP file
+    embed_binary_file(
+        INPUT_FILE "${MODULES_DMP_FILE}"
+        SECTION_NAME ".embedded.modules_dmp"
+        SYMBOL_PREFIX "__modules_dmp"
+    )
+    set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
+    list(APPEND EMBEDDED_OBJECTS "${MODULES_DMP_OBJECT}")
+    message(STATUS "Modules package will be embedded from: ${MODULES_DMP_FILE}")
+else()
+    message(STATUS "No modules.dmd file found, skipping modules package embedding")
 endif()
 
 # ======================================================================
@@ -114,6 +134,11 @@ target_link_libraries(${MODULE_NAME}.elf
         dmboot_startup
         dmboot_arch
 )
+
+# Add dependency on modules package if modules.dmd exists
+if(EXISTS "${CMAKE_SOURCE_DIR}/modules/modules.dmd" AND TARGET build_modules_package)
+    add_dependencies(${MODULE_NAME}.elf build_modules_package)
+endif()
 
 # ======================================================================
 #               Memory Report Generation

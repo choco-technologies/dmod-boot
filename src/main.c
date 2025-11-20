@@ -17,6 +17,9 @@ extern void* __startup_dmp_size;
 extern void* __user_data_start;
 extern void* __user_data_end;
 extern void* __user_data_size;
+extern void* __modules_dmp_start;
+extern void* __modules_dmp_end;
+extern void* __modules_dmp_size;
 
 void delay(int cycles)
 {
@@ -77,6 +80,42 @@ static void load_embedded_startup_dmp(void)
     else
     {
         DMOD_LOG_INFO("No startup.dmp embedded in ROM\n");
+    }
+}
+
+static void load_embedded_modules_dmp(void)
+{
+    void* modules_dmp_start = &__modules_dmp_start;
+    void* modules_dmp_end   = &__modules_dmp_end;
+    size_t modules_dmp_size = (size_t)((uintptr_t)modules_dmp_end - (uintptr_t)modules_dmp_start);
+    if(modules_dmp_size > 0)
+    {
+        DMOD_LOG_INFO("Loading modules.dmp from ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)modules_dmp_start, (unsigned int)modules_dmp_size);
+        
+        Dmod_Context_t* modules_ctx = Dmod_Load(modules_dmp_start, modules_dmp_size);
+        if(modules_ctx != NULL)
+        {
+            DMOD_LOG_INFO("Modules package loaded successfully\n");
+
+            // Enable all modules in the package
+            if( !Dmod_Enable( modules_ctx, false, NULL ) )
+            {
+                DMOD_LOG_ERROR("Failed to enable modules from package\n");
+            }
+            else
+            {
+                DMOD_LOG_INFO("All modules from package enabled successfully\n");
+            }
+        }
+        else
+        {
+            DMOD_LOG_ERROR("Failed to load modules.dmp package\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No modules.dmp embedded in ROM\n");
     }
 }
 
@@ -260,6 +299,9 @@ int main(int argc, char** argv)
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
+
+    // Load modules.dmp if embedded in ROM (load before startup.dmp so modules are available)
+    load_embedded_modules_dmp();
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
