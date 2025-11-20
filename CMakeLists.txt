@@ -36,6 +36,7 @@ project(dmboot
 add_subdirectory(lib)
 add_subdirectory(inc)
 add_subdirectory(src)
+add_subdirectory(modules)
 
 # ======================================================================
 #               Binary File Embedding
