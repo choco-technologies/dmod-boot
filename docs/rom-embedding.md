@@ -16,12 +16,20 @@ DMOD Boot supports embedding binary files into ROM at build time. This allows yo
    - Size available as `USER_DATA_SIZE` environment variable
    - Can contain configuration, assets, or any custom data
 
+3. **`modules.dmp`** (automatic, build-time generated) - A DMOD package file containing modules from the `modules/` directory
+   - Automatically created during the build process if modules are specified in `modules/modules.dmd`
+   - Loaded before `startup.dmp` during boot
+   - If no modules are defined, the file won't exist, which is not an error
+   - Can contain library modules to be enabled or application modules to be run
+
 ## How It Works
 
 When DMOD Boot starts:
-1. It checks if a `startup.dmp` package is embedded in ROM
-2. If present, the package is automatically loaded using `Dmod_Load()` and its main module (if specified) is executed
-3. User data (if embedded) has its location made available through environment variables for your modules to access
+1. It checks if a `modules.dmp` package is embedded in ROM
+2. If present, the package is automatically loaded using `Dmod_Load()` and enabled (for library modules) or run (for application modules)
+3. It checks if a `startup.dmp` package is embedded in ROM
+4. If present, the package is automatically loaded using `Dmod_Load()` and its main module (if specified) is executed
+5. User data (if embedded) has its location made available through environment variables for your modules to access
 
 ## Building with Embedded Files
 
@@ -128,6 +136,9 @@ if (dmenv_geti(env, "USER_DATA_ADDR", &user_data_addr)) {
 After building, you can verify that files were properly embedded by checking the map file:
 
 ```bash
+# Check for modules.dmp symbols
+grep "__modules_dmp" build/dmboot.map
+
 # Check for startup.dmp symbols
 grep "__startup_dmp" build/dmboot.map
 
@@ -135,4 +146,4 @@ grep "__startup_dmp" build/dmboot.map
 grep "__user_data" build/dmboot.map
 ```
 
-Both should show the start, end, and size symbols with their addresses.
+All should show the start, end, and size symbols with their addresses. Note that `modules.dmp` symbols will always be present, but may show zero size if no modules were defined.

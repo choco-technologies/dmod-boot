@@ -14,7 +14,7 @@ if(EXISTS "${DMBOOT_MODULES_DMD}")
         OUTPUT "${DMBOOT_MODULES_MARKER_FILE}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_MODULES_OUT_DIR}"
         COMMAND ${CMAKE_COMMAND} -E echo "Downloading modules to ${DMBOOT_MODULES_OUT_DIR}..."
-        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --type dmfc
+        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --type dmf
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
         DEPENDS "${DMBOOT_MODULES_DMD}"
         COMMENT "Downloading modules specified in ${DMBOOT_MODULES_DMD} from DMD..."
@@ -44,7 +44,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
     COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
     COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-    COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmfc 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmfc; else echo 'No .dmfc files found'; fi"
+    COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found'; fi"
     DEPENDS download_modules
     COMMENT "Creating modules dmp file from modules (if any exist)..."
     VERBATIM

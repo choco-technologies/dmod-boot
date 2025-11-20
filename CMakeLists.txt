@@ -74,6 +74,24 @@ else()
     message(STATUS "No user data file provided (USER_DATA_FILE not set or file doesn't exist)")
 endif()
 
+# Embed modules.dmp if it exists after build
+# Note: modules.dmp is created during build, not configuration, so we check for it at build time
+set(MODULES_DMP_FILE "${CMAKE_BINARY_DIR}/modules.dmp")
+set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
+
+# Create a custom command that will conditionally embed modules.dmp
+add_custom_command(
+    OUTPUT "${MODULES_DMP_OBJECT}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Checking for modules.dmp..."
+    COMMAND bash -c "if [ -f ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=elf32-littlearm --binary-architecture=arm --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=elf32-littlearm --binary-architecture=arm --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents /dev/null ${MODULES_DMP_OBJECT}; fi"
+    DEPENDS prepare_modules_dmp
+    COMMENT "Conditionally embedding modules.dmp if it exists"
+    VERBATIM
+)
+
+list(APPEND EMBEDDED_OBJECTS "${MODULES_DMP_OBJECT}")
+message(STATUS "modules.dmp will be conditionally embedded if created during build")
+
 # ======================================================================
 #               dmod-boot application
 # ======================================================================

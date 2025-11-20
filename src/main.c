@@ -17,6 +17,9 @@ extern void* __startup_dmp_size;
 extern void* __user_data_start;
 extern void* __user_data_end;
 extern void* __user_data_size;
+extern void* __modules_dmp_start;
+extern void* __modules_dmp_end;
+extern void* __modules_dmp_size;
 
 void delay(int cycles)
 {
@@ -186,6 +189,57 @@ static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_
     return true;
 }
 
+static void load_embedded_modules_dmp(void)
+{
+    void* modules_dmp_start = &__modules_dmp_start;
+    void* modules_dmp_end   = &__modules_dmp_end;
+    size_t modules_dmp_size = (size_t)((uintptr_t)modules_dmp_end - (uintptr_t)modules_dmp_start);
+    if(modules_dmp_size > 0)
+    {
+        DMOD_LOG_INFO("Loading modules.dmp from ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)modules_dmp_start, (unsigned int)modules_dmp_size);
+        
+        Dmod_Context_t* modules_ctx = Dmod_Load(modules_dmp_start, modules_dmp_size);
+        if(modules_ctx != NULL)
+        {
+            DMOD_LOG_INFO("Modules package loaded successfully\n");
+
+            // Check module type and handle accordingly
+            Dmod_ModuleType_t moduleType = Dmod_GetModuleType( modules_ctx );
+            if( moduleType == Dmod_ModuleType_Library )
+            {
+                if( !Dmod_Enable( modules_ctx, false, NULL ) )
+                {
+                    DMOD_LOG_ERROR("Failed to enable modules library\n");
+                }
+            }
+            else if( moduleType == Dmod_ModuleType_Application )
+            {
+                DMOD_LOG_INFO("Modules module is an application module\n");
+                char argv0[] = "modules.dmp";
+                char* argv[] = { argv0 };
+                int argc = 1;
+                if( Dmod_Run(modules_ctx, argc, argv) != 0 )
+                {
+                    DMOD_LOG_ERROR("Failed to run modules application\n");
+                }
+            }
+            else
+            {
+                DMOD_LOG_ERROR("Modules module has unknown module type: %d\n", moduleType);
+            }
+        }
+        else
+        {
+            DMOD_LOG_ERROR("Failed to load modules.dmp package\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No modules.dmp embedded in ROM\n");
+    }
+}
+
 static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
 {
     void* user_data_start = &__user_data_start;
@@ -208,6 +262,7 @@ static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
 
 int main(int argc, char** argv) 
 {
+    Dmod_SetLogLevel(Dmod_LogLevel_Verbose);
     void* logs_start = &__logs_start__;
     void* logs_end = &__logs_end__;
     dmlog_index_t  logs_size = (dmlog_index_t)((uintptr_t)logs_end - (uintptr_t)logs_start);
@@ -260,6 +315,9 @@ int main(int argc, char** argv)
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
+
+    // Load modules.dmp if embedded in ROM
+    load_embedded_modules_dmp();
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
