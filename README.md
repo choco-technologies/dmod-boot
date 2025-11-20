@@ -46,6 +46,9 @@ cmake --build build
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
 - `DMBOOT_EMULATION` (optional) - Enable Renode simulation mode instead of hardware mode
 
+**Automatic Build-Time Embedding:**
+- `modules.dmp` - Automatically created and embedded during build if modules are specified in `modules/modules.dmd`. This file is loaded before `startup.dmp` at boot time. If no modules are defined, the file won't exist, which is not an error.
+
 All parameters are optional. If not specified, the build will proceed with default settings.
 
 ## CMake Targets
