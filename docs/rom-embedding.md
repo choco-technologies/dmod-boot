@@ -16,12 +16,22 @@ DMOD Boot supports embedding binary files into ROM at build time. This allows yo
    - Size available as `USER_DATA_SIZE` environment variable
    - Can contain configuration, assets, or any custom data
 
+3. **`modules.dmp`** (automatic) - Automatically created from `modules/modules.dmd`
+   - Lists modules to download and package for the target architecture
+   - Modules are downloaded using `dmf-get` and packaged using `todmp`
+   - Automatically loaded and enabled before `startup.dmp`
+   - See [modules/README.md](../modules/README.md) for details
+
 ## How It Works
 
 When DMOD Boot starts:
-1. It checks if a `startup.dmp` package is embedded in ROM
-2. If present, the package is automatically loaded using `Dmod_Load()` and its main module (if specified) is executed
-3. User data (if embedded) has its location made available through environment variables for your modules to access
+1. It checks if a `modules.dmp` package is embedded in ROM
+2. If present, all modules in the package are loaded and enabled automatically
+3. It checks if a `startup.dmp` package is embedded in ROM
+4. If present, the package is automatically loaded using `Dmod_Load()` and its main module (if specified) is executed
+5. User data (if embedded) has its location made available through environment variables for your modules to access
+
+The loading order ensures that modules from `modules.dmp` are available before `startup.dmp` applications run.
 
 ## Building with Embedded Files
 

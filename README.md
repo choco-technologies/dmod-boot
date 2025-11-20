@@ -48,6 +48,23 @@ cmake --build build
 
 All parameters are optional. If not specified, the build will proceed with default settings.
 
+### Automatic Module Packaging
+
+The build system can automatically download, package, and embed modules listed in `modules/modules.dmd`:
+
+1. Edit `modules/modules.dmd` to list required modules:
+   ```
+   dmffs@1.1
+   ```
+
+2. During build, the system will:
+   - Download modules for the target architecture using `dmf-get`
+   - Package them into `modules.dmp` using `todmp`
+   - Embed the package in firmware
+   - Load and enable modules automatically at boot
+
+See [modules/README.md](modules/README.md) for detailed documentation.
+
 ## CMake Targets
 
 The following targets work in both hardware mode (with OpenOCD) and Renode simulation mode. The workflow is identical regardless of the mode.
