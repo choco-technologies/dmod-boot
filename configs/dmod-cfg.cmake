@@ -25,6 +25,9 @@ set(DMOD_USE_ALIGNED_MALLOC_MOCK OFF CACHE BOOL "Enable to use aligned malloc mo
 # Use realloc function
 set(DMOD_USE_REALLOC OFF CACHE BOOL "Enable to use the realloc function")
 
+# Use environ variable
+set(DMOD_USE_ENVIRON OFF CACHE BOOL "Enable to use the environ variable")
+
 # Use FastLZ compression library
 set(DMOD_USE_FASTLZ ON CACHE BOOL "Enable to use the FastLZ compression library")
 

@@ -150,7 +150,7 @@ static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_
     }
 
     // Allocate argv array
-    char** argv = (char**)dmheap_malloc(sizeof(char*) * argc, module_name);
+    char** argv = (char**)Dmod_MallocEx(sizeof(char*) * argc, module_name);
     if(argv == NULL)
     {
         return false;
@@ -167,15 +167,15 @@ static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_
             const char* arg_start = ptr;
             while(*ptr != ' ' && *ptr != '\0' && *ptr != '\n') ptr++;
             size_t arg_len = (size_t)(ptr - arg_start);
-            argv[index] = (char*)dmheap_malloc(arg_len + 1, module_name);
+            argv[index] = (char*)Dmod_MallocEx(arg_len + 1, module_name);
             if(argv[index] == NULL)
             {
                 // Free previously allocated args
                 for(int j = 0; j < index; j++)
                 {
-                    dmheap_free(argv[j], false);
+                    Dmod_FreeEx(argv[j], false);
                 }
-                dmheap_free(argv, false);
+                Dmod_FreeEx(argv, false);
                 return false;
             }
             strncpy(argv[index], arg_start, arg_len);
@@ -291,7 +291,7 @@ int main(int argc, char** argv)
         DMOD_LOG_ERROR("DMEnv initialization failed!\n");
         while(1);
     }
-    dmenv_set_as_default(dmenv_ctx);
+    dmenv_set_root_context(dmenv_ctx);
 
     if(!Dmod_Initialize())
     {
@@ -419,9 +419,9 @@ int main(int argc, char** argv)
                 // Free allocated argv
                 for(int i = 0; i < run_argc; i++)
                 {
-                    dmheap_free(run_argv[i], false);
+                    Dmod_FreeEx(run_argv[i], false);
                 }
-                dmheap_free(run_argv, false);
+                Dmod_FreeEx(run_argv, false);
 
             }
             else if(strncmp(input_buffer, "list", 4) == 0)
