@@ -189,8 +189,36 @@ static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_
     return true;
 }
 
-static void load_embedded_modules_dmp(void)
+static void start_main_module(Dmod_Context_t* main_ctx)
 {
+    Dmod_ModuleType_t moduleType = Dmod_GetModuleType( main_ctx );
+    if( moduleType == Dmod_ModuleType_Library )
+    {
+        if( !Dmod_Enable( main_ctx, false, NULL ) )
+        {
+            DMOD_LOG_ERROR("Failed to enable modules library\n");
+        }
+    }
+    else if( moduleType == Dmod_ModuleType_Application )
+    {
+        DMOD_LOG_INFO("Main module is an application module\n");
+        char argv0[] = "main_module";
+        char* argv[] = { argv0 };
+        int argc = 1;
+        if( Dmod_Run(main_ctx, argc, argv) != 0 )
+        {
+            DMOD_LOG_ERROR("Failed to run main application module\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_ERROR("Main module is not an application module\n");
+    }
+}
+
+static Dmod_Context_t* load_embedded_modules_dmp(void)
+{
+    Dmod_Context_t* context = NULL;
     void* modules_dmp_start = &__modules_dmp_start;
     void* modules_dmp_end   = &__modules_dmp_end;
     size_t modules_dmp_size = (size_t)((uintptr_t)modules_dmp_end - (uintptr_t)modules_dmp_start);
@@ -199,37 +227,8 @@ static void load_embedded_modules_dmp(void)
         DMOD_LOG_INFO("Loading modules.dmp from ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)modules_dmp_start, (unsigned int)modules_dmp_size);
         
-        Dmod_Context_t* modules_ctx = Dmod_Load(modules_dmp_start, modules_dmp_size);
-        if(modules_ctx != NULL)
-        {
-            DMOD_LOG_INFO("Modules package loaded successfully\n");
-
-            // Check module type and handle accordingly
-            Dmod_ModuleType_t moduleType = Dmod_GetModuleType( modules_ctx );
-            if( moduleType == Dmod_ModuleType_Library )
-            {
-                if( !Dmod_Enable( modules_ctx, false, NULL ) )
-                {
-                    DMOD_LOG_ERROR("Failed to enable modules library\n");
-                }
-            }
-            else if( moduleType == Dmod_ModuleType_Application )
-            {
-                DMOD_LOG_INFO("Modules module is an application module\n");
-                char argv0[] = "modules.dmp";
-                char* argv[] = { argv0 };
-                int argc = 1;
-                if( Dmod_Run(modules_ctx, argc, argv) != 0 )
-                {
-                    DMOD_LOG_ERROR("Failed to run modules application\n");
-                }
-            }
-            else
-            {
-                DMOD_LOG_ERROR("Modules module has unknown module type: %d\n", moduleType);
-            }
-        }
-        else
+        context = Dmod_Load(modules_dmp_start, modules_dmp_size);
+        if(context == NULL)
         {
             DMOD_LOG_ERROR("Failed to load modules.dmp package\n");
         }
@@ -238,6 +237,7 @@ static void load_embedded_modules_dmp(void)
     {
         DMOD_LOG_INFO("No modules.dmp embedded in ROM\n");
     }
+    return context;
 }
 
 static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
@@ -258,6 +258,11 @@ static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
     {
         DMOD_LOG_INFO("No user_data embedded in ROM\n");
     }
+}
+
+static void mount_embedded_filesystems(void)
+{
+    dmvfs_mount_fs("dmramfs", "/", NULL);
 }
 
 int main(int argc, char** argv) 
@@ -316,13 +321,19 @@ int main(int argc, char** argv)
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
-
+    
     // Load modules.dmp if embedded in ROM
-    load_embedded_modules_dmp();
+    Dmod_Context_t* mainModule = load_embedded_modules_dmp();
+
+    // Mount embedded filesystems
+    mount_embedded_filesystems();
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
 
+    // Start main module if loaded
+    start_main_module(mainModule);
+    
     Dmod_Printf("Entering interactive shell. Type 'help' for commands.\n");
 
     while(1)

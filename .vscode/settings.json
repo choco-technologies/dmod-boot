@@ -20,5 +20,5 @@
     "files.exclude": {
         "**/build": false
     },
-    "cortex-debug.variableUseNaturalFormat": true
+    "cortex-debug.variableUseNaturalFormat": false
 }
