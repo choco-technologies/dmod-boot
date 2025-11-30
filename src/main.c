@@ -1,9 +1,11 @@
+// #define DMOD_ENABLE_REGISTRATION
 #include <string.h>
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
 #include "dmvfs.h"
 #include "dmenv.h"
+#include "dmlist.h"
 
 extern void* __logs_start__;
 extern void* __logs_end__;

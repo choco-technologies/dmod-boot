@@ -82,6 +82,9 @@ set(DMOD_REPO_DIR               "${DMOD_DMF_DIR}" 			CACHE STRING "Directory for
 # Paths to the repositories inside the system in an array
 set(DMOD_REPO_PATHS             "${DMOD_DMF_DIR}:${DMOD_DMFC_DIR}"  CACHE STRING "Paths to the repositories inside the system in an array")    
 
+# Enable external registration of modules due to the dmvfs and dmlist libraries
+set(DMOD_EXTERNAL_REGISTRATION ON CACHE BOOL "Enable to use external registration of modules")
+
 # ===========================================================================
 #                       BUILT-IN API
 # ===========================================================================

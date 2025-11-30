@@ -1,4 +1,5 @@
 add_subdirectory(dmod)
+add_subdirectory(dmlist)
 add_subdirectory(dmlog)
 add_subdirectory(dmheap)
 add_subdirectory(dmvfs)

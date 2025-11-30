@@ -13,3 +13,6 @@
 [submodule "lib/dmenv"]
 	path = lib/dmenv
 	url = https://github.com/choco-technologies/dmenv.git
+[submodule "lib/dmlist"]
+	path = lib/dmlist
+	url = https://github.com/choco-technologies/dmlist.git

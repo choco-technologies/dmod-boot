@@ -127,6 +127,7 @@ target_link_libraries(${MODULE_NAME}.elf
         dmod
         dmlog
         dmheap
+        dmlist
         dmvfs
         dmenv
         dmboot_inc
