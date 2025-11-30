@@ -28,11 +28,17 @@ set(DMOD_USE_REALLOC OFF CACHE BOOL "Enable to use the realloc function")
 # Use environ variable
 set(DMOD_USE_ENVIRON OFF CACHE BOOL "Enable to use the environ variable")
 
+# Use termios library
+set(DMOD_USE_TERMIOS OFF CACHE BOOL "Enable to use the termios library")
+
 # Use FastLZ compression library
 set(DMOD_USE_FASTLZ ON CACHE BOOL "Enable to use the FastLZ compression library")
 
 # Implement custom printf 
 set(DMOD_IMPLEMENT_PRINTF ON CACHE BOOL "Enable to implement printf function inside DMOD")
+
+# Implement custom scanf
+set(DMOD_IMPLEMENT_SCANF OFF CACHE BOOL "Enable to implement scanf function inside DMOD")
 
 # Maximum number of modules
 set(DMOD_MAX_MODULES 100 CACHE STRING "Maximum number of modules")

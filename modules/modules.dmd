@@ -1,4 +1,7 @@
 # 
 # File with list of modules to load
 #
+dmell
 dmffs
+dmramfs
+ls 
