@@ -1,4 +1,4 @@
-// #define DMOD_ENABLE_REGISTRATION
+#define DMOD_ENABLE_REGISTRATION
 #include <string.h>
 #include "dmod.h"
 #include "dmlog.h"
