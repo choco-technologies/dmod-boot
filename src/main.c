@@ -1,4 +1,4 @@
-// #define DMOD_ENABLE_REGISTRATION
+#define DMOD_ENABLE_REGISTRATION
 #include <string.h>
 #include "dmod.h"
 #include "dmlog.h"
@@ -193,6 +193,7 @@ static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_
 
 static void start_main_module(Dmod_Context_t* main_ctx)
 {
+    Dmod_SetLogLevel(Dmod_LogLevel_Warn);
     Dmod_ModuleType_t moduleType = Dmod_GetModuleType( main_ctx );
     if( moduleType == Dmod_ModuleType_Library )
     {
@@ -320,6 +321,7 @@ int main(int argc, char** argv)
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
     dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", DMBOOT_EMULATION_ENABLED);
+    dmenv_set(dmenv_ctx, "PWD", "/");
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
