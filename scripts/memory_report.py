@@ -160,7 +160,7 @@ class MemoryMapParser:
         """Calculate ROM (Flash) usage
         
         Args:
-            modules_dmp_size: Size of modules.dmp file if it exists
+            modules_dmp_size: Size of modules.dmp file if it exists (0 if not present)
         """
         rom_usage = {}
         
@@ -170,7 +170,7 @@ class MemoryMapParser:
         for lib_name, sections in library_usage.items():
             rom_usage[lib_name] = sections['text'] + sections['rodata']
         
-        # Add modules.dmp size if provided
+        # Add modules.dmp size if file exists (size > 0)
         if modules_dmp_size > 0:
             rom_usage['modules.dmp'] = modules_dmp_size
         
@@ -204,7 +204,7 @@ class MemoryMapParser:
         """Get total ROM usage
         
         Args:
-            modules_dmp_size: Size of modules.dmp file if it exists
+            modules_dmp_size: Size of modules.dmp file if it exists (0 if not present)
         """
         total = 0
         if 'text' in self.sections:
@@ -214,7 +214,7 @@ class MemoryMapParser:
         if 'data' in self.sections:
             # .data is stored in ROM but copied to RAM
             total += self.sections['data']['size']
-        # Add modules.dmp size if provided
+        # Add modules.dmp size if provided (0 is safe to add)
         total += modules_dmp_size
         return total
     
@@ -398,8 +398,11 @@ def main():
     modules_dmp_path = Path(output_dir) / "modules.dmp"
     modules_dmp_size = 0
     if modules_dmp_path.exists():
-        modules_dmp_size = modules_dmp_path.stat().st_size
-        print(f"Found modules.dmp: {format_size(modules_dmp_size)}")
+        try:
+            modules_dmp_size = modules_dmp_path.stat().st_size
+            print(f"Found modules.dmp: {format_size(modules_dmp_size)}")
+        except (OSError, PermissionError) as e:
+            print(f"Warning: Could not read modules.dmp size: {e}")
     
     # Get memory usage
     rom_usage = parser.get_rom_usage(modules_dmp_size)
