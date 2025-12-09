@@ -2,4 +2,4 @@
 # Each line is a pattern that must appear in the monitor-gdb output
 # Lines starting with # are comments and empty lines are ignored
 
-stm32f746xg@/>
+DMOD-Boot started

@@ -280,8 +280,6 @@ int main(int argc, char** argv)
     dmlog_ctx_t ctx = dmlog_create(logs_start, logs_size);
     dmlog_set_as_default(ctx);
 
-    dmlog_puts(ctx, "DMOD-Boot started\n");
-
     void* heap_start = &__heap_start__;
     void* heap_end = &__heap_end__;
     size_t heap_size = (size_t)((uintptr_t)heap_end - (uintptr_t)heap_start);
@@ -334,6 +332,9 @@ int main(int argc, char** argv)
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
+
+    // Mark that the boot process is done
+    dmlog_puts(ctx, "DMOD-Boot started\n");
 
     // Start main module if loaded
     start_main_module(mainModule);
