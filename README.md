@@ -37,6 +37,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DTARGET=STM32F746xG \
       -DSTARTUP_DMP_FILE=path/to/startup.dmp \
       -DUSER_DATA_FILE=path/to/user_data.dat \
+      -DDMBOOT_CONFIG_DIR=path/to/config_directory \
       -S . -B build
 cmake --build build
 ```
@@ -44,6 +45,7 @@ cmake --build build
 **Build Parameters:**
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
+- `DMBOOT_CONFIG_DIR` (optional) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time
 - `DMBOOT_EMULATION` (optional) - Enable Renode simulation mode instead of hardware mode
 
 **Automatic Build-Time Embedding:**

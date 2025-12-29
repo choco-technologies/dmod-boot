@@ -113,6 +113,18 @@ SECTIONS
        PROVIDE(__modules_dmp_size = __modules_dmp_end - __modules_dmp_start);
    } > rom AT > rom
 
+   . = ALIGN(16);
+   .embedded.config_fs :
+   {
+       __config_fs_start = .;
+       PROVIDE(__config_fs_start = .);
+       KEEP(*(.embedded.config_fs))
+       __config_fs_end = .;
+       PROVIDE(__config_fs_end = .);
+       __config_fs_size = __config_fs_end - __config_fs_start;
+       PROVIDE(__config_fs_size = __config_fs_end - __config_fs_start);
+   } > rom AT > rom
+
    . = ALIGN(4);
    __exidx_start__ = .;
    PROVIDE(__exidx_start__ = __exidx_start__);
