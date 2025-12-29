@@ -1,6 +1,5 @@
 #define DMOD_ENABLE_REGISTRATION
 #include <string.h>
-#include <stdio.h>
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
@@ -283,7 +282,7 @@ static void mount_embedded_filesystems(void)
         
         // Mount the dmffs filesystem at /configs/
         char mount_opts[128];
-        snprintf(mount_opts, sizeof(mount_opts), "addr=0x%X,size=%u", 
+        Dmod_SnPrintf(mount_opts, sizeof(mount_opts), "addr=0x%X,size=%u", 
                  (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
         
         if(dmvfs_mount_fs("dmffs", "/configs", mount_opts) == 0)
