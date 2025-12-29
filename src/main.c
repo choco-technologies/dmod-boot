@@ -22,6 +22,9 @@ extern void* __user_data_size;
 extern void* __modules_dmp_start;
 extern void* __modules_dmp_end;
 extern void* __modules_dmp_size;
+extern void* __config_fs_start;
+extern void* __config_fs_end;
+extern void* __config_fs_size;
 
 void delay(int cycles)
 {
@@ -266,6 +269,35 @@ static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
 static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
+    
+    // Mount config filesystem if embedded
+    void* config_fs_start = &__config_fs_start;
+    void* config_fs_end   = &__config_fs_end;
+    size_t config_fs_size = (size_t)((uintptr_t)config_fs_end - (uintptr_t)config_fs_start);
+    
+    if(config_fs_size > 0)
+    {
+        DMOD_LOG_INFO("Config filesystem found in ROM: addr=0x%X, size=%u bytes\n", 
+                      (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
+        
+        // Mount the dmffs filesystem at /configs/
+        char mount_opts[128];
+        Dmod_SnPrintf(mount_opts, sizeof(mount_opts), "addr=0x%X,size=%u", 
+                 (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
+        
+        if(dmvfs_mount_fs("dmffs", "/configs", mount_opts) == 0)
+        {
+            DMOD_LOG_INFO("Config filesystem mounted at /configs/\n");
+        }
+        else
+        {
+            DMOD_LOG_ERROR("Failed to mount config filesystem at /configs/\n");
+        }
+    }
+    else
+    {
+        DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
+    }
 }
 
 int main(int argc, char** argv) 
