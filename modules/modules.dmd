@@ -4,6 +4,7 @@
 dmell
 dmffs
 dmramfs
+dmdevfs
 ls 
 mkdir
-dmclk
+dmclk boards/stm32f746g-disco.ini

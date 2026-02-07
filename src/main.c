@@ -266,11 +266,8 @@ static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
     }
 }
 
-static void mount_embedded_filesystems(void)
+static void mount_config_filesystem(void)
 {
-    dmvfs_mount_fs("dmramfs", "/", NULL);
-    
-    // Mount config filesystem if embedded
     void* config_fs_start = &__config_fs_start;
     void* config_fs_end   = &__config_fs_end;
     size_t config_fs_size = (size_t)((uintptr_t)config_fs_end - (uintptr_t)config_fs_start);
@@ -298,6 +295,13 @@ static void mount_embedded_filesystems(void)
     {
         DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
     }
+}
+
+static void mount_embedded_filesystems(void)
+{
+    dmvfs_mount_fs("dmramfs", "/", NULL);
+    mount_config_filesystem();
+    dmvfs_mount_fs("dmdevfs", "/dev", "/configs");
 }
 
 int main(int argc, char** argv) 
