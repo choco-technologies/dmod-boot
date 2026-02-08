@@ -41,8 +41,8 @@ if(EXISTS "${DMBOOT_MODULES_DMD}")
         COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_CONFIGS_TEMP_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmfc
         COMMAND ${CMAKE_COMMAND} -E echo "Copying configuration files to ${DMBOOT_CONFIG_DIR}..."
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${DMBOOT_CONFIGS_TEMP_DIR}" "${DMBOOT_CONFIG_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E echo "Removing .dmf, .dmd files from config directory..."
-        COMMAND bash -c "find ${DMBOOT_CONFIG_DIR} -type f \\( -name '*.dmf' -o -name '*.dmd' \\) -delete || true"
+        COMMAND ${CMAKE_COMMAND} -E echo "Removing module files (.dmf, .dmd, .dmp) from config directory..."
+        COMMAND bash -c "find ${DMBOOT_CONFIG_DIR} -type f \\( -name '*.dmf' -o -name '*.dmd' -o -name '*.dmp' \\) -delete || true"
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_CONFIGS_MARKER_FILE}"
         DEPENDS "${DMBOOT_MODULES_DMD}"
         COMMENT "Downloading configuration files specified in ${DMBOOT_MODULES_DMD} from DMD..."
