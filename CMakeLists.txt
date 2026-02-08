@@ -79,11 +79,6 @@ endif()
 include(scripts/romfs.cmake)
 if(CONFIG_FS_OBJECT)
     list(APPEND EMBEDDED_OBJECTS "${CONFIG_FS_OBJECT}")
-    # Add dependency on the filesystem generation
-    add_custom_command(
-        OUTPUT "${CONFIG_FS_OBJECT}"
-        DEPENDS generate_config_fs
-    )
 endif()
 
 # Embed modules.dmp if it exists after build

@@ -1,8 +1,10 @@
 # This script sets up a ROM filesystem using dmffs and integrates it into the build
 # It checks for the required tools, creates the ROMFS image, and embeds it into the firmware
 
-# Check if DMBOOT_CONFIG_DIR is set and exists
-if(DMBOOT_CONFIG_DIR AND EXISTS "${DMBOOT_CONFIG_DIR}")
+# Check if DMBOOT_CONFIG_DIR is set
+if(DMBOOT_CONFIG_DIR)
+    # Create the directory if it doesn't exist
+    file(MAKE_DIRECTORY "${DMBOOT_CONFIG_DIR}")
     message(STATUS "Config directory specified: ${DMBOOT_CONFIG_DIR}")
     
     # Set output path for the config filesystem image
@@ -41,7 +43,7 @@ if(DMBOOT_CONFIG_DIR AND EXISTS "${DMBOOT_CONFIG_DIR}")
     # Create custom command to generate the config filesystem image
     add_custom_command(
         OUTPUT "${CONFIG_FS_IMAGE}"
-        COMMAND ${MAKE_DMFFS_COMMAND} -d "${DMBOOT_CONFIG_DIR}" -o "${CONFIG_FS_IMAGE}"
+        COMMAND ${MAKE_DMFFS_COMMAND} "${DMBOOT_CONFIG_DIR}" "${CONFIG_FS_IMAGE}"
         DEPENDS "${DMBOOT_CONFIG_DIR}" download_configs
         COMMENT "Creating config filesystem image from ${DMBOOT_CONFIG_DIR}"
         VERBATIM
@@ -52,14 +54,21 @@ if(DMBOOT_CONFIG_DIR AND EXISTS "${DMBOOT_CONFIG_DIR}")
         DEPENDS "${CONFIG_FS_IMAGE}"
     )
     
-    # Embed the config filesystem image
-    embed_binary_file(
-        INPUT_FILE "${CONFIG_FS_IMAGE}"
-        SECTION_NAME ".embedded.config_fs"
-        SYMBOL_PREFIX "__config_fs"
-    )
-    
+    # Create custom command to embed the config filesystem image (similar to modules.dmp approach)
     set(CONFIG_FS_OBJECT "${CMAKE_BINARY_DIR}/__config_fs.o")
+    add_custom_command(
+        OUTPUT "${CONFIG_FS_OBJECT}"
+        COMMAND ${CMAKE_OBJCOPY}
+            --input-target=binary
+            --output-target=elf32-littlearm
+            --binary-architecture=arm
+            --rename-section .data=.embedded.config_fs,alloc,load,readonly,data,contents
+            "${CONFIG_FS_IMAGE}"
+            "${CONFIG_FS_OBJECT}"
+        DEPENDS "${CONFIG_FS_IMAGE}" generate_config_fs
+        COMMENT "Embedding config filesystem into section .embedded.config_fs"
+        VERBATIM
+    )
     
     # Export variables to parent scope
     set(CONFIG_FS_OBJECT "${CONFIG_FS_OBJECT}" PARENT_SCOPE)
@@ -67,5 +76,5 @@ if(DMBOOT_CONFIG_DIR AND EXISTS "${DMBOOT_CONFIG_DIR}")
     
     message(STATUS "Config filesystem will be embedded from: ${DMBOOT_CONFIG_DIR}")
 else()
-    message(STATUS "No config directory specified (DMBOOT_CONFIG_DIR not set or doesn't exist)")
+    message(STATUS "No config directory specified (DMBOOT_CONFIG_DIR not set)")
 endif() 
