@@ -26,6 +26,28 @@ if(EXISTS "${DMBOOT_MODULES_DMD}")
 else()
     message(WARNING "Modules DMD file not found at ${DMBOOT_MODULES_DMD}. Skipping module download.")
 endif()
+
+# ======================================================================
+#               Downloading configuration files from DMD 
+# ======================================================================
+set(DMBOOT_CONFIGS_MARKER_FILE "${DMBOOT_CONFIG_DIR}/.download_complete")
+if(EXISTS "${DMBOOT_MODULES_DMD}")
+    add_custom_command(
+        OUTPUT "${DMBOOT_CONFIGS_MARKER_FILE}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_CONFIG_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E echo "Downloading configuration files to ${DMBOOT_CONFIG_DIR}..."
+        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_CONFIG_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmfc
+        COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_CONFIGS_MARKER_FILE}"
+        DEPENDS "${DMBOOT_MODULES_DMD}"
+        COMMENT "Downloading configuration files specified in ${DMBOOT_MODULES_DMD} from DMD..."
+        VERBATIM
+    )
+    add_custom_target(download_configs ALL
+        DEPENDS "${DMBOOT_CONFIGS_MARKER_FILE}"
+    )
+else()
+    message(WARNING "Modules DMD file not found at ${DMBOOT_MODULES_DMD}. Skipping config download.")
+endif()
         
 # ======================================================================
 #               Preparing dmp file from modules

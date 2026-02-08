@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.10)
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
-set(DMBOOT_CONFIG_DIR "" CACHE PATH "Optional config directory to mount as /configs/ using dmffs")
+set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================
@@ -79,11 +79,6 @@ endif()
 include(scripts/romfs.cmake)
 if(CONFIG_FS_OBJECT)
     list(APPEND EMBEDDED_OBJECTS "${CONFIG_FS_OBJECT}")
-    # Add dependency on the filesystem generation
-    add_custom_command(
-        OUTPUT "${CONFIG_FS_OBJECT}"
-        DEPENDS generate_config_fs
-    )
 endif()
 
 # Embed modules.dmp if it exists after build
