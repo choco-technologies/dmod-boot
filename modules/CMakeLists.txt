@@ -36,7 +36,7 @@ if(EXISTS "${DMBOOT_MODULES_DMD}")
         OUTPUT "${DMBOOT_CONFIGS_MARKER_FILE}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_CONFIG_DIR}"
         COMMAND ${CMAKE_COMMAND} -E echo "Downloading configuration files to ${DMBOOT_CONFIG_DIR}..."
-        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_CONFIG_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmfc || ${CMAKE_COMMAND} -E echo "No config files found in DMD (this is normal)"
+        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_CONFIG_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmfc || ${CMAKE_COMMAND} -E echo "Warning: Config file download failed or no config files available"
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_CONFIGS_MARKER_FILE}"
         DEPENDS "${DMBOOT_MODULES_DMD}"
         COMMENT "Downloading configuration files specified in ${DMBOOT_MODULES_DMD} from DMD..."

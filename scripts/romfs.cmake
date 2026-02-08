@@ -65,7 +65,7 @@ if(DMBOOT_CONFIG_DIR)
             --rename-section .data=.embedded.config_fs,alloc,load,readonly,data,contents
             "${CONFIG_FS_IMAGE}"
             "${CONFIG_FS_OBJECT}"
-        DEPENDS "${CONFIG_FS_IMAGE}" generate_config_fs
+        DEPENDS "${CONFIG_FS_IMAGE}"
         COMMENT "Embedding config filesystem into section .embedded.config_fs"
         VERBATIM
     )
