@@ -30,13 +30,19 @@ endif()
 # ======================================================================
 #               Downloading configuration files from DMD 
 # ======================================================================
+set(DMBOOT_CONFIGS_TEMP_DIR "${CMAKE_BINARY_DIR}/configs_temp")
 set(DMBOOT_CONFIGS_MARKER_FILE "${DMBOOT_CONFIG_DIR}/.download_complete")
 if(EXISTS "${DMBOOT_MODULES_DMD}")
     add_custom_command(
         OUTPUT "${DMBOOT_CONFIGS_MARKER_FILE}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_CONFIGS_TEMP_DIR}"
         COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_CONFIG_DIR}"
-        COMMAND ${CMAKE_COMMAND} -E echo "Downloading configuration files to ${DMBOOT_CONFIG_DIR}..."
-        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_CONFIG_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmfc
+        COMMAND ${CMAKE_COMMAND} -E echo "Downloading configuration files to temporary directory..."
+        COMMAND ${DMF_GET} -d "${DMBOOT_MODULES_DMD}" -o "${DMBOOT_CONFIGS_TEMP_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmfc
+        COMMAND ${CMAKE_COMMAND} -E echo "Copying configuration files to ${DMBOOT_CONFIG_DIR}..."
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${DMBOOT_CONFIGS_TEMP_DIR}" "${DMBOOT_CONFIG_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E echo "Removing .dmf, .dmd files from config directory..."
+        COMMAND bash -c "find ${DMBOOT_CONFIG_DIR} -type f \\( -name '*.dmf' -o -name '*.dmd' \\) -delete || true"
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_CONFIGS_MARKER_FILE}"
         DEPENDS "${DMBOOT_MODULES_DMD}"
         COMMENT "Downloading configuration files specified in ${DMBOOT_MODULES_DMD} from DMD..."
