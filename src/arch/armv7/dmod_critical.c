@@ -39,6 +39,7 @@
  */
 #include "dmod.h"
 #include <stdint.h>
+#include <stddef.h>
 
 static uint32_t critical_nesting = 0;
 
@@ -108,4 +109,39 @@ void Dmod_ExitCritical(void)
             );
         }
     }
+}
+
+/**
+ * @brief Get the remaining stack size
+ * 
+ * This function returns the number of bytes still available on the current
+ * stack. It reads the Main Stack Pointer (MSP) register and computes the
+ * distance to the bottom of the stack region defined by the linker symbol
+ * __stack_start__.
+ * 
+ * On ARMv7-M the stack is full-descending: the SP starts at the top
+ * (__stack_end__) and moves toward the bottom (__stack_start__) as frames
+ * are pushed. The remaining (free) space is therefore:
+ *
+ *   remaining = MSP - __stack_start__
+ * 
+ * @return Remaining stack size in bytes, or 0 if the stack has overflowed
+ */
+size_t Dmod_GetLeftStackSize(void)
+{
+    extern uint32_t __stack_start__;
+
+    uint32_t sp;
+    __asm volatile (
+        "MRS %0, MSP\n"
+        : "=r"(sp)
+    );
+
+    uint32_t stackBase = (uint32_t)&__stack_start__;
+    if (sp <= stackBase)
+    {
+        return 0;
+    }
+
+    return (size_t)(sp - stackBase);
 }
