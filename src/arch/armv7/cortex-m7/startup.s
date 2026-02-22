@@ -37,11 +37,11 @@ vectors:
     .word   0                                /* 8: Reserved */
     .word   0                                /* 9: Reserved */
     .word   0                                /* 10: Reserved */
-    .word   SVC_Handler                      /* 11: SVCall Handler */
+    .word   dmosi_syscall_handler            /* 11: SVCall Handler */
     .word   DebugMon_Handler                 /* 12: Debug Monitor Handler */
     .word   0                                /* 13: Reserved */
-    .word   PendSV_Handler                   /* 14: PendSV Handler */
-    .word   SysTick_Handler                  /* 15: SysTick Handler */
+    .word   dmosi_context_switch_handler     /* 14: PendSV Handler */
+    .word   dmosi_tick_handler               /* 15: SysTick Handler */
 
 /*==============================================================================
 ARMv7-M (Cortex-M7) startup code
@@ -200,21 +200,21 @@ assign undefined exception handlers to __default_handler
 .global UsageFault_Handler
 .set    UsageFault_Handler, __default_handler
 
-.weak   SVC_Handler
-.global SVC_Handler
-.set    SVC_Handler, __default_handler
+.weak   dmosi_syscall_handler
+.global dmosi_syscall_handler
+.set    dmosi_syscall_handler, __default_handler
 
 .weak   DebugMon_Handler
 .global DebugMon_Handler
 .set    DebugMon_Handler, __default_handler
 
-.weak   PendSV_Handler
-.global PendSV_Handler
-.set    PendSV_Handler, __default_handler
+.weak   dmosi_context_switch_handler
+.global dmosi_context_switch_handler
+.set    dmosi_context_switch_handler, __default_handler
 
-.weak   SysTick_Handler
-.global SysTick_Handler
-.set    SysTick_Handler, __default_handler
+.weak   dmosi_tick_handler
+.global dmosi_tick_handler
+.set    dmosi_tick_handler, __default_handler
 
 /*******************************************************************************
 END OF FILE

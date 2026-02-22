@@ -43,6 +43,28 @@
 static uint32_t critical_nesting = 0;
 
 /**
+ * @brief Assertion handler for critical section functions
+ * 
+ * This function is called when an assertion fails in the critical section code.
+ * It logs the error message and halts the system to prevent further damage.
+ * 
+ * @param Condition The condition that failed (should be false)
+ * @param Message A message describing the assertion failure
+ * @param File The source file where the assertion failed
+ * @param Line The line number in the source file where the assertion failed
+ * @param Function The function name where the assertion failed
+ */
+void Dmod_Assert( int Condition, const char* Message, const char* File, int Line, const char* Function )
+{
+    if( !Condition )
+    {
+        DMOD_LOG_ERROR("Assertion failed: %s, at %s:%d in function %s\n", Message, File, Line, Function);
+        __asm volatile ("BKPT #0"); // Trigger a breakpoint for debugging
+        while(1); // Halt the system
+    }
+}
+
+/**
  * @brief Enter critical section
  * 
  * This function disables interrupts by setting the PRIMASK register.

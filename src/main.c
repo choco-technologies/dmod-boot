@@ -35,7 +35,7 @@ void delay(int cycles)
 void HardFault_Handler(void)
 {
     DMOD_LOG_ERROR("HardFault_Handler invoked!\n");
-    while(1);
+    DMOD_ASSERT_MSG(false, "A hard fault occurred. System halted.");
 }
 
 static void load_embedded_startup_dmp(void)
@@ -212,9 +212,9 @@ static void start_main_module(Dmod_Context_t* main_ctx)
         char argv0[] = "main_module";
         char* argv[] = { argv0 };
         int argc = 1;
-        if( Dmod_Run(main_ctx, argc, argv) != 0 )
+        if( Dmod_RunDetached(main_ctx, argc, argv) == 0 )
         {
-            DMOD_LOG_ERROR("Failed to run main application module\n");
+            DMOD_ASSERT_MSG(false, "Failed to run main application module. System halted.");
         }
     }
     else
@@ -305,77 +305,8 @@ static void mount_embedded_filesystems(void)
     dmvfs_mount_fs("dmdevfs", "/dev", "/configs");
 }
 
-int main(int argc, char** argv) 
+static void boot_shell(dmlog_ctx_t ctx)
 {
-    Dmod_SetLogLevel(Dmod_LogLevel_Info);
-    void* logs_start = &__logs_start__;
-    void* logs_end = &__logs_end__;
-    dmlog_index_t  logs_size = (dmlog_index_t)((uintptr_t)logs_end - (uintptr_t)logs_start);
-    
-    memset(logs_start, 0, logs_size);
-
-    dmlog_ctx_t ctx = dmlog_create(logs_start, logs_size);
-    dmlog_set_as_default(ctx);
-
-    void* heap_start = &__heap_start__;
-    void* heap_end = &__heap_end__;
-    size_t heap_size = (size_t)((uintptr_t)heap_end - (uintptr_t)heap_start);
-
-    if(!dmheap_init(heap_start, heap_size, sizeof(void*)))
-    {
-        DMOD_LOG_ERROR("Heap initialization failed!\n");
-        while(1);
-    }
-    DMOD_LOG_INFO("Heap initialized: Start=0x%X, Size=%u bytes\n", (uintptr_t)heap_start, (unsigned int)heap_size);
-
-    dmenv_ctx_t dmenv_ctx = dmenv_create(NULL);
-    if(dmenv_ctx == NULL)
-    {
-        DMOD_LOG_ERROR("DMEnv initialization failed!\n");
-        while(1);
-    }
-    dmenv_set_root_context(dmenv_ctx);
-
-    if(!Dmod_Initialize())
-    {
-        DMOD_LOG_ERROR("DMOD initialization failed!\n");
-        while(1);
-    }
-
-    if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
-    {
-        DMOD_LOG_ERROR("VFS initialization failed!\n");
-        while(1);
-    }
-
-    dmenv_set(dmenv_ctx, "HOSTNAME", DMBOOT_MCU_NAME_STRING);
-    dmenv_set(dmenv_ctx, "DMOD_VERSION", DMOD_VERSION_STRING);
-    dmenv_set(dmenv_ctx, "DMBOOT_MCU_NAME", DMBOOT_MCU_NAME_STRING);
-    dmenv_set(dmenv_ctx, "DMBOOT_MCU_SERIES", DMBOOT_MCU_SERIES_STRING);
-    dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
-    dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
-    dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
-    dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", DMBOOT_EMULATION_ENABLED);
-    dmenv_set(dmenv_ctx, "PWD", "/");
-    
-    // Set user_data environment variables if embedded in ROM
-    setup_embedded_user_data(dmenv_ctx);
-    
-    // Load modules.dmp if embedded in ROM
-    Dmod_Context_t* mainModule = load_embedded_modules_dmp();
-
-    // Mount embedded filesystems
-    mount_embedded_filesystems();
-
-    // Load startup.dmp if embedded in ROM
-    load_embedded_startup_dmp();
-
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
-
-    // Start main module if loaded
-    start_main_module(mainModule);
-    
     Dmod_Printf("Entering interactive shell. Type 'help' for commands.\n");
 
     while(1)
@@ -493,6 +424,84 @@ int main(int argc, char** argv)
             }
         }
     }
+}
+
+int main(int argc, char** argv) 
+{
+    Dmod_SetLogLevel(Dmod_LogLevel_Info);
+    void* logs_start = &__logs_start__;
+    void* logs_end = &__logs_end__;
+    dmlog_index_t  logs_size = (dmlog_index_t)((uintptr_t)logs_end - (uintptr_t)logs_start);
+    
+    memset(logs_start, 0, logs_size);
+
+    dmlog_ctx_t ctx = dmlog_create(logs_start, logs_size);
+    dmlog_set_as_default(ctx);
+
+    void* heap_start = &__heap_start__;
+    void* heap_end = &__heap_end__;
+    size_t heap_size = (size_t)((uintptr_t)heap_end - (uintptr_t)heap_start);
+
+    if(!dmheap_init(heap_start, heap_size, sizeof(void*)))
+    {
+        DMOD_LOG_ERROR("Heap initialization failed!\n");
+        while(1);
+    }
+    DMOD_LOG_INFO("Heap initialized: Start=0x%X, Size=%u bytes\n", (uintptr_t)heap_start, (unsigned int)heap_size);
+
+    dmenv_ctx_t dmenv_ctx = dmenv_create(NULL);
+    if(dmenv_ctx == NULL)
+    {
+        DMOD_LOG_ERROR("DMEnv initialization failed!\n");
+        while(1);
+    }
+    dmenv_set_root_context(dmenv_ctx);
+
+    if(!Dmod_Initialize())
+    {
+        DMOD_LOG_ERROR("DMOD initialization failed!\n");
+        while(1);
+    }
+
+    if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
+    {
+        DMOD_LOG_ERROR("VFS initialization failed!\n");
+        while(1);
+    }
+
+    dmenv_set(dmenv_ctx, "HOSTNAME", DMBOOT_MCU_NAME_STRING);
+    dmenv_set(dmenv_ctx, "DMOD_VERSION", DMOD_VERSION_STRING);
+    dmenv_set(dmenv_ctx, "DMBOOT_MCU_NAME", DMBOOT_MCU_NAME_STRING);
+    dmenv_set(dmenv_ctx, "DMBOOT_MCU_SERIES", DMBOOT_MCU_SERIES_STRING);
+    dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
+    dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
+    dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
+    dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", DMBOOT_EMULATION_ENABLED);
+    dmenv_set(dmenv_ctx, "PWD", "/");
+    
+    // Set user_data environment variables if embedded in ROM
+    setup_embedded_user_data(dmenv_ctx);
+    
+    // Load modules.dmp if embedded in ROM
+    Dmod_Context_t* mainModule = load_embedded_modules_dmp();
+
+    // Mount embedded filesystems
+    mount_embedded_filesystems();
+
+    // Load startup.dmp if embedded in ROM
+    load_embedded_startup_dmp();
+
+    // Mark that the boot process is done
+    dmlog_puts(ctx, "DMOD-Boot started\n");
+
+    // Start main module if loaded
+    start_main_module(mainModule);
+    
+    // Initialize RTOS and start scheduler (if applicable)
+    dmosi_init();
+
+    // fallback to interactive shell
+    boot_shell(ctx);
 
     return 0;
 }
