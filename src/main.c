@@ -6,6 +6,7 @@
 #include "dmvfs.h"
 #include "dmenv.h"
 #include "dmlist.h"
+#include "dmosi.h"
 
 extern void* __logs_start__;
 extern void* __logs_end__;
