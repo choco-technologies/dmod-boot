@@ -100,6 +100,16 @@ list(APPEND EMBEDDED_OBJECTS "${MODULES_DMP_OBJECT}")
 message(STATUS "modules.dmp will be conditionally embedded if created during build")
 
 # ======================================================================
+#               Fetch RTOS
+# ======================================================================
+# Currently we support only FreeRTOS, but in the future this 
+# part should be dependent on the selected RTOS (if more are supported)
+set(DMOSI_ARCH        ${DMBOOT_ARCH} CACHE STRING "Architecture for dmosi-freertos configuration")
+set(DMOSI_ARCH_FAMILY ${DMBOOT_ARCH_FAMILY} CACHE STRING "Architecture family for dmosi-freertos configuration")
+
+add_subdirectory(lib/dmosi-freertos)
+
+# ======================================================================
 #               dmod-boot application
 # ======================================================================
 set(MODULE_NAME dmboot)
@@ -140,6 +150,7 @@ target_link_libraries(${MODULE_NAME}.elf
         dmboot_inc
         dmboot_startup
         dmboot_arch
+        dmosi_freertos
 )
 
 # ======================================================================

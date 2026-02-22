@@ -7,6 +7,11 @@ set(DMBOOT_ARCH "armv7" CACHE STRING "Architecture of the target microcontroller
 set(DMBOOT_ARCH_FAMILY "cortex-m4" CACHE STRING "Microcontroller family")
 
 # ======================================================================
+#               RTOS Clock Configuration
+# ======================================================================
+set(DMOSI_CPU_CLOCK_HZ 180000000 CACHE STRING "CPU clock frequency for dmosi-freertos configuration")
+
+# ======================================================================
 #               OpenOCD Configuration
 # ======================================================================
 # OpenOCD is only required when not using QEMU mode
