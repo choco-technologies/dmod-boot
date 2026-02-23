@@ -34,6 +34,9 @@ set(DMOD_USE_TERMIOS OFF CACHE BOOL "Enable to use the termios library")
 # Use FastLZ compression library
 set(DMOD_USE_FASTLZ ON CACHE BOOL "Enable to use the FastLZ compression library")
 
+# Use time.h library
+set(DMOD_USE_TIME_H OFF CACHE BOOL "Enable to use the time.h library")
+
 # Implement custom printf 
 set(DMOD_IMPLEMENT_PRINTF ON CACHE BOOL "Enable to implement printf function inside DMOD")
 
