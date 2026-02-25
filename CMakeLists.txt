@@ -7,6 +7,7 @@ cmake_minimum_required(VERSION 3.10)
 #               Configuration
 # ======================================================================
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
+set(BOARD "" CACHE STRING "Board name (optional). If set, TARGET is derived from configs/board/<BOARD>/board.cmake")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
@@ -18,6 +19,12 @@ option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 set(DMOD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/dmod")
 include(configs/dmod-cfg.cmake)
 include(configs/dmvfs-cfg.cmake)
+
+# If BOARD is specified, read TARGET from board.cmake
+if(BOARD)
+    include(configs/board/${BOARD}/board.cmake)
+endif()
+
 include(configs/mcu/${TARGET}.cmake)
 
 # Include toolchain configuration before project() to set compilers
@@ -139,7 +146,7 @@ target_link_options(${MODULE_NAME}.elf
     PRIVATE 
         -L${DMOD_DIR}/scripts
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/arch.ld
-        -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}.ld
+        -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/mcu.ld
         -T${CMAKE_CURRENT_SOURCE_DIR}/linker/common.ld
         -Wl,-Map=${MODULE_NAME}.map
 )

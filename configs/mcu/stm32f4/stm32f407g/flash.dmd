@@ -1,0 +1,5 @@
+#
+# STM32F407G flash modules - MCU-specific modules for flash
+#
+dmclk
+dmgpio

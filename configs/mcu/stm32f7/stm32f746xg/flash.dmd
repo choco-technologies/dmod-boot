@@ -1,0 +1,5 @@
+#
+# STM32F746xG flash modules - MCU-specific modules for flash
+#
+dmclk
+dmgpio
