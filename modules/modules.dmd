@@ -8,3 +8,4 @@ dmdevfs
 ls 
 mkdir
 dmclk board/stm32f746g-disco.ini
+dmgpio board/stm32f746g-disco.ini
