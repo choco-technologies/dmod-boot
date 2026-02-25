@@ -11,6 +11,9 @@ set(BOARD "" CACHE STRING "Board name (optional). If set, TARGET is derived from
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
+set(DMBOOT_MAIN_MODULE "dmell" CACHE STRING "Name of the main module to start after boot")
+set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to include (semicolon-separated list of absolute paths)")
+set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================

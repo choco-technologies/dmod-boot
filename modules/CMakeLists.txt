@@ -23,6 +23,15 @@ if(BOARD)
     endif()
 endif()
 
+# Extra flash modules from cmake parameter
+foreach(_EXTRA_FLASH_DMD IN LISTS DMBOOT_EXTRA_FLASH_DMD_FILES)
+    if(EXISTS "${_EXTRA_FLASH_DMD}")
+        list(APPEND DMBOOT_FLASH_DMD_FILES "${_EXTRA_FLASH_DMD}")
+    else()
+        message(WARNING "Extra flash.dmd file not found: ${_EXTRA_FLASH_DMD}")
+    endif()
+endforeach()
+
 # ======================================================================
 #               Collecting sdcard.dmd files (common + MCU + board)
 # ======================================================================
@@ -47,6 +56,15 @@ if(BOARD)
         list(APPEND DMBOOT_SDCARD_DMD_FILES "${_BOARD_SDCARD_DMD}")
     endif()
 endif()
+
+# Extra sdcard modules from cmake parameter
+foreach(_EXTRA_SDCARD_DMD IN LISTS DMBOOT_EXTRA_SDCARD_DMD_FILES)
+    if(EXISTS "${_EXTRA_SDCARD_DMD}")
+        list(APPEND DMBOOT_SDCARD_DMD_FILES "${_EXTRA_SDCARD_DMD}")
+    else()
+        message(WARNING "Extra sdcard.dmd file not found: ${_EXTRA_SDCARD_DMD}")
+    endif()
+endforeach()
 
 # ======================================================================
 #               Downloading modules from DMD 
@@ -141,7 +159,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
     COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
     COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-    COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} dmell; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found'; fi"
+    COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found'; fi"
     DEPENDS download_modules
     COMMENT "Creating modules dmp file from flash modules (if any exist)..."
     VERBATIM
