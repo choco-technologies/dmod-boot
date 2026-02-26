@@ -95,6 +95,42 @@ if(_EXTRA_SDCARD_COUNT GREATER 0)
 endif()
 
 # ======================================================================
+#               Handling local packages directory
+# ======================================================================
+set(_LOCAL_MAIN_MODULE_DMF "")
+if(DMBOOT_MAIN_MODULE_PACKAGES_DIR)
+    if(NOT IS_DIRECTORY "${DMBOOT_MAIN_MODULE_PACKAGES_DIR}")
+        message(WARNING "DMBOOT_MAIN_MODULE_PACKAGES_DIR is not a valid directory: ${DMBOOT_MAIN_MODULE_PACKAGES_DIR}")
+    else()
+        set(_LOCAL_MODULE_DIR "${DMBOOT_MAIN_MODULE_PACKAGES_DIR}/${DMBOOT_MAIN_MODULE}")
+        set(_LOCAL_MODULE_DMD "${_LOCAL_MODULE_DIR}/${DMBOOT_MAIN_MODULE}.dmd")
+        set(_LOCAL_MANIFEST "${DMBOOT_MAIN_MODULE_PACKAGES_DIR}/manifest-local.dmm")
+        set(_LOCAL_MAIN_MODULE_DMF "${_LOCAL_MODULE_DIR}/${DMBOOT_MAIN_MODULE}.dmf")
+
+        if(NOT EXISTS "${_LOCAL_MAIN_MODULE_DMF}")
+            message(WARNING "Local module .dmf not found: ${_LOCAL_MAIN_MODULE_DMF}")
+            set(_LOCAL_MAIN_MODULE_DMF "")
+        else()
+            message(STATUS "Using local main module from: ${_LOCAL_MAIN_MODULE_DMF}")
+        endif()
+
+        if(EXISTS "${_LOCAL_MODULE_DMD}")
+            if(EXISTS "${_LOCAL_MANIFEST}")
+                message(STATUS "Using local manifest for dependency resolution: ${_LOCAL_MANIFEST}")
+                list(INSERT _EXTRA_FLASH_DMD_VALID_FILES 0 "${_LOCAL_MODULE_DMD}")
+                list(INSERT _EXTRA_FLASH_DMD_VALID_MANIFESTS 0 "${_LOCAL_MANIFEST}")
+            else()
+                message(STATUS "Local manifest not found, using remote manifest for dependencies")
+                list(INSERT _EXTRA_FLASH_DMD_VALID_FILES 0 "${_LOCAL_MODULE_DMD}")
+                list(INSERT _EXTRA_FLASH_DMD_VALID_MANIFESTS 0 "")
+            endif()
+        else()
+            message(STATUS "No .dmd dependency file found at ${_LOCAL_MODULE_DMD}, skipping dependency download for local module")
+        endif()
+    endif()
+endif()
+
+# ======================================================================
 #               Downloading modules from DMD 
 # ======================================================================
 find_program(DMF_GET dmf-get HINTS ${DMBOOT_TOOLS_DIR})
@@ -135,6 +171,12 @@ if(DMBOOT_FLASH_DMD_FILES OR _EXTRA_FLASH_DMD_VALID_FILES)
             endif()
         endforeach()
     endif()
+    if(_LOCAL_MAIN_MODULE_DMF)
+        list(APPEND _FLASH_DOWNLOAD_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E echo "Copying main module from local packages: ${_LOCAL_MAIN_MODULE_DMF}..."
+            COMMAND ${CMAKE_COMMAND} -E copy "${_LOCAL_MAIN_MODULE_DMF}" "${DMBOOT_MODULES_OUT_DIR}/${DMBOOT_MAIN_MODULE}.dmf"
+        )
+    endif()
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
     )
@@ -151,8 +193,25 @@ if(DMBOOT_FLASH_DMD_FILES OR _EXTRA_FLASH_DMD_VALID_FILES)
     )
     message(STATUS "Flash DMD files: ${DMBOOT_FLASH_DMD_FILES} ${_EXTRA_FLASH_DMD_VALID_FILES}")
 else()
-    message(WARNING "No flash.dmd files found. Skipping flash module download.")
-    add_custom_target(download_modules ALL)
+    if(_LOCAL_MAIN_MODULE_DMF)
+        # No flash.dmd files, but a local main module .dmf was specified - copy it directly
+        add_custom_command(
+            OUTPUT "${DMBOOT_MODULES_MARKER_FILE}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_MODULES_OUT_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E echo "Copying main module from local packages: ${_LOCAL_MAIN_MODULE_DMF}..."
+            COMMAND ${CMAKE_COMMAND} -E copy "${_LOCAL_MAIN_MODULE_DMF}" "${DMBOOT_MODULES_OUT_DIR}/${DMBOOT_MAIN_MODULE}.dmf"
+            COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
+            COMMENT "Copying local main module .dmf (no flash.dmd files)"
+            VERBATIM
+        )
+        add_custom_target(download_modules ALL
+            DEPENDS "${DMBOOT_MODULES_MARKER_FILE}"
+        )
+        message(STATUS "No flash.dmd files found, but local main module .dmf will be copied from: ${_LOCAL_MAIN_MODULE_DMF}")
+    else()
+        message(WARNING "No flash.dmd files found. Skipping flash module download.")
+        add_custom_target(download_modules ALL)
+    endif()
 endif()
 
 # ======================================================================

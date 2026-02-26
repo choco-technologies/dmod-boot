@@ -16,6 +16,7 @@ set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to 
 set(DMBOOT_EXTRA_FLASH_DMD_MANIFESTS "" CACHE STRING "Manifests for extra flash.dmd files (semicolon-separated list of manifest paths/URLs, one per extra flash.dmd file)")
 set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_EXTRA_SDCARD_DMD_MANIFESTS "" CACHE STRING "Manifests for extra sdcard.dmd files (semicolon-separated list of manifest paths/URLs, one per extra sdcard.dmd file)")
+set(DMBOOT_MAIN_MODULE_PACKAGES_DIR "" CACHE PATH "Path to the local packages directory of the main module (e.g., /path/to/module/build/packages). When set, the main module's .dmf is copied from this directory and its dependencies are resolved using the local manifest-local.dmm (falling back to remote for missing dependencies).")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================

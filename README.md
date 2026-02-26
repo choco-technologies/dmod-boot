@@ -50,6 +50,7 @@ cmake --build build
 - `DMBOOT_EXTRA_FLASH_DMD_MANIFESTS` (optional) - Semicolon-separated list of manifest paths/URLs (one per extra flash.dmd file). Use this to specify a custom manifest for each extra flash.dmd file.
 - `DMBOOT_EXTRA_SDCARD_DMD_FILES` (optional) - Semicolon-separated list of additional `sdcard.dmd` files. Each file adds more sdcard modules to download at build time.
 - `DMBOOT_EXTRA_SDCARD_DMD_MANIFESTS` (optional) - Semicolon-separated list of manifest paths/URLs (one per extra sdcard.dmd file). Use this to specify a custom manifest for each extra sdcard.dmd file.
+- `DMBOOT_MAIN_MODULE_PACKAGES_DIR` (optional) - Path to the local `packages` directory of the main module (e.g., `/path/to/dmgpio/build/packages`). When set together with `DMBOOT_MAIN_MODULE`, dmboot will copy the main module's `.dmf` directly from the local packages directory and resolve its dependencies using `manifest-local.dmm` from that directory (falling back to the remote manifest for any missing dependencies). This is useful for testing a locally-built module without re-publishing it.
 - `DMBOOT_EMULATION` (optional) - Enable Renode simulation mode instead of hardware mode
 
 **Automatic Build-Time Embedding:**
