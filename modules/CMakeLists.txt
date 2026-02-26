@@ -97,6 +97,7 @@ endif()
 # ======================================================================
 #               Handling local packages directory
 # ======================================================================
+set(_LOCAL_MAIN_MODULE_MANIFEST "")
 if(DMBOOT_MAIN_MODULE_PACKAGES_DIR)
     if(NOT IS_DIRECTORY "${DMBOOT_MAIN_MODULE_PACKAGES_DIR}")
         message(WARNING "DMBOOT_MAIN_MODULE_PACKAGES_DIR is not a valid directory: ${DMBOOT_MAIN_MODULE_PACKAGES_DIR}")
@@ -106,14 +107,18 @@ if(DMBOOT_MAIN_MODULE_PACKAGES_DIR)
         set(_LOCAL_MANIFEST "${DMBOOT_MAIN_MODULE_PACKAGES_DIR}/manifest-local.dmm")
 
         if(EXISTS "${_LOCAL_MODULE_DMD}")
+            # Install dependencies from .dmd without overriding the manifest -
+            # the local .dmd already has an embedded reference to the local manifest
+            message(STATUS "Using local .dmd for '${DMBOOT_MAIN_MODULE}' dependencies: ${_LOCAL_MODULE_DMD}")
+            list(APPEND _EXTRA_FLASH_DMD_VALID_FILES "${_LOCAL_MODULE_DMD}")
+            list(APPEND _EXTRA_FLASH_DMD_VALID_MANIFESTS "")
+
+            # Record the local manifest so we can install the main module itself afterwards
             if(EXISTS "${_LOCAL_MANIFEST}")
-                message(STATUS "Using local packages for main module '${DMBOOT_MAIN_MODULE}' with manifest: ${_LOCAL_MANIFEST}")
-                list(APPEND _EXTRA_FLASH_DMD_VALID_FILES "${_LOCAL_MODULE_DMD}")
-                list(APPEND _EXTRA_FLASH_DMD_VALID_MANIFESTS "${_LOCAL_MANIFEST}")
+                message(STATUS "Will install main module '${DMBOOT_MAIN_MODULE}' from local manifest: ${_LOCAL_MANIFEST}")
+                set(_LOCAL_MAIN_MODULE_MANIFEST "${_LOCAL_MANIFEST}")
             else()
-                message(STATUS "Local manifest not found at ${_LOCAL_MANIFEST}, using remote manifest for local module dependencies")
-                list(APPEND _EXTRA_FLASH_DMD_VALID_FILES "${_LOCAL_MODULE_DMD}")
-                list(APPEND _EXTRA_FLASH_DMD_VALID_MANIFESTS "")
+                message(WARNING "Local manifest not found at ${_LOCAL_MANIFEST}. Main module '${DMBOOT_MAIN_MODULE}' will not be installed from local packages.")
             endif()
         else()
             message(WARNING "No .dmd file found at ${_LOCAL_MODULE_DMD}. Skipping local installation of module '${DMBOOT_MAIN_MODULE}'.")
@@ -161,6 +166,12 @@ if(DMBOOT_FLASH_DMD_FILES OR _EXTRA_FLASH_DMD_VALID_FILES)
                 )
             endif()
         endforeach()
+    endif()
+    if(_LOCAL_MAIN_MODULE_MANIFEST)
+        list(APPEND _FLASH_DOWNLOAD_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -E echo "Installing main module '${DMBOOT_MAIN_MODULE}' from local manifest: ${_LOCAL_MAIN_MODULE_MANIFEST}..."
+            COMMAND ${DMF_GET} "${DMBOOT_MAIN_MODULE}" -m "${_LOCAL_MAIN_MODULE_MANIFEST}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+        )
     endif()
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
