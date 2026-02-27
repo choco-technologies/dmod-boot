@@ -83,11 +83,13 @@ macro(append_main_module_download_commands LIST_VAR)
         list(APPEND ${LIST_VAR}
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading main module ${DMBOOT_MAIN_MODULE} (manifest: ${DMBOOT_MANIFEST_URL})..."
             COMMAND ${DMF_GET} ${DMBOOT_MAIN_MODULE} -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+            COMMAND bash -c "test -f '${DMBOOT_MODULES_OUT_DIR}/${DMBOOT_MAIN_MODULE}.dmf' || { echo 'ERROR: Main module ${DMBOOT_MAIN_MODULE}.dmf was not downloaded to ${DMBOOT_MODULES_OUT_DIR}. The manifest may not contain the module entry or dmf-get encountered an error.'; exit 1; }"
         )
     else()
         list(APPEND ${LIST_VAR}
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading main module ${DMBOOT_MAIN_MODULE}..."
             COMMAND ${DMF_GET} ${DMBOOT_MAIN_MODULE} -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+            COMMAND bash -c "test -f '${DMBOOT_MODULES_OUT_DIR}/${DMBOOT_MAIN_MODULE}.dmf' || { echo 'ERROR: Main module ${DMBOOT_MAIN_MODULE}.dmf was not downloaded to ${DMBOOT_MODULES_OUT_DIR}. Check if dmf-get encountered an error.'; exit 1; }"
         )
     endif()
 endmacro()
@@ -230,17 +232,33 @@ if(NOT TODMP)
 endif()
 set(DMBOOT_MODULES_DMP "${CMAKE_BINARY_DIR}/modules.dmp")
 
-add_custom_command(
-    OUTPUT "${DMBOOT_MODULES_DMP}"
-    WORKING_DIRECTORY ${DMBOOT_MODULES_OUT_DIR}
-    COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
-    COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
-    COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-    COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found'; fi"
-    DEPENDS download_modules
-    COMMENT "Creating modules dmp file from flash modules (if any exist)..."
-    VERBATIM
-)
+# When a main module is expected, fail the build if no .dmf files are found
+# after the download step. Otherwise, just print a notice and succeed.
+if(DMBOOT_MAIN_MODULE)
+    add_custom_command(
+        OUTPUT "${DMBOOT_MODULES_DMP}"
+        WORKING_DIRECTORY ${DMBOOT_MODULES_OUT_DIR}
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
+        COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
+        COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
+        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
+        DEPENDS download_modules
+        COMMENT "Creating modules dmp file from flash modules (if any exist)..."
+        VERBATIM
+    )
+else()
+    add_custom_command(
+        OUTPUT "${DMBOOT_MODULES_DMP}"
+        WORKING_DIRECTORY ${DMBOOT_MODULES_OUT_DIR}
+        COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
+        COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
+        COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
+        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found, skipping DMP creation'; fi"
+        DEPENDS download_modules
+        COMMENT "Creating modules dmp file from flash modules (if any exist)..."
+        VERBATIM
+    )
+endif()
 add_custom_target(prepare_modules_dmp ALL
     DEPENDS "${DMBOOT_MODULES_DMP}"
 )
