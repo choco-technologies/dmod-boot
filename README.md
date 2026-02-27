@@ -57,6 +57,8 @@ cmake --build build
 
 All parameters are optional. If not specified, the build will proceed with default settings.
 
+For a full list of all available CMake options (including DMOD library and VFS configuration), see [docs/cmake-options.md](docs/cmake-options.md).
+
 ## CMake Targets
 
 The following targets work in both hardware mode (with OpenOCD) and Renode simulation mode. The workflow is identical regardless of the mode.
