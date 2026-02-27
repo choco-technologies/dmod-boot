@@ -13,9 +13,8 @@ set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
 set(DMBOOT_MAIN_MODULE "dmell" CACHE STRING "Name of the main module to start after boot")
 set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to include (semicolon-separated list of absolute paths)")
-set(DMBOOT_EXTRA_FLASH_DMD_MANIFESTS "" CACHE STRING "Manifests for extra flash.dmd files (semicolon-separated list of manifest paths/URLs, one per extra flash.dmd file)")
 set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
-set(DMBOOT_EXTRA_SDCARD_DMD_MANIFESTS "" CACHE STRING "Manifests for extra sdcard.dmd files (semicolon-separated list of manifest paths/URLs, one per extra sdcard.dmd file)")
+set(DMBOOT_MANIFEST_URL "" CACHE STRING "Manifest path/URL to use with dmf-get -m flag for all module downloads")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # ======================================================================
