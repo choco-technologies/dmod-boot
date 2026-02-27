@@ -77,6 +77,21 @@ endif()
 set(DMBOOT_MODULES_OUT_DIR "${CMAKE_BINARY_DIR}/dmf")
 set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_OUT_DIR}/.download_complete")
 
+# Helper macro to append main module download commands to a list
+macro(append_main_module_download_commands LIST_VAR)
+    if(DMBOOT_MANIFEST_URL)
+        list(APPEND ${LIST_VAR}
+            COMMAND ${CMAKE_COMMAND} -E echo "Downloading main module ${DMBOOT_MAIN_MODULE} (manifest: ${DMBOOT_MANIFEST_URL})..."
+            COMMAND ${DMF_GET} ${DMBOOT_MAIN_MODULE} -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+        )
+    else()
+        list(APPEND ${LIST_VAR}
+            COMMAND ${CMAKE_COMMAND} -E echo "Downloading main module ${DMBOOT_MAIN_MODULE}..."
+            COMMAND ${DMF_GET} ${DMBOOT_MAIN_MODULE} -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+        )
+    endif()
+endmacro()
+
 if(DMBOOT_FLASH_DMD_FILES)
     # Build a sequence of download commands, one per flash.dmd file
     set(_FLASH_DOWNLOAD_COMMANDS
@@ -96,6 +111,33 @@ if(DMBOOT_FLASH_DMD_FILES)
             )
         endif()
     endforeach()
+
+    # Download main module if specified (at the end of installation),
+    # but only if it is not already listed in any flash.dmd file
+    if(DMBOOT_MAIN_MODULE)
+        set(_MAIN_MODULE_IN_FLASH_DMD FALSE)
+        foreach(_DMD_FILE IN LISTS DMBOOT_FLASH_DMD_FILES)
+            file(STRINGS "${_DMD_FILE}" _DMD_LINES)
+            foreach(_LINE IN LISTS _DMD_LINES)
+                string(STRIP "${_LINE}" _LINE_STRIPPED)
+                if(NOT _LINE_STRIPPED MATCHES "^#" AND NOT _LINE_STRIPPED STREQUAL "")
+                    if(_LINE_STRIPPED STREQUAL "${DMBOOT_MAIN_MODULE}")
+                        set(_MAIN_MODULE_IN_FLASH_DMD TRUE)
+                        break()
+                    endif()
+                endif()
+            endforeach()
+            if(_MAIN_MODULE_IN_FLASH_DMD)
+                break()
+            endif()
+        endforeach()
+        if(NOT _MAIN_MODULE_IN_FLASH_DMD)
+            append_main_module_download_commands(_FLASH_DOWNLOAD_COMMANDS)
+        else()
+            message(STATUS "Main module '${DMBOOT_MAIN_MODULE}' is already listed in flash.dmd, skipping explicit download")
+        endif()
+    endif()
+
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
     )
@@ -111,6 +153,25 @@ if(DMBOOT_FLASH_DMD_FILES)
         DEPENDS "${DMBOOT_MODULES_MARKER_FILE}"
     )
     message(STATUS "Flash DMD files: ${DMBOOT_FLASH_DMD_FILES}")
+elseif(DMBOOT_MAIN_MODULE)
+    # No flash.dmd files configured. Downloading main module only.
+    message(STATUS "No flash.dmd files configured. Downloading main module only: ${DMBOOT_MAIN_MODULE}")
+    set(_MAIN_MODULE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_MODULES_OUT_DIR}"
+    )
+    append_main_module_download_commands(_MAIN_MODULE_COMMANDS)
+    list(APPEND _MAIN_MODULE_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
+    )
+    add_custom_command(
+        OUTPUT "${DMBOOT_MODULES_MARKER_FILE}"
+        ${_MAIN_MODULE_COMMANDS}
+        COMMENT "Downloading main module: ${DMBOOT_MAIN_MODULE}"
+        VERBATIM
+    )
+    add_custom_target(download_modules ALL
+        DEPENDS "${DMBOOT_MODULES_MARKER_FILE}"
+    )
 else()
     message(WARNING "No flash.dmd files found. Skipping flash module download.")
     add_custom_target(download_modules ALL)
