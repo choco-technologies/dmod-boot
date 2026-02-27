@@ -17,6 +17,14 @@ set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files t
 set(DMBOOT_MANIFEST_URL "" CACHE STRING "Manifest path/URL to use with dmf-get -m flag for all module downloads")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
+# Convert relative manifest path to absolute so it remains valid when the
+# working directory changes during the build (e.g. dmf-get is invoked from a
+# different directory than where cmake was originally run).
+if(DMBOOT_MANIFEST_URL AND NOT DMBOOT_MANIFEST_URL MATCHES "://")
+    get_filename_component(DMBOOT_MANIFEST_URL "${DMBOOT_MANIFEST_URL}" ABSOLUTE BASE_DIR "${CMAKE_BINARY_DIR}")
+    message(STATUS "Resolved manifest path to absolute: ${DMBOOT_MANIFEST_URL}")
+endif()
+
 # ======================================================================
 #               Early DMOD Configuration (before project())
 # ======================================================================
