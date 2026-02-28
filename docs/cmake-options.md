@@ -16,7 +16,7 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `DMBOOT_MAIN_MODULE` | STRING | `dmell` | Name of the main module to start after boot. |
 | `DMBOOT_EXTRA_FLASH_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `flash.dmd` files to include. Each file adds more flash modules to download at build time. |
 | `DMBOOT_EXTRA_SDCARD_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `sdcard.dmd` files to include. Each file adds more sdcard modules to download at build time. |
-| `DMBOOT_MANIFEST_URL` | STRING | *(empty)* | Manifest path/URL to use with `dmf-get -m` flag for all module downloads. |
+| `DMBOOT_MANIFEST_URL` | STRING | *(empty)* | Manifest path/URL to use with `dmf-get -m` flag when downloading the main module. Flash and sdcard dependency modules (from `.dmd` files) always use the default public manifest. |
 | `DMBOOT_EMULATION` | BOOL | `OFF` | Enable Renode emulation mode instead of hardware mode (OpenOCD). |
 
 ## VFS Options
