@@ -167,7 +167,7 @@ jobs:
     
     - name: Build with emulation mode enabled
       run: |
-        cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=STM32F746xG -DDMBOOT_EMULATION=ON -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Debug -DBOARD=stm32f746g-disco -DDMBOOT_EMULATION=ON -S . -B build
         cmake --build build --config Debug
     
     - name: Test install-firmware target
