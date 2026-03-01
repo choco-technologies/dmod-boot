@@ -145,22 +145,58 @@ ${SUDO} apt-get install -y "${PACKAGES[@]}"
 
 echo "[DMBOOT 2/3] Installing Renode ${RENODE_VERSION}..."
 
-if command -v renode &>/dev/null && renode --version 2>&1 | grep -q "${RENODE_VERSION}"; then
-    echo "    Renode ${RENODE_VERSION} already installed"
+# Use the actual directory name that the archive creates
+RENODE_DIR="${TOOLS_DIR}/renode_${RENODE_VERSION}_portable"
+if [[ -x "${RENODE_DIR}/renode" ]] && "${RENODE_DIR}/renode" --version 2>&1 | grep -q "${RENODE_VERSION}"; then
+    echo "    Renode ${RENODE_VERSION} already installed at ${RENODE_DIR}"
 else
-    RENODE_VERSION_DEB="renode_${RENODE_VERSION}_amd64.deb"
-    RENODE_URL="https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/${RENODE_VERSION_DEB}"
-    RENODE_TEMP="/tmp/${RENODE_VERSION_DEB}"
+    RENODE_ARCHIVE="renode-${RENODE_VERSION}.linux-portable.tar.gz"
+    RENODE_URL="https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/${RENODE_ARCHIVE}"
+    RENODE_TEMP="/tmp/${RENODE_ARCHIVE}"
 
     if [[ ! -f "${RENODE_TEMP}" ]]; then
-        echo "    Downloading Renode (this may take a few minutes)..."
+        echo "    Downloading Renode portable (this may take a few minutes)..."
         wget -q "${RENODE_URL}" -O "${RENODE_TEMP}"
     else
-        echo "    Using cached Renode installer..."
+        echo "    Using cached Renode archive..."
     fi
     
-    ${SUDO} dpkg -i "${RENODE_TEMP}" || ${SUDO} apt-get install -f -y
-    echo "    Renode installed successfully"
+    echo "    Extracting Renode to ${TOOLS_DIR}..."
+    ${SUDO} mkdir -p "${TOOLS_DIR}"
+    ${SUDO} tar -xzf "${RENODE_TEMP}" -C "${TOOLS_DIR}"
+    
+    # Create symlink in /usr/local/bin for easy access
+    ${SUDO} ln -sf "${RENODE_DIR}/renode" /usr/local/bin/renode
+    
+    echo "    Renode installed successfully at ${RENODE_DIR}"
+fi
+
+# Configure PATH for DMOD Boot tools
+if [[ "${SKIP_PROFILE_SETUP}" != "true" ]]; then
+    echo ""
+    echo "Configuring PATH in /etc/profile.d/dmboot-tools.sh..."
+    ${SUDO} tee /etc/profile.d/dmboot-tools.sh >/dev/null << EOF
+#!/usr/bin/env sh
+# DMOD Boot tools PATH configuration
+if [ -d "${RENODE_DIR}" ]; then
+    case ":\$PATH:" in
+        *:"${RENODE_DIR}":*) ;;
+        *) export PATH="\$PATH:${RENODE_DIR}" ;;
+    esac
+fi
+EOF
+    ${SUDO} chmod 644 /etc/profile.d/dmboot-tools.sh
+    
+    # Add to user's bashrc for non-login shells
+    if [[ -f "${HOME}/.bashrc" ]]; then
+        if ! grep -q "dmboot-tools.sh" "${HOME}/.bashrc"; then
+            echo "" >> "${HOME}/.bashrc"
+            echo "# DMOD Boot tools PATH (added by setup-linux-env.sh)" >> "${HOME}/.bashrc"
+            echo "if [ -f /etc/profile.d/dmboot-tools.sh ]; then" >> "${HOME}/.bashrc"
+            echo "    . /etc/profile.d/dmboot-tools.sh" >> "${HOME}/.bashrc"
+            echo "fi" >> "${HOME}/.bashrc"
+        fi
+    fi
 fi
 
 echo "[DMBOOT 3/3] Installing dmffs..."
@@ -177,7 +213,15 @@ fi
 
 echo ""
 echo "[DMBOOT] Verifying installed tools..."
-renode --version || true
+# Load dmboot tools PATH for verification
+if [[ -f /etc/profile.d/dmboot-tools.sh ]]; then
+    source /etc/profile.d/dmboot-tools.sh
+fi
+if command -v renode &>/dev/null; then
+    renode --version
+else
+    echo "    Warning: renode not found in PATH. Restart your terminal or run: source ~/.bashrc"
+fi
 
 echo ""
 echo "[DMBOOT] Environment prepared successfully!"

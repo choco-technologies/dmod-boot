@@ -491,11 +491,11 @@ int main(int argc, char** argv)
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
 
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
-
     // Start main module if loaded
     start_main_module(mainModule);
+
+    // Mark that the boot process is done
+    dmlog_puts(ctx, "DMOD-Boot started\n");
     
     // Initialize RTOS and start scheduler (if applicable)
     dmosi_init();
