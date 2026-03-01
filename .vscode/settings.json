@@ -19,7 +19,7 @@
     "C_Cpp.errorSquiggles": "enabled",
     "cortex-debug.openocdPath": "/usr/bin/openocd",
     "cortex-debug.armToolchainPath": "/usr/bin",
-    "cortex-debug.gdbPath": "/usr/bin/arm-none-eabi-gdb",
+    "cortex-debug.gdbPath": "gdb-multiarch",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "files.exclude": {
         "**/build": false

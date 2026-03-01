@@ -120,7 +120,6 @@ export DEBIAN_FRONTEND=noninteractive
 ${SUDO} apt-get update
 
 # Try to install packages, with fallbacks for modern systems
-# libncurses5 -> libncurses6 (newer systems)
 # libgtk2.0-0 -> libgtk2.0-0t64 (T64 ABI systems)
 PACKAGES=(
     "wget"
@@ -131,15 +130,8 @@ PACKAGES=(
     "gcc"
     "python3"
     "python3-pip"
+    "gdb-multiarch"
 )
-
-# Try libncurses5 first, fallback to libncurses6
-if ${SUDO} apt-cache search --names-only "^libncurses5$" | grep -q .; then
-    PACKAGES+=("libncurses5")
-else
-    echo "[DMBOOT] libncurses5 not found, using libncurses6..."
-    PACKAGES+=("libncurses6")
-fi
 
 # Try libgtk2.0-0 first, fallback to libgtk2.0-0t64
 if ${SUDO} apt-cache search --names-only "^libgtk2.0-0$" | grep -q . && ! ${SUDO} apt-cache search --names-only "^libgtk2.0-0t64$" | grep -q .; then
@@ -152,13 +144,24 @@ fi
 ${SUDO} apt-get install -y "${PACKAGES[@]}"
 
 echo "[DMBOOT 2/3] Installing Renode ${RENODE_VERSION}..."
-RENODE_VERSION_DEB="renode_${RENODE_VERSION}_amd64.deb"
-RENODE_URL="https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/${RENODE_VERSION_DEB}"
-RENODE_TEMP="/tmp/${RENODE_VERSION_DEB}"
 
-wget -q "${RENODE_URL}" -O "${RENODE_TEMP}"
-${SUDO} dpkg -i "${RENODE_TEMP}" || ${SUDO} apt-get install -f -y
-rm -f "${RENODE_TEMP}"
+if command -v renode &>/dev/null && renode --version 2>&1 | grep -q "${RENODE_VERSION}"; then
+    echo "    Renode ${RENODE_VERSION} already installed"
+else
+    RENODE_VERSION_DEB="renode_${RENODE_VERSION}_amd64.deb"
+    RENODE_URL="https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/${RENODE_VERSION_DEB}"
+    RENODE_TEMP="/tmp/${RENODE_VERSION_DEB}"
+
+    if [[ ! -f "${RENODE_TEMP}" ]]; then
+        echo "    Downloading Renode (this may take a few minutes)..."
+        wget -q "${RENODE_URL}" -O "${RENODE_TEMP}"
+    else
+        echo "    Using cached Renode installer..."
+    fi
+    
+    ${SUDO} dpkg -i "${RENODE_TEMP}" || ${SUDO} apt-get install -f -y
+    echo "    Renode installed successfully"
+fi
 
 echo "[DMBOOT 3/3] Installing dmffs..."
 dmf-get make_dmffs --type dmf
