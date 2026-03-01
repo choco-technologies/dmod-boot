@@ -10,6 +10,7 @@ THIS_SCRIPT_PATH="${BASH_SOURCE[0]}"
 THIS_DIR="$( cd "$( dirname "$THIS_SCRIPT_PATH" )" >/dev/null && pwd )"
 ROOT_DIR="$THIS_DIR/.."
 DOCKERFILE_PATH="$THIS_DIR/Dockerfile"
+DOCKERFILE_ENV_PATH="$THIS_DIR/Dockerfile.env"
 
 #
 #   Path to the configuration file
@@ -71,6 +72,7 @@ function prepareScript()
 {
     defineScript "$0" "Builds an image required for building of the ChocoOS system"
     
+    addCommandLineOptionalArgument 'ENV_IMAGE_NAME' '--env-image-name' not_empty_string 'Name of the environment image to build' 'chocotechnologies/dmboot-env' ''
     addCommandLineOptionalArgument 'IMAGE_NAME' '--image-name' not_empty_string 'Name of the image to build' 'chocotechnologies/dmboot' ''
     addCommandLineOptionalArgument 'IMAGE_VERSION' '--image-version' not_empty_string 'Version of the image to build' 'latest' ''
 
@@ -80,13 +82,24 @@ function prepareScript()
 }
 
 #
-#   Builds the image
+#   Builds the environment image
+#   
+function buildEnv()
+{
+    local old_pwd=$(pwd)
+    cd "$THIS_DIR/.."
+    doCommandAsStepWithSpinner "Building the environment image $ENV_IMAGE_NAME:$IMAGE_VERSION" docker build --squash -t "$ENV_IMAGE_NAME:$IMAGE_VERSION" -f "$DOCKERFILE_ENV_PATH" "$ROOT_DIR"
+    cd "$old_pwd"
+}
+
+#
+#   Builds the application image
 #   
 function build()
 {
     local old_pwd=$(pwd)
     cd "$THIS_DIR/.."
-    doCommandAsStepWithSpinner "Building the image $IMAGE_NAME:$IMAGE_VERSION" docker build --squash -t "$IMAGE_NAME:$IMAGE_VERSION" -f "$DOCKERFILE_PATH" "$ROOT_DIR"
+    doCommandAsStepWithSpinner "Building the image $IMAGE_NAME:$IMAGE_VERSION" docker build --squash -t "$IMAGE_NAME:$IMAGE_VERSION" --build-arg "ENV_IMAGE_VERSION=$IMAGE_VERSION" -f "$DOCKERFILE_PATH" "$ROOT_DIR"
     cd "$old_pwd"
 }
 
@@ -95,4 +108,5 @@ function build()
 #   MAIN
 #
 prepareScript "$@"
+buildEnv
 build 
