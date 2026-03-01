@@ -428,7 +428,7 @@ static void boot_shell(dmlog_ctx_t ctx)
 
 int main(int argc, char** argv) 
 {
-    Dmod_SetLogLevel(Dmod_LogLevel_Warn);
+    Dmod_SetLogLevel(Dmod_LogLevel_Info);
     void* logs_start = &__logs_start__;
     void* logs_end = &__logs_end__;
     dmlog_index_t  logs_size = (dmlog_index_t)((uintptr_t)logs_end - (uintptr_t)logs_start);
@@ -488,14 +488,14 @@ int main(int argc, char** argv)
     // Mount embedded filesystems
     mount_embedded_filesystems();
 
+    // Mark that the boot process is done
+    dmlog_puts(ctx, "DMOD-Boot started\n");
+
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
 
     // Start main module if loaded
     start_main_module(mainModule);
-
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
     
     // Initialize RTOS and start scheduler (if applicable)
     dmosi_init();
