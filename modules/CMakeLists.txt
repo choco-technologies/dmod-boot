@@ -79,16 +79,20 @@ set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_OUT_DIR}/.download_complete")
 
 # Helper macro to append main module download commands to a list
 macro(append_main_module_download_commands LIST_VAR)
+    set(_MAIN_MODULE_ARGS ${DMBOOT_MAIN_MODULE})
+    if(DMBOOT_MAIN_MODULE_CONFIG)
+        list(APPEND _MAIN_MODULE_ARGS ${DMBOOT_MAIN_MODULE_CONFIG})
+    endif()
     if(DMBOOT_MANIFEST_URL)
         list(APPEND ${LIST_VAR}
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading main module ${DMBOOT_MAIN_MODULE} (manifest: ${DMBOOT_MANIFEST_URL})..."
-            COMMAND ${DMF_GET} ${DMBOOT_MAIN_MODULE} -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+            COMMAND ${DMF_GET} ${_MAIN_MODULE_ARGS} -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
             COMMAND bash -c "test -f '${DMBOOT_MODULES_OUT_DIR}/${DMBOOT_MAIN_MODULE}.dmf' || { echo 'ERROR: Main module ${DMBOOT_MAIN_MODULE}.dmf was not downloaded to ${DMBOOT_MODULES_OUT_DIR}. The manifest may not contain the module entry or dmf-get encountered an error.'; exit 1; }"
         )
     else()
         list(APPEND ${LIST_VAR}
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading main module ${DMBOOT_MAIN_MODULE}..."
-            COMMAND ${DMF_GET} ${DMBOOT_MAIN_MODULE} -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+            COMMAND ${DMF_GET} ${_MAIN_MODULE_ARGS} -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
             COMMAND bash -c "test -f '${DMBOOT_MODULES_OUT_DIR}/${DMBOOT_MAIN_MODULE}.dmf' || { echo 'ERROR: Main module ${DMBOOT_MAIN_MODULE}.dmf was not downloaded to ${DMBOOT_MODULES_OUT_DIR}. Check if dmf-get encountered an error.'; exit 1; }"
         )
     endif()
@@ -123,7 +127,8 @@ if(DMBOOT_FLASH_DMD_FILES)
             foreach(_LINE IN LISTS _DMD_LINES)
                 string(STRIP "${_LINE}" _LINE_STRIPPED)
                 if(NOT _LINE_STRIPPED MATCHES "^#" AND NOT _LINE_STRIPPED STREQUAL "")
-                    if(_LINE_STRIPPED STREQUAL "${DMBOOT_MAIN_MODULE}")
+                    string(REGEX MATCH "^[^ \t\r\n]+" _LINE_MODULE_NAME "${_LINE_STRIPPED}")
+                    if(_LINE_MODULE_NAME STREQUAL "${DMBOOT_MAIN_MODULE}")
                         set(_MAIN_MODULE_IN_FLASH_DMD TRUE)
                         break()
                     endif()
@@ -241,7 +246,7 @@ if(DMBOOT_MAIN_MODULE)
         COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
+        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE} ${DMBOOT_MAIN_MODULE_CONFIG}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
         DEPENDS download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM
