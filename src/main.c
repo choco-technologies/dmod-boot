@@ -463,9 +463,6 @@ int main(int argc, char** argv)
         while(1);
     }
 
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
-
     if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
     {
         DMOD_LOG_ERROR("VFS initialization failed!\n");
@@ -497,6 +494,9 @@ int main(int argc, char** argv)
     // Start main module if loaded
     start_main_module(mainModule);
     
+    // Mark that the boot process is done
+    dmlog_puts(ctx, "DMOD-Boot started\n");
+
     // Initialize RTOS and start scheduler (if applicable)
     dmosi_init();
 
