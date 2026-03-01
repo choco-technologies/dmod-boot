@@ -1,5 +1,7 @@
 #define DMOD_ENABLE_REGISTRATION
 #include <string.h>
+#include "FreeRTOS.h"
+#include "task.h"
 #include "dmod.h"
 #include "dmlog.h"
 #include "dmheap.h"
@@ -273,7 +275,7 @@ static void mount_config_filesystem(void)
     void* config_fs_end   = &__config_fs_end;
     size_t config_fs_size = (size_t)((uintptr_t)config_fs_end - (uintptr_t)config_fs_start);
     
-    if(config_fs_size > 0)
+    // if(config_fs_size > 0)
     {
         DMOD_LOG_INFO("Config filesystem found in ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
@@ -292,19 +294,17 @@ static void mount_config_filesystem(void)
             DMOD_LOG_ERROR("Failed to mount config filesystem at /configs/\n");
         }
     }
-    else
-    {
-        DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
-    }
+    // else
+    // {
+    //     DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
+    // }
 }
 
 static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
-#if !DMBOOT_EMULATION_ENABLED
     dmvfs_mount_fs("dmdevfs", "/dev", "/configs");
-#endif
 }
 
 static void boot_shell(dmlog_ctx_t ctx)
@@ -428,6 +428,37 @@ static void boot_shell(dmlog_ctx_t ctx)
     }
 }
 
+typedef struct
+{
+    dmlog_ctx_t ctx;
+    Dmod_Context_t* mainModule;
+} boot_task_args_t;
+
+static boot_task_args_t g_boot_args;
+
+static void boot_task_fn(void* param)
+{
+    boot_task_args_t* args = (boot_task_args_t*)param;
+
+    // Mount embedded filesystems (RTOS scheduler is now running,
+    // so RTOS primitives used by dmdevfs work correctly)
+    mount_embedded_filesystems();
+
+    // Load startup.dmp if embedded in ROM
+    load_embedded_startup_dmp();
+
+    // Mark that the boot process is done
+    dmlog_puts(args->ctx, "DMOD-Boot started\n");
+
+    // Start main module if loaded
+    start_main_module(args->mainModule);
+
+    // fallback to interactive shell
+    boot_shell(args->ctx);
+
+    vTaskDelete(NULL);
+}
+
 int main(int argc, char** argv) 
 {
     Dmod_SetLogLevel(Dmod_LogLevel_Info);
@@ -487,23 +518,24 @@ int main(int argc, char** argv)
     // Load modules.dmp if embedded in ROM
     Dmod_Context_t* mainModule = load_embedded_modules_dmp();
 
-    // Mount embedded filesystems
-    mount_embedded_filesystems();
+    // Store context for the boot task
+    g_boot_args.ctx = ctx;
+    g_boot_args.mainModule = mainModule;
 
-    // Load startup.dmp if embedded in ROM
-    load_embedded_startup_dmp();
+    // Create a boot task that will run once the RTOS scheduler starts.
+    // Filesystem mounting (including dmdevfs) is deferred to the task so
+    // that RTOS thread primitives are available during module initialisation.
+    if(xTaskCreate(boot_task_fn, "boot", 2048, &g_boot_args, tskIDLE_PRIORITY + 1, NULL) != pdPASS)
+    {
+        DMOD_LOG_ERROR("Failed to create boot task!\n");
+        while(1);
+    }
 
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
-
-    // Start main module if loaded
-    start_main_module(mainModule);
-    
-    // Initialize RTOS and start scheduler (if applicable)
+    // Initialize RTOS and start scheduler (never returns in bare-metal)
     dmosi_init();
 
-    // fallback to interactive shell
-    boot_shell(ctx);
+    // Should never reach here
+    while(1);
 
     return 0;
 }
