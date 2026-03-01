@@ -35,5 +35,5 @@
   <text x="298" y="72" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="300" fill="#e94560" letter-spacing="1">-boot</text>
 
   <!-- Tagline -->
-  <text x="152" y="92" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#a8b2d8" letter-spacing="0.5">Dynamic Modules Bootloader for STM32</text>
+  <text x="152" y="92" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#a8b2d8" letter-spacing="0.5">Dynamic Modules Bootloader for Embedded Systems</text>
 </svg>

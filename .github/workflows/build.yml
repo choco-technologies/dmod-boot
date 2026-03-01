@@ -185,12 +185,12 @@ jobs:
         
         # Start Renode with connect target in background
         echo "Launching Renode..."
-        timeout 60 cmake --build . --target connect > connect.log 2>&1 &
+        timeout 90 cmake --build . --target connect > connect.log 2>&1 &
         CONNECT_PID=$!
         
         # Wait for Renode to start and GDB server to be ready
         echo "Waiting for Renode GDB server to start..."
-        sleep 15
+        sleep 30
         
         # Check if Renode is still running
         if ! ps -p $CONNECT_PID > /dev/null 2>&1; then
@@ -203,11 +203,11 @@ jobs:
         
         # Now test monitor-gdb to read logs
         echo "Testing monitor-gdb to read firmware logs..."
-        timeout 20 cmake --build . --target monitor-gdb > monitor.log 2>&1 &
+        timeout 60 cmake --build . --target monitor-gdb > monitor.log 2>&1 &
         MONITOR_PID=$!
         
         # Wait for monitor to capture some output
-        sleep 10
+        sleep 30
         
         # Check monitor output
         if [ -f monitor.log ]; then

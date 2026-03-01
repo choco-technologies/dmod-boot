@@ -9,10 +9,14 @@ if(EXISTS "${_COMMON_FLASH_DMD}")
     list(APPEND DMBOOT_FLASH_DMD_FILES "${_COMMON_FLASH_DMD}")
 endif()
 
-# MCU-specific flash modules
-set(_MCU_FLASH_DMD "${CMAKE_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/flash.dmd")
-if(EXISTS "${_MCU_FLASH_DMD}")
-    list(APPEND DMBOOT_FLASH_DMD_FILES "${_MCU_FLASH_DMD}")
+# MCU-specific flash modules (skip in emulation mode - hardware peripherals not needed for emulation testing)
+if(NOT DMBOOT_EMULATION)
+    set(_MCU_FLASH_DMD "${CMAKE_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/flash.dmd")
+    if(EXISTS "${_MCU_FLASH_DMD}")
+        list(APPEND DMBOOT_FLASH_DMD_FILES "${_MCU_FLASH_DMD}")
+    endif()
+else()
+    message(STATUS "Emulation mode: skipping MCU-specific flash modules")
 endif()
 
 # Board-specific flash modules (only if BOARD is set)
