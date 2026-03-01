@@ -7,3 +7,5 @@ dmramfs
 dmdevfs
 ls
 mkdir
+cat
+catini
