@@ -463,6 +463,9 @@ int main(int argc, char** argv)
         while(1);
     }
 
+    // Mark that the boot process is done
+    dmlog_puts(ctx, "DMOD-Boot started\n");
+
     if(!dmvfs_init(DMBOOT_MAX_MOUNT_POINTS, DMBOOT_MAX_OPEN_FILES))
     {
         DMOD_LOG_ERROR("VFS initialization failed!\n");
@@ -487,9 +490,6 @@ int main(int argc, char** argv)
 
     // Mount embedded filesystems
     mount_embedded_filesystems();
-
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
