@@ -246,7 +246,7 @@ if(DMBOOT_MAIN_MODULE)
         COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE} ${DMBOOT_MAIN_MODULE_CONFIG}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
+        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
         DEPENDS download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM

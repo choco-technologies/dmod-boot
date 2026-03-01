@@ -14,7 +14,7 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `USER_DATA_FILE` | FILEPATH | *(empty)* | Path to an optional user data file to embed in ROM. Its address and size are accessible via `USER_DATA_ADDR` and `USER_DATA_SIZE` environment variables. |
 | `DMBOOT_CONFIG_DIR` | PATH | `<build>/configs` | Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time. |
 | `DMBOOT_MAIN_MODULE` | STRING | `dmell` | Name of the main module to start after boot. |
-| `DMBOOT_MAIN_MODULE_CONFIG` | STRING | *(empty)* | Configuration file for the main module (e.g. `board/stm32f746g-disco.ini`). Passed to `dmf-get` and `todmp` when the main module is downloaded and packaged. |
+| `DMBOOT_MAIN_MODULE_CONFIG` | STRING | *(empty)* | Configuration file for the main module (e.g. `board/stm32f746g-disco.ini`). Passed to `dmf-get` when downloading the main module. |
 | `DMBOOT_EXTRA_FLASH_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `flash.dmd` files to include. Each file adds more flash modules to download at build time. |
 | `DMBOOT_EXTRA_SDCARD_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `sdcard.dmd` files to include. Each file adds more sdcard modules to download at build time. |
 | `DMBOOT_MANIFEST_URL` | STRING | *(empty)* | Manifest path/URL to use with `dmf-get -m` flag for all module downloads. |
