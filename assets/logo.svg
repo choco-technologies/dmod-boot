@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="120" viewBox="0 0 480 120">
+  <!-- Background -->
+  <rect width="480" height="120" rx="10" fill="#1a1a2e"/>
+
+  <!-- Boot chip icon -->
+  <rect x="18" y="20" width="80" height="80" rx="8" fill="#16213e" stroke="#0f3460" stroke-width="2"/>
+  <!-- Chip pins left -->
+  <rect x="8"  y="35" width="10" height="6" rx="2" fill="#e94560"/>
+  <rect x="8"  y="50" width="10" height="6" rx="2" fill="#e94560"/>
+  <rect x="8"  y="65" width="10" height="6" rx="2" fill="#e94560"/>
+  <rect x="8"  y="80" width="10" height="6" rx="2" fill="#e94560"/>
+  <!-- Chip pins right -->
+  <rect x="98" y="35" width="10" height="6" rx="2" fill="#e94560"/>
+  <rect x="98" y="50" width="10" height="6" rx="2" fill="#e94560"/>
+  <rect x="98" y="65" width="10" height="6" rx="2" fill="#e94560"/>
+  <rect x="98" y="80" width="10" height="6" rx="2" fill="#e94560"/>
+  <!-- Chip pins top -->
+  <rect x="35" y="8"  width="6" height="12" rx="2" fill="#e94560"/>
+  <rect x="52" y="8"  width="6" height="12" rx="2" fill="#e94560"/>
+  <rect x="69" y="8"  width="6" height="12" rx="2" fill="#e94560"/>
+  <!-- Chip pins bottom -->
+  <rect x="35" y="100" width="6" height="12" rx="2" fill="#e94560"/>
+  <rect x="52" y="100" width="6" height="12" rx="2" fill="#e94560"/>
+  <rect x="69" y="100" width="6" height="12" rx="2" fill="#e94560"/>
+  <!-- Chip label -->
+  <text x="58" y="57" font-family="monospace" font-size="11" fill="#e94560" text-anchor="middle" font-weight="bold">dMOD</text>
+  <text x="58" y="72" font-family="monospace" font-size="9"  fill="#a8b2d8" text-anchor="middle">BOOT</text>
+
+  <!-- Arrow / launch symbol -->
+  <polygon points="116,60 130,52 130,68" fill="#e94560"/>
+  <line x1="130" y1="60" x2="142" y2="60" stroke="#e94560" stroke-width="2"/>
+
+  <!-- dmod-boot text -->
+  <text x="152" y="72" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="700" fill="#e2e8f0" letter-spacing="1">dmod</text>
+  <text x="298" y="72" font-family="'Segoe UI', Arial, sans-serif" font-size="38" font-weight="300" fill="#e94560" letter-spacing="1">-boot</text>
+
+  <!-- Tagline -->
+  <text x="152" y="92" font-family="'Segoe UI', Arial, sans-serif" font-size="13" fill="#a8b2d8" letter-spacing="0.5">Dynamic Modules Bootloader for STM32</text>
+</svg>

@@ -1,5 +1,12 @@
 # dmod-boot
 
+[![Build](https://github.com/choco-technologies/dmod-boot/actions/workflows/build.yml/badge.svg)](https://github.com/choco-technologies/dmod-boot/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+<p align="center">
+  <img src="assets/logo.svg" alt="dmod-boot logo" width="480"/>
+</p>
+
 Dynamic Modules (dMOD) bootloader - A minimalistic embedded project for STM32 microcontrollers.
 
 ## Setting Up Your Environment
@@ -75,6 +82,28 @@ cmake ..
 cmake --build .
 ```
 
+### Selecting a Target or Board
+
+By default, the build targets the `STM32F746xG` microcontroller. You can select a different target or use a predefined board configuration:
+
+**Using the `TARGET` parameter** – specify a microcontroller directly:
+
+```bash
+cmake -DTARGET=STM32F407G -S . -B build
+cmake --build build
+```
+
+Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`.
+
+**Using the `BOARD` parameter** – select a ready-made board configuration that automatically sets `TARGET` and other board-specific settings:
+
+```bash
+cmake -DBOARD=stm32f746g-disco -S . -B build
+cmake --build build
+```
+
+Board configuration files are located in `configs/board/<BOARD>/board.cmake`. When `BOARD` is set, the `TARGET` parameter is ignored.
+
 ### Building for Renode Simulation
 
 To build for Renode simulation (useful for automated testing without hardware):
@@ -105,6 +134,8 @@ cmake --build build
 ```
 
 **Build Parameters:**
+- `TARGET` (optional, defaults to `STM32F746xG`) - Target microcontroller. Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`. Ignored when `BOARD` is set.
+- `BOARD` (optional) - Board name. When set, `TARGET` and other board-specific settings are automatically derived from `configs/board/<BOARD>/board.cmake`, so you don't need to set `TARGET` manually. Example: `-DBOARD=stm32f746g-disco`.
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
 - `DMBOOT_CONFIG_DIR` (optional, defaults to `build/configs`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time. By default, configuration files from `modules.dmd` are downloaded to this directory.
