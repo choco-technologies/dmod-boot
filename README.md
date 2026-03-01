@@ -2,6 +2,68 @@
 
 Dynamic Modules (dMOD) bootloader - A minimalistic embedded project for STM32 microcontrollers.
 
+## Setting Up Your Environment
+
+### Option 1: Docker (Recommended for Easy Setup)
+
+The easiest way to get started is to use the pre-configured Docker image that includes all necessary tools:
+
+```bash
+docker run -it --rm \
+    -v $(pwd):/workspace \
+    -w /workspace \
+    chocotechnologies/dmboot:1.0.0 \
+    bash
+```
+
+This Docker image includes:
+- ARM GNU toolchain (arm-none-eabi-gcc)
+- CMake
+- Renode emulator
+- All dMOD tools and libraries
+- Python development environment
+
+Once inside the container, you can proceed directly to [Building](#building).
+
+### Option 2: Native Linux Setup
+
+If you prefer to set up your Linux environment natively, we provide an automated setup script that installs all necessary tools and dependencies:
+
+```bash
+./scripts/setup-linux-env.sh
+```
+
+**What this script does:**
+1. Calls the DMOD base environment setup (installs ARM toolchain, CMake, and other core tools)
+2. Installs additional dMOD Boot specific packages:
+   - Renode emulator
+   - ncurses libraries (with automatic fallback for modern systems)
+   - GTK libraries (with T64 ABI support)
+   - Python 3 and pip
+   - Other development utilities
+3. Sets up the environment variables and bash aliases
+
+**Advanced options:**
+
+```bash
+# Skip DMOD base setup if you've already set it up separately
+./scripts/setup-linux-env.sh --skip-dmod-setup
+
+# Specify custom tool directory
+./scripts/setup-linux-env.sh --tools-dir /opt/tools
+
+# Specify custom Renode version
+./scripts/setup-linux-env.sh --renode-version 1.14.0
+
+# View all available options
+./scripts/setup-linux-env.sh --help
+```
+
+After running the script, restart your terminal or run:
+```bash
+source ~/.bashrc
+```
+
 ## Building
 
 ### Building for Hardware
