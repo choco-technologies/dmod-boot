@@ -75,6 +75,7 @@ function prepareScript()
     addCommandLineOptionalArgument 'ENV_IMAGE_NAME' '--env-image-name' not_empty_string 'Name of the environment image to build' 'chocotechnologies/dmboot-env' ''
     addCommandLineOptionalArgument 'IMAGE_NAME' '--image-name' not_empty_string 'Name of the image to build' 'chocotechnologies/dmboot' ''
     addCommandLineOptionalArgument 'IMAGE_VERSION' '--image-version' not_empty_string 'Version of the image to build' 'latest' ''
+    addCommandLineFlag 'BUILD_ENV' '--build-env' 'Also build the environment image (chocotechnologies/dmboot-env)'
 
     
     disableConfigurationPrinting
@@ -108,5 +109,7 @@ function build()
 #   MAIN
 #
 prepareScript "$@"
-buildEnv
+if [ "$BUILD_ENV" = "true" ]; then
+    buildEnv
+fi
 build 
