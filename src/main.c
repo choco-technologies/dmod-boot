@@ -273,7 +273,7 @@ static void mount_config_filesystem(void)
     void* config_fs_end   = &__config_fs_end;
     size_t config_fs_size = (size_t)((uintptr_t)config_fs_end - (uintptr_t)config_fs_start);
     
-    // if(config_fs_size > 0)
+    if(config_fs_size > 0)
     {
         DMOD_LOG_INFO("Config filesystem found in ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
@@ -292,17 +292,19 @@ static void mount_config_filesystem(void)
             DMOD_LOG_ERROR("Failed to mount config filesystem at /configs/\n");
         }
     }
-    // else
-    // {
-    //     DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
-    // }
+    else
+    {
+        DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
+    }
 }
 
 static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
+#if !DMBOOT_EMULATION_ENABLED
     dmvfs_mount_fs("dmdevfs", "/dev", "/configs");
+#endif
 }
 
 static void boot_shell(dmlog_ctx_t ctx)
