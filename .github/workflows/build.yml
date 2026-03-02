@@ -165,74 +165,9 @@ jobs:
         git submodule init
         git submodule update --recursive
     
-    - name: Build with emulation mode enabled
+    - name: Run Renode emulation tests
       run: |
-        cmake -DCMAKE_BUILD_TYPE=Debug -DBOARD=stm32f746g-disco -DDMBOOT_EMULATION=ON -S . -B build
-        cmake --build build --config Debug
-    
-    - name: Test install-firmware target
-      run: |
-        cd build
-        cmake --build . --target install-firmware
-        ls -lh renode_firmware.elf
-        echo "✓ install-firmware target works correctly"
-    
-    - name: Test Renode workflow and monitor-gdb
-      run: |
-        cd build
-        
-        echo "Starting Renode emulation test..."
-        
-        # Start Renode with connect target in background
-        echo "Launching Renode..."
-        timeout 90 cmake --build . --target connect > connect.log 2>&1 &
-        CONNECT_PID=$!
-        
-        # Wait for Renode to start and GDB server to be ready
-        echo "Waiting for Renode GDB server to start..."
-        sleep 3
-        
-        # Check if Renode is still running
-        if ! ps -p $CONNECT_PID > /dev/null 2>&1; then
-          echo "✗ Renode failed to start"
-          cat connect.log
-          exit 1
-        fi
-        
-        echo "✓ Renode started successfully"
-        
-        # Now test monitor-gdb to read logs
-        echo "Testing monitor-gdb to read firmware logs..."
-        timeout 60 cmake --build . --target monitor-gdb > monitor.log 2>&1 &
-        MONITOR_PID=$!
-        
-        # Wait for monitor to capture some output
-        sleep 60
-        
-        # Check monitor output
-        if [ -f monitor.log ]; then
-          echo "Monitor output:"
-          cat monitor.log
-          echo ""
-          
-          # Verify expected logs using the verification script
-          bash "$GITHUB_WORKSPACE"/scripts/verify_renode_logs.sh monitor.log "$GITHUB_WORKSPACE"/configs/renode/expected_logs.txt
-        else
-          echo "✗ No monitor output captured"
-          exit 1
-        fi
-        
-        # Cleanup
-        echo ""
-        echo "Cleaning up processes..."
-        kill $MONITOR_PID 2>/dev/null || true
-        kill $CONNECT_PID 2>/dev/null || true
-        sleep 2
-        pkill -9 -f renode || true
-        pkill -9 -f mono || true
-        
-        echo ""
-        echo "Renode workflow test completed!"
+        bash "$GITHUB_WORKSPACE"/scripts/run_renode_tests.sh "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/build"
     
   build-all:
     name: All builds completed
