@@ -96,6 +96,10 @@ echo "Monitor output:"
 cat "$MONITOR_LOG"
 echo ""
 
+echo "Renode output:"
+cat "$CONNECT_LOG"
+echo ""
+
 # Verify expected log messages
 bash "$VERIFY_SCRIPT" "$MONITOR_LOG" "$EXPECTED_LOGS"
 VERIFY_STATUS=$?
@@ -108,10 +112,11 @@ echo "Cleaning up processes..."
 kill "$MONITOR_PID" 2>/dev/null || true
 kill "$CONNECT_PID" 2>/dev/null || true
 sleep 2
+
 pkill -9 -f renode 2>/dev/null || true
 pkill -9 -f mono 2>/dev/null || true
 
-echo ""
+echo " ✓ Cleanup completed"
 echo "=============================================="
 if [ "$VERIFY_STATUS" -eq 0 ]; then
     echo " Renode emulation tests PASSED"
