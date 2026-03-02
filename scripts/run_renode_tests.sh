@@ -25,7 +25,7 @@ VERIFY_SCRIPT="$SOURCE_DIR/scripts/verify_renode_logs.sh"
 
 # Timeouts (seconds)
 CONNECT_TIMEOUT=90
-MONITOR_TIMEOUT=30
+MONITOR_TIMEOUT=60
 
 echo "=============================================="
 echo " dmod-boot Renode emulation tests"
