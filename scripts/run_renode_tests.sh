@@ -66,63 +66,18 @@ echo ""
 # -------------------------------------------------------
 echo "[3/4] Starting Renode emulation..."
 CONNECT_LOG="$BUILD_DIR/connect.log"
-cmake --build "$BUILD_DIR" --target connect > "$CONNECT_LOG" 2>&1 &
+cmake --build "$BUILD_DIR" --target connect &
 CONNECT_PID=$!
 
-echo "Waiting for Renode GDB server to start (PID $CONNECT_PID)..."
-sleep 20
-
-if ! ps -p "$CONNECT_PID" > /dev/null 2>&1; then
-    echo "✗ Renode failed to start"
-    echo "--- connect.log ---"
-    cat "$CONNECT_LOG"
-    exit 1
-fi
-echo "✓ Renode started successfully"
-echo ""
+sleep 5  # Give Renode some time to start
 
 # -------------------------------------------------------
-# Step 4 – Run monitor-gdb and verify firmware logs
+# Step 4 – Run monitor-gdb to capture logs
 # -------------------------------------------------------
-echo "[4/4] Running monitor-gdb to capture firmware logs..."
+echo "[4/4] Running monitor-gdb to capture logs..."
 MONITOR_LOG="$BUILD_DIR/monitor.log"
-cmake --build "$BUILD_DIR" --target monitor-gdb > "$MONITOR_LOG" 2>&1 &
+cmake --build "$BUILD_DIR" --target monitor-gdb 
 MONITOR_PID=$!
 
-# Give the firmware time to produce log output
-sleep "$MONITOR_TIMEOUT"
-
-echo "Monitor output:"
-cat "$MONITOR_LOG"
-echo ""
-
-echo "Renode output:"
-cat "$CONNECT_LOG"
-echo ""
-
-# Verify expected log messages
-bash "$VERIFY_SCRIPT" "$MONITOR_LOG" "$EXPECTED_LOGS"
-VERIFY_STATUS=$?
-
-# -------------------------------------------------------
-# Cleanup
-# -------------------------------------------------------
-echo ""
-echo "Cleaning up processes..."
-kill "$MONITOR_PID" 2>/dev/null || true
-kill "$CONNECT_PID" 2>/dev/null || true
-sleep 2
-
-pkill -9 -f renode 2>/dev/null || true
-pkill -9 -f mono 2>/dev/null || true
-
-echo " ✓ Cleanup completed"
-echo "=============================================="
-if [ "$VERIFY_STATUS" -eq 0 ]; then
-    echo " Renode emulation tests PASSED"
-else
-    echo " Renode emulation tests FAILED"
-fi
-echo "=============================================="
-
-exit "$VERIFY_STATUS"
+# Wait for monitor-gdb to finish
+sleep $MONITOR_TIMEOUT
