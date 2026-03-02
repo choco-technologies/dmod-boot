@@ -100,14 +100,6 @@ echo ""
 bash "$VERIFY_SCRIPT" "$MONITOR_LOG" "$EXPECTED_LOGS"
 VERIFY_STATUS=$?
 
-# -------------------------------------------------------
-# Cleanup
-# -------------------------------------------------------
-echo ""
-echo "Cleaning up processes..."
-pkill -9 -f renode 2>/dev/null || true
-pkill -9 -f mono 2>/dev/null || true
-
 echo ""
 echo "=============================================="
 if [ "$VERIFY_STATUS" -eq 0 ]; then
