@@ -167,7 +167,7 @@ jobs:
     
     - name: Run Renode emulation tests
       run: |
-        bash "$GITHUB_WORKSPACE"/scripts/run_renode_tests.sh "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/build"
+        ./scripts/run_renode_tests.sh
     
   build-all:
     name: All builds completed

@@ -86,7 +86,7 @@ echo ""
 # -------------------------------------------------------
 echo "[4/4] Running monitor-gdb to capture firmware logs..."
 MONITOR_LOG="$BUILD_DIR/monitor.log"
-timeout "$MONITOR_TIMEOUT" cmake --build "$BUILD_DIR" --target monitor-gdb > "$MONITOR_LOG" 2>&1 &
+cmake --build "$BUILD_DIR" --target monitor-gdb > "$MONITOR_LOG" 2>&1 &
 MONITOR_PID=$!
 
 # Give the firmware time to produce log output

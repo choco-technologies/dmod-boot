@@ -36,7 +36,7 @@ message(STATUS "Connecting to GDB server at localhost:3333 (OpenOCD GDB server)"
 # Use execute_process without OUTPUT/ERROR capture so output goes directly to terminal
 # OpenOCD's GDB server runs on port 3333 by default
 execute_process(
-    COMMAND ${DMLOG_MONITOR_EXECUTABLE} --gdb --port 3333 --addr ${DMLOG_RING_BUFFER_ADDR}
+    COMMAND ${DMLOG_MONITOR_EXECUTABLE} --gdb --port 3333 --addr ${DMLOG_RING_BUFFER_ADDR} --time
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     # Don't capture OUTPUT or ERROR - let them pass through to terminal
     INPUT_FILE /dev/stdin
