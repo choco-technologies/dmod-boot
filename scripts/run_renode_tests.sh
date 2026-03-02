@@ -25,7 +25,7 @@ VERIFY_SCRIPT="$SOURCE_DIR/scripts/verify_renode_logs.sh"
 
 # Timeouts (seconds)
 CONNECT_TIMEOUT=90
-MONITOR_TIMEOUT=60
+MONITOR_TIMEOUT=30
 
 echo "=============================================="
 echo " dmod-boot Renode emulation tests"
@@ -70,7 +70,7 @@ cmake --build "$BUILD_DIR" --target connect > "$CONNECT_LOG" 2>&1 &
 CONNECT_PID=$!
 
 echo "Waiting for Renode GDB server to start (PID $CONNECT_PID)..."
-sleep 3
+sleep 20
 
 if ! ps -p "$CONNECT_PID" > /dev/null 2>&1; then
     echo "✗ Renode failed to start"
