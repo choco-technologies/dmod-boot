@@ -1,5 +1,18 @@
 # Expected log messages from DMOD-Boot firmware running in Renode
-# Each line is a pattern that must appear in the monitor-gdb output
-# Lines starting with # are comments and empty lines are ignored
+# on the stm32f746g-disco board configuration.
+#
+# This test catches the hard-fault that occurred when .dmod.inputs was not
+# correctly copied to RAM during startup.  A corrupt .dmod.inputs caused
+# Dmod_ConnectApi to write garbage function pointers into loaded modules'
+# .dmod.outputs sections, leading to an immediate hard-fault whenever a
+# loaded driver (e.g. dmgpio via dmdevfs) tried to log a message.
+#
+# All lines below must appear in the monitor-gdb output.  If the firmware
+# crashes before completing initialization, none of the later lines will
+# appear and the test will fail.
+#
+# Each line is a literal substring to match in the log (grep -q).
+# Lines starting with # and empty lines are ignored.
 
+Heap initialized
 DMOD-Boot started

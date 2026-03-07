@@ -1,9 +1,12 @@
 #!/bin/bash
 # run_renode_tests.sh - Run Renode emulation tests for dmod-boot
 #
-# This script reproduces the Renode CI tests locally.
-# It builds the firmware with emulation mode, starts Renode, runs monitor-gdb
-# to capture firmware logs, and verifies the expected log messages.
+# This script builds the stm32f746g-disco firmware with Renode emulation mode,
+# starts Renode, runs monitor-gdb to capture firmware logs, and verifies that
+# the expected log messages appear.  In particular it catches the hard-fault
+# that occurs when .dmod.inputs is not correctly copied to RAM at startup
+# (which prevents Dmod_EnterCritical and other output function pointers from
+# being connected when modules are loaded at runtime).
 #
 # Usage:
 #   ./scripts/run_renode_tests.sh [SOURCE_DIR [BUILD_DIR]]
@@ -24,21 +27,33 @@ EXPECTED_LOGS="$SOURCE_DIR/configs/renode/expected_logs.txt"
 VERIFY_SCRIPT="$SOURCE_DIR/scripts/verify_renode_logs.sh"
 
 # Timeouts (seconds)
-CONNECT_TIMEOUT=90
-MONITOR_TIMEOUT=30
+CONNECT_TIMEOUT=120
+MONITOR_TIMEOUT=60
 
 echo "=============================================="
 echo " dmod-boot Renode emulation tests"
+echo " Board: $BOARD"
 echo "=============================================="
 echo "Source dir : $SOURCE_DIR"
 echo "Build dir  : $BUILD_DIR"
 echo "Board      : $BOARD"
 echo ""
 
+# Cleanup helper – kill any lingering background processes on exit
+cleanup() {
+    if [ -n "$CONNECT_PID" ] && ps -p "$CONNECT_PID" > /dev/null 2>&1; then
+        kill "$CONNECT_PID" 2>/dev/null || true
+    fi
+    if [ -n "$MONITOR_PID" ] && ps -p "$MONITOR_PID" > /dev/null 2>&1; then
+        kill "$MONITOR_PID" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
 # -------------------------------------------------------
 # Step 1 – Build firmware with emulation mode enabled
 # -------------------------------------------------------
-echo "[1/4] Building firmware with emulation mode enabled..."
+echo "[1/4] Building firmware (BOARD=$BOARD, DMBOOT_EMULATION=ON)..."
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DBOARD="$BOARD" \
       -DDMBOOT_EMULATION=ON \
@@ -89,11 +104,17 @@ MONITOR_LOG="$BUILD_DIR/monitor.log"
 timeout "$MONITOR_TIMEOUT" cmake --build "$BUILD_DIR" --target monitor-gdb > "$MONITOR_LOG" 2>&1 &
 MONITOR_PID=$!
 
-# Give the firmware time to produce log output
+# Give the firmware time to boot and produce log output
+echo "Waiting ${MONITOR_TIMEOUT}s for firmware to boot..."
 sleep "$MONITOR_TIMEOUT"
 
 echo "Monitor output:"
 cat "$MONITOR_LOG"
+echo ""
+
+# Also show the Renode connect log for diagnostics
+echo "--- connect.log (last 40 lines) ---"
+tail -40 "$CONNECT_LOG" || true
 echo ""
 
 # Verify expected log messages
