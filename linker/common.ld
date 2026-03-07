@@ -149,9 +149,40 @@ SECTIONS
       . = ALIGN(4);
       *(.data .data.* .gnu.linkonce.d.*)
 
-   } > ram AT > rom
+      /*
+       * Include DMOD input/output sections inside .data so that the startup
+       * data copy (from __data_init_start__ to __data_end__) correctly handles
+       * them.  Placing these sections outside .data with "> ram AT > rom" would
+       * create VMA alignment gaps (the ". = ALIGN(16)" below) that have no
+       * corresponding LMA gaps, causing the startup copy to corrupt the .inputs
+       * section and produce garbage function-pointer values at runtime
+       * (e.g. Dmod_EnterCritical = 0xd3aefbda → hard fault).
+       *
+       * When the subsections live inside a single .data section the linker
+       * inserts the same alignment padding in both the VMA (RAM) and LMA (ROM)
+       * representations of the section, so the byte-for-byte startup copy
+       * remains correct.
+       */
 
-   INCLUDE dmod-system.ld
+      . = ALIGN(16);
+      __inputs_start = .;
+      PROVIDE(__dmod_inputs_start = .);
+      KEEP(*(.dmod.inputs))
+      __inputs_end = .;
+      PROVIDE(__dmod_inputs_end = .);
+      __inputs_size = __inputs_end - __inputs_start;
+      PROVIDE(__dmod_inputs_size = __inputs_end - __inputs_start);
+
+      . = ALIGN(16);
+      __outputs_start = .;
+      PROVIDE(__dmod_outputs_start = .);
+      KEEP(*(.dmod.outputs))
+      __outputs_end = .;
+      PROVIDE(__dmod_outputs_end = .);
+      __outputs_size = __outputs_end - __outputs_start;
+      PROVIDE(__dmod_outputs_size = __outputs_end - __outputs_start);
+
+   } > ram AT > rom
 
    . = ALIGN(4);
    __data_end__ = .;
