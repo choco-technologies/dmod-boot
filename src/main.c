@@ -34,7 +34,11 @@ void delay(int cycles)
 
 void HardFault_Handler(void)
 {
-    DMOD_LOG_ERROR("HardFault_Handler invoked!\n");
+    const char* module_name = dmosi_thread_get_module_name(NULL);
+    module_name = module_name ? module_name : "<System>";
+    const char* task_name = dmosi_thread_get_name(NULL);
+    task_name = task_name ? task_name : "Unknown";
+    DMOD_LOG_ERROR("HardFault_Handler invoked in module: %s, thread: %s\n", module_name, task_name);
     DMOD_ASSERT_MSG(false, "A hard fault occurred. System halted.");
 }
 
@@ -427,7 +431,7 @@ static void boot_shell(dmlog_ctx_t ctx)
 }
 
 int main(int argc, char** argv) 
-{
+{ 
     Dmod_SetLogLevel(Dmod_LogLevel_Info);
     void* logs_start = &__logs_start__;
     void* logs_end = &__logs_end__;

@@ -16,7 +16,7 @@ PROVIDE(__dma_end__   = __dma_start__ + __dma_size__);
 
 ENTRY(Reset_Handler);
 
-__stack_size__    = 4096;
+__stack_size__    = 8192;
 __logs_size__     = 8192;
 
 PROVIDE(__stack_size__ = __stack_size__);
