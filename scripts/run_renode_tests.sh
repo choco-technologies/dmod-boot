@@ -9,16 +9,30 @@
 # being connected when modules are loaded at runtime).
 #
 # Usage:
-#   ./scripts/run_renode_tests.sh [SOURCE_DIR [BUILD_DIR]]
+#   ./scripts/run_renode_tests.sh [OPTIONS] [SOURCE_DIR [BUILD_DIR]]
 #
-#   SOURCE_DIR  Path to the project root.
-#               Defaults to the parent directory of this script.
-#   BUILD_DIR   Path to the build directory.
-#               Defaults to SOURCE_DIR/build.
+#   --skip-build  Skip the cmake configure + build steps.  Use this when the
+#                 firmware has already been built (e.g. in a prior CI step)
+#                 and only the Renode emulation part needs to be run.
+#   SOURCE_DIR    Path to the project root.
+#                 Defaults to the parent directory of this script.
+#   BUILD_DIR     Path to the build directory.
+#                 Defaults to SOURCE_DIR/build.
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+SKIP_BUILD=0
+POSITIONAL=()
+for arg in "$@"; do
+    case "$arg" in
+        --skip-build) SKIP_BUILD=1 ;;
+        *) POSITIONAL+=("$arg") ;;
+    esac
+done
+set -- "${POSITIONAL[@]}"
+
 SOURCE_DIR="${1:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 BUILD_DIR="${2:-$SOURCE_DIR/build}"
 
@@ -37,6 +51,7 @@ echo "=============================================="
 echo "Source dir : $SOURCE_DIR"
 echo "Build dir  : $BUILD_DIR"
 echo "Board      : $BOARD"
+echo "Skip build : $SKIP_BUILD"
 echo ""
 
 # Cleanup helper – kill any lingering background processes on exit
@@ -50,31 +65,44 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# -------------------------------------------------------
-# Step 1 – Build firmware with emulation mode enabled
-# -------------------------------------------------------
-echo "[1/4] Building firmware (BOARD=$BOARD, DMBOOT_EMULATION=ON)..."
-cmake -DCMAKE_BUILD_TYPE=Debug \
-      -DBOARD="$BOARD" \
-      -DDMBOOT_EMULATION=ON \
-      -S "$SOURCE_DIR" \
-      -B "$BUILD_DIR"
-cmake --build "$BUILD_DIR" --config Debug
-echo "✓ Build completed"
-echo ""
+if [ "$SKIP_BUILD" -eq 0 ]; then
+    # -------------------------------------------------------
+    # Step 1 – Build firmware with emulation mode enabled
+    # -------------------------------------------------------
+    echo "[1/4] Building firmware (BOARD=$BOARD, DMBOOT_EMULATION=ON)..."
+    cmake -DCMAKE_BUILD_TYPE=Debug \
+          -DBOARD="$BOARD" \
+          -DDMBOOT_EMULATION=ON \
+          -S "$SOURCE_DIR" \
+          -B "$BUILD_DIR"
+    cmake --build "$BUILD_DIR" --config Debug
+    echo "✓ Build completed"
+    echo ""
 
-# -------------------------------------------------------
-# Step 2 – Verify install-firmware target
-# -------------------------------------------------------
-echo "[2/4] Testing install-firmware target..."
-cmake --build "$BUILD_DIR" --target install-firmware
-if [ ! -f "$BUILD_DIR/renode_firmware.elf" ]; then
-    echo "✗ renode_firmware.elf not found after install-firmware"
-    exit 1
+    # -------------------------------------------------------
+    # Step 2 – Verify install-firmware target
+    # -------------------------------------------------------
+    echo "[2/4] Testing install-firmware target..."
+    cmake --build "$BUILD_DIR" --target install-firmware
+    if [ ! -f "$BUILD_DIR/renode_firmware.elf" ]; then
+        echo "✗ renode_firmware.elf not found after install-firmware"
+        exit 1
+    fi
+    ls -lh "$BUILD_DIR/renode_firmware.elf"
+    echo "✓ install-firmware target works correctly"
+    echo ""
+else
+    # --skip-build: just verify the firmware exists
+    echo "[1/4] Skipping build (--skip-build specified)"
+    if [ ! -f "$BUILD_DIR/renode_firmware.elf" ]; then
+        echo "✗ renode_firmware.elf not found at $BUILD_DIR/renode_firmware.elf"
+        echo "  Run without --skip-build or build the firmware first."
+        exit 1
+    fi
+    ls -lh "$BUILD_DIR/renode_firmware.elf"
+    echo "✓ Firmware found"
+    echo ""
 fi
-ls -lh "$BUILD_DIR/renode_firmware.elf"
-echo "✓ install-firmware target works correctly"
-echo ""
 
 # -------------------------------------------------------
 # Step 3 – Start Renode in the background

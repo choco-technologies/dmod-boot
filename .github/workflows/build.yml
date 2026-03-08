@@ -164,10 +164,27 @@ jobs:
       run: |
         git submodule init
         git submodule update --recursive
-    
-    - name: Run Renode emulation tests (stm32f746g-disco board)
+
+    - name: Configure cmake for stm32f746g-disco with Renode emulation
       run: |
-        ./scripts/run_renode_tests.sh
+        cmake -DCMAKE_BUILD_TYPE=Debug \
+              -DBOARD=stm32f746g-disco \
+              -DDMBOOT_EMULATION=ON \
+              -S . \
+              -B build
+
+    - name: Build firmware for stm32f746g-disco
+      run: |
+        cmake --build build --config Debug
+
+    - name: Install firmware for Renode
+      run: |
+        cmake --build build --target install-firmware
+        ls -lh build/renode_firmware.elf
+
+    - name: Run Renode emulation and verify firmware logs
+      run: |
+        ./scripts/run_renode_tests.sh --skip-build . build
 
     - name: Upload Renode logs on failure
       if: failure()
