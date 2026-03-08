@@ -7,12 +7,23 @@
 # .dmod.outputs sections, leading to an immediate hard-fault whenever a
 # loaded driver (e.g. dmgpio via dmdevfs) tried to log a message.
 #
-# All lines below must appear in the monitor-gdb output.  If the firmware
-# crashes before completing initialization, none of the later lines will
-# appear and the test will fail.
+# With the fix applied the boot sequence is:
+#   1. Heap initialised
+#   2. modules.dmp loaded, dmell enabled
+#   3. Filesystems mounted (/configs, /dev)  -- requires the dmvfs pre-RTOS
+#      mutex fallback fix so that mounts succeed before vTaskStartScheduler
+#   4. FreeRTOS scheduler starts
+#   5. dmell loads and configures board drivers (dmgpio, dmclk, etc.)
+#      -- this is where the hard-fault used to occur with the corrupt
+#         .dmod.inputs linker bug
 #
-# Each line is a literal substring to match in the log (grep -q).
-# Lines starting with # and empty lines are ignored.
+# Lines starting with ! must NOT appear in the log (crash guard).
+# The pattern matched is everything after the leading '!'.
+# All other non-empty, non-comment lines must appear in the log.
 
+# --- crash guard: a hard-fault means something is still broken ---
+!HardFault_Handler invoked!
+
+# --- positive checks: firmware must reach these milestones ---
 Heap initialized
 DMOD-Boot started
