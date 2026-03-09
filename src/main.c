@@ -267,23 +267,23 @@ static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
     }
 }
 
-static void mount_config_filesystem(void)
+static void mount_config_filesystem(dmenv_ctx_t env_ctx)
 {
     void* config_fs_start = &__config_fs_start;
     void* config_fs_end   = &__config_fs_end;
     size_t config_fs_size = (size_t)((uintptr_t)config_fs_end - (uintptr_t)config_fs_start);
     
-    // if(config_fs_size > 0)
+    if(config_fs_size > 0)
     {
         DMOD_LOG_INFO("Config filesystem found in ROM: addr=0x%X, size=%u bytes\n", 
                       (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
+
+        // dmffs reads flash location from FLASH_FS_ADDR and FLASH_FS_SIZE environment
+        // variables. Set these before mounting so dmffs can find the embedded filesystem image.
+        dmenv_seti(env_ctx, "FLASH_FS_ADDR", (uint32_t)(uintptr_t)config_fs_start);
+        dmenv_seti(env_ctx, "FLASH_FS_SIZE", (uint32_t)config_fs_size);
         
-        // Mount the dmffs filesystem at /configs/
-        char mount_opts[128];
-        Dmod_SnPrintf(mount_opts, sizeof(mount_opts), "flash_addr=0x%X;flash_size=%u", 
-                 (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
-        
-        if(dmvfs_mount_fs("dmffs", "/configs", mount_opts))
+        if(dmvfs_mount_fs("dmffs", "/configs", NULL))
         {
             DMOD_LOG_INFO("Config filesystem mounted at /configs/\n");
         }
@@ -292,16 +292,16 @@ static void mount_config_filesystem(void)
             DMOD_LOG_ERROR("Failed to mount config filesystem at /configs/\n");
         }
     }
-    // else
-    // {
-    //     DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
-    // }
+    else
+    {
+        DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
+    }
 }
 
-static void mount_embedded_filesystems(void)
+static void mount_embedded_filesystems(dmenv_ctx_t env_ctx)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
-    mount_config_filesystem();
+    mount_config_filesystem(env_ctx);
     dmvfs_mount_fs("dmdevfs", "/dev", "/configs");
 }
 
@@ -486,7 +486,7 @@ int main(int argc, char** argv)
     Dmod_Context_t* mainModule = load_embedded_modules_dmp();
 
     // Mount embedded filesystems
-    mount_embedded_filesystems();
+    mount_embedded_filesystems(dmenv_ctx);
 
     // Load startup.dmp if embedded in ROM
     load_embedded_startup_dmp();
