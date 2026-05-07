@@ -16,15 +16,40 @@ Supported workflows:
 
 ### 1. Install required tools
 
-Install and make available in `PATH`:
+Use the repository helper script (no admin-required package installation; tools are downloaded to user-writable directory):
+
+```powershell
+.\scripts\setup-windows-env.ps1
+```
+
+By default this downloads/extracts tools to:
+
+```powershell
+$env:USERPROFILE\tools\dmboot
+```
+
+Then (for the current shell session):
+
+```powershell
+. "$env:USERPROFILE\tools\dmboot\activate-dmboot-tools.ps1"
+```
+
+Downloaded tools:
 
 - **CMake** (3.10+)
 - **Ninja** (optional, recommended)
 - **GNU Arm Embedded Toolchain** (`arm-none-eabi-*`)
 - **Python 3**
-- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`)
+- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - provide separately (this script does not install them globally)
 - **OpenOCD** (for hardware workflow)
 - **Renode** (optional, for emulation workflow)
+
+Optional script flags:
+
+```powershell
+.\scripts\setup-windows-env.ps1 -ToolsDir D:\tools\dmboot -SkipRenode
+.\scripts\setup-windows-env.ps1 -DryRun
+```
 
 ### 2. Configure and build (PowerShell)
 

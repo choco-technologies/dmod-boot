@@ -76,6 +76,11 @@ source ~/.bashrc
 Native Windows development/build (without WSL or Docker) is supported.
 
 See [docs/windows-environment-setup.md](docs/windows-environment-setup.md) for the required toolchain and PowerShell build flow.
+Quick start:
+
+```powershell
+.\scripts\setup-windows-env.ps1
+```
 
 ## Building
 
