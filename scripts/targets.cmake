@@ -37,14 +37,13 @@ configure_file(
 if(DMBOOT_EMULATION)
     message(STATUS "Emulation mode enabled - targets will use Renode instead of OpenOCD")
     message(STATUS "Renode platform: ${DMBOOT_RENODE_PLATFORM}")
+    find_program(RENODE_EXECUTABLE renode REQUIRED)
     set(INSTALL_FIRMWARE_COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.elf ${CMAKE_BINARY_DIR}/renode_firmware.elf)
     set(INSTALL_FIRMWARE_COMMENT "Copying firmware for Renode: ${TARGET}...")
-    set(CONNECT_COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/scripts/renode_connect.sh 
-        ${CMAKE_BINARY_DIR}/renode_firmware.elf 
-        ${TARGET}
-        ${DMBOOT_RENODE_PLATFORM}
-        ${DMBOOT_MCU_NAME}
-        ${RENODE_SCRIPT_PATH})
+    set(CONNECT_COMMAND ${RENODE_EXECUTABLE}
+        --disable-xwt
+        --hide-monitor
+        -e "include @${RENODE_SCRIPT_PATH}")
     set(CONNECT_COMMENT "Starting Renode for ${TARGET}...")
 else()
     set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}

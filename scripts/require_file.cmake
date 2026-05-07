@@ -1,0 +1,11 @@
+if(NOT DEFINED REQUIRED_FILE)
+    message(FATAL_ERROR "REQUIRED_FILE is not defined")
+endif()
+
+if(NOT EXISTS "${REQUIRED_FILE}")
+    if(DEFINED ERROR_MESSAGE)
+        message(FATAL_ERROR "${ERROR_MESSAGE}")
+    else()
+        message(FATAL_ERROR "Required file does not exist: ${REQUIRED_FILE}")
+    endif()
+endif()

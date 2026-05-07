@@ -2,16 +2,80 @@
 
 ## Overview
 
-dmod-boot is Linux-oriented (Bash scripts, Linux toolchain, POSIX paths). On Windows, use one of the supported workflows below:
+dmod-boot supports native Windows development and build workflows.
 
-1. **WSL2 + Ubuntu (recommended)** - best for local development in VS Code
-2. **Docker Desktop** - fastest way to get a ready-to-use environment
+Supported workflows:
 
-> Native (non-WSL) Windows builds are not officially supported by this repository.
+1. **Native Windows (PowerShell + CMake)** - Recommended when you want to work without WSL/Docker
+2. **WSL2 + Ubuntu** - Linux-like workflow on Windows
+3. **Docker Desktop** - fastest way to get a ready-to-use environment
 
 ---
 
-## Option 1: WSL2 + Ubuntu (Recommended)
+## Option 1: Native Windows (Recommended)
+
+### 1. Install required tools
+
+Use the repository helper script (no admin-required package installation; tools are downloaded to user-writable directory):
+
+```powershell
+.\scripts\setup-windows-env.ps1
+```
+
+By default this downloads/extracts tools to:
+
+```powershell
+$env:USERPROFILE\tools\dmboot
+```
+
+Then (for the current shell session):
+
+```powershell
+. "$env:USERPROFILE\tools\dmboot\activate-dmboot-tools.ps1"
+```
+
+Downloaded by `setup-windows-env.ps1`:
+
+- **CMake** (3.10+)
+- **GNU Arm Embedded Toolchain** (`arm-none-eabi-*`)
+- **Renode** (optional, for emulation workflow)
+
+Install separately and add to `PATH`:
+
+- **Python 3**
+- **Ninja** (optional, recommended)
+- **OpenOCD** (for hardware workflow)
+- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - build/install from the dmod project
+
+> Note: `setup-windows-env.ps1` downloads portable tools to user space and does not install tools globally.
+
+Optional script flags:
+
+```powershell
+.\scripts\setup-windows-env.ps1 -ToolsDir D:\tools\dmboot -SkipRenode
+.\scripts\setup-windows-env.ps1 -DryRun
+```
+
+### 2. Configure and build (PowerShell)
+
+From repository root:
+
+```powershell
+cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=STM32F746xG -S . -B build
+cmake --build build --config Debug
+```
+
+### 3. Optional: Renode emulation mode
+
+```powershell
+cmake -DCMAKE_BUILD_TYPE=Debug -DDMBOOT_EMULATION=ON -S . -B build
+cmake --build build --config Debug
+cmake --build build --target connect
+```
+
+---
+
+## Option 2: WSL2 + Ubuntu
 
 ### 1. Install WSL2
 
@@ -93,7 +157,7 @@ cmake --build build --target monitor-gdb
 
 ---
 
-## Option 2: Docker Desktop (Quick Start)
+## Option 3: Docker Desktop (Quick Start)
 
 ### 1. Install Docker Desktop on Windows
 

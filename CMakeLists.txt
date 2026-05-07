@@ -51,6 +51,9 @@ project(dmboot
     DESCRIPTION "DMOD Bootloader"
     LANGUAGES C CXX ASM)
 
+# Python interpreter for helper scripts (cross-platform)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
 # ======================================================================
 #               For VS Code
 # ======================================================================
@@ -115,7 +118,11 @@ set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
 add_custom_command(
     OUTPUT "${MODULES_DMP_OBJECT}"
     COMMAND ${CMAKE_COMMAND} -E echo "Checking for modules.dmp..."
-    COMMAND bash -c "if [ -f ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=elf32-littlearm --binary-architecture=arm --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=elf32-littlearm --binary-architecture=arm --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents /dev/null ${MODULES_DMP_OBJECT}; fi"
+    COMMAND ${CMAKE_COMMAND}
+        -DINPUT_DMP="${MODULES_DMP_FILE}"
+        -DOUTPUT_OBJECT="${MODULES_DMP_OBJECT}"
+        -DOBJCOPY_EXECUTABLE="${CMAKE_OBJCOPY}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/scripts/embed_modules_dmp.cmake"
     DEPENDS prepare_modules_dmp
     COMMENT "Conditionally embedding modules.dmp if it exists"
     VERBATIM
@@ -184,7 +191,7 @@ target_link_libraries(${MODULE_NAME}.elf
 add_custom_command(
     TARGET ${MODULE_NAME}.elf POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Generating memory usage report..."
-    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memory_report.py 
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/memory_report.py
             ${CMAKE_BINARY_DIR}/${MODULE_NAME}.map 
             ${CMAKE_BINARY_DIR}
             --lib-dir ${CMAKE_CURRENT_SOURCE_DIR}/lib
@@ -205,7 +212,11 @@ include(scripts/targets.cmake)
 
 # Custom target to build dmlog_monitor for host architecture
 set(DMLOG_HOST_BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/dmlog/build_host)
-set(DMLOG_MONITOR_EXECUTABLE ${DMLOG_HOST_BUILD_DIR}/tools/monitor/dmlog_monitor)
+if(WIN32)
+    set(DMLOG_MONITOR_EXECUTABLE ${DMLOG_HOST_BUILD_DIR}/tools/monitor/dmlog_monitor.exe)
+else()
+    set(DMLOG_MONITOR_EXECUTABLE ${DMLOG_HOST_BUILD_DIR}/tools/monitor/dmlog_monitor)
+endif()
 
 add_custom_command(
     OUTPUT ${DMLOG_MONITOR_EXECUTABLE}
@@ -224,7 +235,7 @@ add_custom_target(build_dmlog_monitor
 # Extract ring buffer configuration after building firmware
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake
-    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/extract_ring_buffer_addr.py 
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/extract_ring_buffer_addr.py
             ${CMAKE_BINARY_DIR}/${MODULE_NAME}.map 
             --output ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake
             --format cmake

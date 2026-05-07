@@ -14,7 +14,11 @@ endif()
 include(${PROJECT_BINARY_DIR}/dmlog_ring_buffer.cmake)
 
 # Set paths
-set(DMLOG_MONITOR_EXECUTABLE "${PROJECT_SOURCE_DIR}/lib/dmlog/build_host/tools/monitor/dmlog_monitor")
+if(WIN32)
+    set(DMLOG_MONITOR_EXECUTABLE "${PROJECT_SOURCE_DIR}/lib/dmlog/build_host/tools/monitor/dmlog_monitor.exe")
+else()
+    set(DMLOG_MONITOR_EXECUTABLE "${PROJECT_SOURCE_DIR}/lib/dmlog/build_host/tools/monitor/dmlog_monitor")
+endif()
 
 # Check if dmlog_monitor exists
 if(NOT EXISTS ${DMLOG_MONITOR_EXECUTABLE})
@@ -36,10 +40,6 @@ message(STATUS "Ring buffer size: ${DMLOG_RING_BUFFER_SIZE}")
 execute_process(
     COMMAND ${DMLOG_MONITOR_EXECUTABLE} --addr ${DMLOG_RING_BUFFER_ADDR}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-    # Don't capture OUTPUT or ERROR - let them pass through to terminal
-    INPUT_FILE /dev/stdin
-    OUTPUT_FILE /dev/stdout 
-    ERROR_FILE /dev/stderr
 )
 
 # Note: We intentionally don't check the exit code because:
