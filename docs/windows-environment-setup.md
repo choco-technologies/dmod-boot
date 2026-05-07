@@ -40,7 +40,7 @@ Downloaded tools:
 - **Ninja** (optional, recommended)
 - **GNU Arm Embedded Toolchain** (`arm-none-eabi-*`)
 - **Python 3**
-- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - provide separately (this script does not install them globally)
+- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - install/build separately from the dmod project and add them to `PATH` (this script does not install them globally)
 - **OpenOCD** (for hardware workflow)
 - **Renode** (optional, for emulation workflow)
 

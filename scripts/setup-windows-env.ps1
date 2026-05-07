@@ -138,7 +138,10 @@ if (Test-Path "$activateScriptPath") {
     if ($DryRun) {
         Write-Host "[DRY RUN] append activation snippet to $profilePath"
     } else {
-        $profileContent = Get-Content -Path $profilePath -Raw
+        $profileContent = ""
+        if (Test-Path -LiteralPath $profilePath) {
+            $profileContent = Get-Content -Path $profilePath -Raw
+        }
         if ($profileContent -notlike "*setup-windows-env.ps1*") {
             Add-Content -Path $profilePath -Value "`n$profileSnippet"
         }
