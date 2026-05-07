@@ -10,12 +10,13 @@ if(NOT DEFINED OBJCOPY_EXECUTABLE)
     message(FATAL_ERROR "OBJCOPY_EXECUTABLE is not defined")
 endif()
 
-set(EMBED_SOURCE_FILE "${INPUT_DMP}")
+set(INPUT_BINARY_FILE "${INPUT_DMP}")
 if(EXISTS "${INPUT_DMP}")
     message(STATUS "Embedding modules.dmp from ${INPUT_DMP}")
 else()
-    set(EMBED_SOURCE_FILE "${CMAKE_BINARY_DIR}/empty_modules_dmp.bin")
-    file(WRITE "${EMBED_SOURCE_FILE}" "")
+    get_filename_component(OUTPUT_DIR "${OUTPUT_OBJECT}" DIRECTORY)
+    set(INPUT_BINARY_FILE "${OUTPUT_DIR}/empty_modules_dmp.bin")
+    file(WRITE "${INPUT_BINARY_FILE}" "")
     message(STATUS "No modules.dmp found, embedding empty placeholder")
 endif()
 
@@ -25,7 +26,7 @@ execute_process(
         --output-target=elf32-littlearm
         --binary-architecture=arm
         --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents
-        "${EMBED_SOURCE_FILE}"
+        "${INPUT_BINARY_FILE}"
         "${OUTPUT_OBJECT}"
     RESULT_VARIABLE OBJCOPY_RESULT
 )

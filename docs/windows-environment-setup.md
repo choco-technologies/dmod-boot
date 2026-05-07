@@ -6,7 +6,7 @@ dmod-boot supports native Windows development and build workflows.
 
 Supported workflows:
 
-1. **Native Windows (PowerShell + CMake)** - recommended when you want to work without WSL/Docker
+1. **Native Windows (PowerShell + CMake)** - Recommended when you want to work without WSL/Docker
 2. **WSL2 + Ubuntu** - Linux-like workflow on Windows
 3. **Docker Desktop** - fastest way to get a ready-to-use environment
 
