@@ -162,7 +162,7 @@ if (Test-Path "$activateScriptPath") {
                 $profileContent = ""
             }
         }
-        if ($profileContent -notlike "*setup-windows-env.ps1*") {
+        if ($profileContent -notlike "*activate-dmboot-tools.ps1*") {
             Add-Content -Path $profilePath -Value "`n$profileSnippet"
         }
     }
