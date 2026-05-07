@@ -70,7 +70,7 @@ if (-not $IsWindows -and -not $DryRun) {
     throw "setup-windows-env.ps1 is intended for native Windows. Use -DryRun outside Windows."
 }
 
-Write-Host "Preparing native Windows environment for dmod-boot..."
+Write-Host "Preparing native Windows environment for dmboot..."
 Write-Host "Tools directory: $ToolsDir"
 
 New-DirectoryIfMissing -Path $ToolsDir
