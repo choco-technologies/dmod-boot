@@ -40,9 +40,11 @@ Downloaded tools:
 - **Ninja** (optional, recommended)
 - **GNU Arm Embedded Toolchain** (`arm-none-eabi-*`)
 - **Python 3**
-- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - install/build separately from the dmod project and add them to `PATH` (this script does not install them globally)
+- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - install/build separately from the dmod project and add them to `PATH`
 - **OpenOCD** (for hardware workflow)
 - **Renode** (optional, for emulation workflow)
+
+> Note: `setup-windows-env.ps1` downloads portable tools to user space and does not install tools globally.
 
 Optional script flags:
 

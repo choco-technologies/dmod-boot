@@ -95,6 +95,23 @@ if (-not $SkipRenode) {
     Expand-PortableArchive -ArchivePath $renodeArchive -OutputDir $renodeRoot
 }
 
+if (-not $DryRun) {
+    $armDetected = Get-ChildItem -Path $ToolsDir -Directory -Filter "arm-gnu-toolchain-$ArmVersion*" | Select-Object -First 1
+    if ($armDetected) {
+        $armRoot = $armDetected.FullName
+    }
+
+    $cmakeDetected = Get-ChildItem -Path $ToolsDir -Directory -Filter "cmake-$CMakeVersion-windows*" | Select-Object -First 1
+    if ($cmakeDetected) {
+        $cmakeRoot = $cmakeDetected.FullName
+    }
+
+    $renodeDetected = Get-ChildItem -Path $ToolsDir -Directory -Filter "renode_${RenodeVersion}*" | Select-Object -First 1
+    if ($renodeDetected) {
+        $renodeRoot = $renodeDetected.FullName
+    }
+}
+
 $activateScriptPath = Join-Path $ToolsDir "activate-dmboot-tools.ps1"
 $activateScript = @"
 `$toolPaths = @(
@@ -141,6 +158,9 @@ if (Test-Path "$activateScriptPath") {
         $profileContent = ""
         if (Test-Path -LiteralPath $profilePath) {
             $profileContent = Get-Content -Path $profilePath -Raw
+            if ($null -eq $profileContent) {
+                $profileContent = ""
+            }
         }
         if ($profileContent -notlike "*setup-windows-env.ps1*") {
             Add-Content -Path $profilePath -Value "`n$profileSnippet"
