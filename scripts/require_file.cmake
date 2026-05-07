@@ -1,0 +1,13 @@
+if(NOT DEFINED REQUIRED_FILE)
+    message(FATAL_ERROR "REQUIRED_FILE is not defined")
+endif()
+
+if(EXISTS "${REQUIRED_FILE}")
+    message(STATUS "Verified required file exists: ${REQUIRED_FILE}")
+else()
+    if(DEFINED ERROR_MESSAGE)
+        message(FATAL_ERROR "${ERROR_MESSAGE}")
+    else()
+        message(FATAL_ERROR "Required file does not exist: ${REQUIRED_FILE}")
+    endif()
+endif()

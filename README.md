@@ -71,6 +71,12 @@ After running the script, restart your terminal or run:
 source ~/.bashrc
 ```
 
+### Option 3: Native Windows Setup
+
+Native Windows development/build (without WSL or Docker) is supported.
+
+See [docs/windows-environment-setup.md](docs/windows-environment-setup.md) for the required toolchain and PowerShell build flow.
+
 ## Building
 
 ### Building for Hardware
