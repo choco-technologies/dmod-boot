@@ -34,15 +34,18 @@ Then (for the current shell session):
 . "$env:USERPROFILE\tools\dmboot\activate-dmboot-tools.ps1"
 ```
 
-Downloaded tools:
+Downloaded by `setup-windows-env.ps1`:
 
 - **CMake** (3.10+)
-- **Ninja** (optional, recommended)
 - **GNU Arm Embedded Toolchain** (`arm-none-eabi-*`)
-- **Python 3**
-- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - install/build separately from the dmod project and add them to `PATH`
-- **OpenOCD** (for hardware workflow)
 - **Renode** (optional, for emulation workflow)
+
+Install separately and add to `PATH`:
+
+- **Python 3**
+- **Ninja** (optional, recommended)
+- **OpenOCD** (for hardware workflow)
+- **dmod tools** (`dmf-get`, `todmp`, `dmod_loader`) - build/install from the dmod project
 
 > Note: `setup-windows-env.ps1` downloads portable tools to user space and does not install tools globally.
 

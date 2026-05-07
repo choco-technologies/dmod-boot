@@ -39,7 +39,11 @@ function Get-Archive {
         return
     }
     Write-Host "Downloading: $Url"
-    Invoke-WebRequest -Uri $Url -OutFile $ArchivePath
+    try {
+        Invoke-WebRequest -Uri $Url -OutFile $ArchivePath
+    } catch {
+        throw "Failed to download from $Url. $($_.Exception.Message)"
+    }
 }
 
 function Expand-PortableArchive {
@@ -55,7 +59,11 @@ function Expand-PortableArchive {
         Write-Host "[DRY RUN] expand $ArchivePath -> $OutputDir"
         return
     }
-    Expand-Archive -Path $ArchivePath -DestinationPath $ToolsDir -Force
+    $destinationRoot = Split-Path -Parent $OutputDir
+    if (-not (Test-Path -LiteralPath $destinationRoot)) {
+        New-Item -ItemType Directory -Path $destinationRoot | Out-Null
+    }
+    Expand-Archive -Path $ArchivePath -DestinationPath $destinationRoot -Force
 }
 
 if (-not $IsWindows -and -not $DryRun) {
