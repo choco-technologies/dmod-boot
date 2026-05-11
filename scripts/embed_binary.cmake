@@ -63,8 +63,8 @@ function(embed_binary_file)
         OUTPUT "${EMBED_OUTPUT_OBJECT}"
         COMMAND ${CMAKE_OBJCOPY}
             --input-target=binary
-            --output-target=elf32-littlearm
-            --binary-architecture=arm
+            --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT}
+            --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH}
             --rename-section .data=${EMBED_SECTION_NAME},alloc,load,readonly,data,contents
             "${EMBED_INPUT_FILE_ABS}"
             "${EMBED_OUTPUT_OBJECT}"

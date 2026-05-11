@@ -93,7 +93,7 @@ cmake -DTARGET=STM32F407G -S . -B build
 cmake --build build
 ```
 
-Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`.
+Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`, `ESP32S3`.
 
 **Using the `BOARD` parameter** – select a ready-made board configuration that automatically sets `TARGET` and other board-specific settings:
 
@@ -103,6 +103,43 @@ cmake --build build
 ```
 
 Board configuration files are located in `configs/board/<BOARD>/board.cmake`. When `BOARD` is set, the `TARGET` parameter is ignored.
+
+### Building for LILYGO T-Deck Pro
+
+The T-Deck Pro is based on the **ESP32-S3FN16R8** (Xtensa LX7 dual-core, 240 MHz, 16 MB flash, 8 MB PSRAM).
+
+**Prerequisites:**
+
+- [Espressif ESP32-S3 toolchain](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/linux-macos-setup.html) (`xtensa-esp32s3-elf-gcc`)
+- [Espressif OpenOCD fork](https://github.com/espressif/openocd-esp32) (supports the built-in USB JTAG of the ESP32-S3)
+
+**Build using the board preset:**
+
+```bash
+cmake -DBOARD=t-deck-pro -S . -B build
+cmake --build build
+```
+
+**Or specify the target directly:**
+
+```bash
+cmake -DTARGET=ESP32S3 -S . -B build
+cmake --build build
+```
+
+**Flash via OpenOCD** (T-Deck Pro has a built-in USB JTAG, no external probe needed):
+
+```bash
+cmake --build build --target install-firmware
+```
+
+This runs:
+```
+openocd -f interface/esp_usb_jtag.cfg -f target/esp32s3.cfg \
+        -c "program dmboot.elf verify reset exit"
+```
+
+> **Note:** The firmware is loaded directly into IRAM/DRAM, bypassing the ROM bootloader's cache setup. This makes the development cycle fast and requires no partition table or bootloader binary.
 
 ### Building for Renode Simulation
 
@@ -134,8 +171,8 @@ cmake --build build
 ```
 
 **Build Parameters:**
-- `TARGET` (optional, defaults to `STM32F746xG`) - Target microcontroller. Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`. Ignored when `BOARD` is set.
-- `BOARD` (optional) - Board name. When set, `TARGET` and other board-specific settings are automatically derived from `configs/board/<BOARD>/board.cmake`, so you don't need to set `TARGET` manually. Example: `-DBOARD=stm32f746g-disco`.
+- `TARGET` (optional, defaults to `STM32F746xG`) - Target microcontroller. Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`, `ESP32S3`. Ignored when `BOARD` is set.
+- `BOARD` (optional) - Board name. When set, `TARGET` and other board-specific settings are automatically derived from `configs/board/<BOARD>/board.cmake`, so you don't need to set `TARGET` manually. Examples: `-DBOARD=stm32f746g-disco`, `-DBOARD=t-deck-pro`.
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
 - `DMBOOT_CONFIG_DIR` (optional, defaults to `build/configs`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time. By default, configuration files from `modules.dmd` are downloaded to this directory.

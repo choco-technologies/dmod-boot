@@ -8,8 +8,8 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `TARGET` | STRING | `STM32F746xG` | Target microcontroller. Supported values: `STM32F746xG`, `STM32F407G`. Ignored when `BOARD` is set. |
-| `BOARD` | STRING | *(empty)* | Board name (optional). When set, `TARGET` is derived from `configs/board/<BOARD>/board.cmake`. Example: `stm32f746g-disco`. |
+| `TARGET` | STRING | `STM32F746xG` | Target microcontroller. Supported values: `STM32F746xG`, `STM32F407G`, `STM32F746ZG`, `ESP32S3`. Ignored when `BOARD` is set. |
+| `BOARD` | STRING | *(empty)* | Board name (optional). When set, `TARGET` is derived from `configs/board/<BOARD>/board.cmake`. Examples: `stm32f746g-disco`, `t-deck-pro`. |
 | `STARTUP_DMP_FILE` | FILEPATH | *(empty)* | Path to an optional `.dmp` startup package file to embed in ROM. Loaded using `Dmod_AddPackageBuffer` at boot. |
 | `USER_DATA_FILE` | FILEPATH | *(empty)* | Path to an optional user data file to embed in ROM. Its address and size are accessible via `USER_DATA_ADDR` and `USER_DATA_SIZE` environment variables. |
 | `DMBOOT_CONFIG_DIR` | PATH | `<build>/configs` | Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time. |
@@ -115,6 +115,15 @@ cmake --build build
 ```bash
 cmake -DBOARD=stm32f746g-disco -S . -B build
 cmake --build build
+```
+
+### Build for LILYGO T-Deck Pro (ESP32-S3)
+
+```bash
+cmake -DBOARD=t-deck-pro -S . -B build
+cmake --build build
+# Flash via the built-in USB JTAG using Espressif OpenOCD
+cmake --build build --target install-firmware
 ```
 
 ### Build for Renode emulation

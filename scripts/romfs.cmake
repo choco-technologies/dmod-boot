@@ -60,8 +60,8 @@ if(DMBOOT_CONFIG_DIR)
         OUTPUT "${CONFIG_FS_OBJECT}"
         COMMAND ${CMAKE_OBJCOPY}
             --input-target=binary
-            --output-target=elf32-littlearm
-            --binary-architecture=arm
+            --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT}
+            --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH}
             --rename-section .data=.embedded.config_fs,alloc,load,readonly,data,contents
             "${CONFIG_FS_IMAGE}"
             "${CONFIG_FS_OBJECT}"
