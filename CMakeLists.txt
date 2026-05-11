@@ -41,7 +41,12 @@ endif()
 include(configs/mcu/${TARGET}.cmake)
 
 # Include toolchain configuration before project() to set compilers
-include(${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake)
+# Check for a local override first, then fall back to the dmod library
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
+else()
+    include(${DMOD_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake)
+endif()
 
 # ======================================================================
 #               DMOD Boot Project Configuration
@@ -115,7 +120,7 @@ set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
 add_custom_command(
     OUTPUT "${MODULES_DMP_OBJECT}"
     COMMAND ${CMAKE_COMMAND} -E echo "Checking for modules.dmp..."
-    COMMAND bash -c "if [ -f ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=elf32-littlearm --binary-architecture=arm --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=elf32-littlearm --binary-architecture=arm --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents /dev/null ${MODULES_DMP_OBJECT}; fi"
+    COMMAND bash -c "if [ -f ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents /dev/null ${MODULES_DMP_OBJECT}; fi"
     DEPENDS prepare_modules_dmp
     COMMENT "Conditionally embedding modules.dmp if it exists"
     VERBATIM
