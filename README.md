@@ -106,11 +106,11 @@ Board configuration files are located in `configs/board/<BOARD>/board.cmake`. Wh
 
 ### Building for LILYGO T-Deck Pro
 
-The T-Deck Pro is based on the **ESP32-S3FN16R8** (Xtensa LX7 dual-core, 240 MHz, 16 MB flash, 8 MB PSRAM).
+The T-Deck Pro is based on the **ESP32-S3FN16R8** (Xtensa ESP32-S3 dual-core, 240 MHz, 16 MB flash, 8 MB PSRAM).
 
 **Prerequisites:**
 
-- [Espressif ESP32-S3 toolchain](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/linux-macos-setup.html) (`xtensa-esp32s3-elf-gcc`)
+- [Espressif ESP32-S3 toolchain](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/get-started/linux-macos-setup.html) (`xtensa-esp32s3-elf-gcc`) with Xtensa HAL headers available (`xtensa/hal.h`, usually via ESP-IDF-compatible layout)
 - [Espressif OpenOCD fork](https://github.com/espressif/openocd-esp32) (supports the built-in USB JTAG of the ESP32-S3)
 
 **Build using the board preset:**

@@ -21,7 +21,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  *
- * @brief Critical section implementation for Xtensa LX7 (ESP32-S3) architecture
+ * @brief Critical section implementation for Xtensa ESP32-S3 architecture
  * @date  2024-11-06
  * @author Patryk Kubiak <patryk.kubiak90@gmail.com>
  *

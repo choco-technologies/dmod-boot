@@ -4,7 +4,7 @@
 set(DMBOOT_MCU_NAME   "esp32s3fn16r8" CACHE STRING "Name of the target microcontroller")
 set(DMBOOT_MCU_SERIES "esp32s3"       CACHE STRING "Series of the target microcontroller")
 set(DMBOOT_ARCH       "xtensa"        CACHE STRING "Architecture of the target microcontroller")
-set(DMBOOT_ARCH_FAMILY "lx7"          CACHE STRING "Microcontroller family")
+set(DMBOOT_ARCH_FAMILY "esp32s3"      CACHE STRING "Microcontroller family")
 
 # ======================================================================
 #               RTOS Clock Configuration

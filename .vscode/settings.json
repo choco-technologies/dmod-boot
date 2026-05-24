@@ -24,5 +24,11 @@
     "files.exclude": {
         "**/build": false
     },
-    "cortex-debug.variableUseNaturalFormat": true
+    "cortex-debug.variableUseNaturalFormat": true,
+    "chat.tools.terminal.autoApprove": {
+        "/^echo check_v0 && ls -l /tmp/dmdevfs_v0_verbose\\.log /tmp/openocd_v0\\.log /tmp/monitor_v0\\.log 2>/dev/null \\|\\| true && grep -E \"arm-none-eabi-gcc \\.\\*dmdevfs\\\\\\.c\\\\\\.o \\.\\* -c /data/projects/chocotechnologies/public/dmdevfs/src/dmdevfs\\\\\\.c\" /tmp/dmdevfs_v0_verbose\\.log 2>/dev/null \\| head -1 && \\(grep -q \"HardFault\" /tmp/openocd_v0\\.log && echo \"V0_RESULT=HARDFAULT\" \\|\\| echo \"V0_RESULT=NO_HARDFAULT_IN_OPENOCD\"\\)$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }

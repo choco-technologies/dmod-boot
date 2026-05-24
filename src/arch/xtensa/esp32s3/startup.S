@@ -1,7 +1,7 @@
 /*******************************************************************************
- * Xtensa LX7 (ESP32-S3) startup code
+ * Xtensa ESP32-S3 startup code
  *
- * chip:     Xtensa LX7 (ESP32-S3)
+ * chip:     Xtensa ESP32-S3
  * ABI:      call0 (no register-window overhead; compiled with -mabi=call0)
  * compiler: xtensa-esp32s3-elf-gcc
  *

@@ -34,6 +34,13 @@ SECTIONS
       KEEP(*(.vectors)) /* Startup code */
       
       . = ALIGN(4);
+      *(.literal .literal.* .gnu.linkonce.literal.*);
+      *(.init.literal .fini.literal);
+
+      . = ALIGN(4);
+      *(.iram1 .iram1.*);
+
+      . = ALIGN(4);
       
       *(.text .text.* .gnu.linkonce.t.*);
       . = ALIGN(4);
@@ -205,6 +212,13 @@ SECTIONS
    . = ALIGN(4);
    __heap_end__ = __ram_end__;
    PROVIDE(__heap_end__ = __heap_end__);
+   PROVIDE(end = __heap_end__);
+   PROVIDE(_end = __heap_end__);
+
+   PROVIDE(_thread_local_start = 0);
+   PROVIDE(_thread_local_end = 0);
+   PROVIDE(_flash_rodata_start = __text_start__);
+   PROVIDE(_flash_rodata_align = 4);
 
    .stab             0 (NOLOAD) : { *(.stab) }
    .stabstr          0 (NOLOAD) : { *(.stabstr) }

@@ -1,0 +1,7 @@
+# DMOD Dependencies File
+# Generated from module: make_dmffs
+# Source file: /__w/dmffs/dmffs/build_x86_64/dmf/make_dmffs.dmf
+#
+# This file lists all non-system modules required by the module.
+# Use with dmf-get: dmf-get -d /__w/dmffs/dmffs/build_x86_64/dmf/make_dmffs.dmd
+

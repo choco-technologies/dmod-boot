@@ -1,0 +1,1 @@
+Fixed  compatibility issues with new Usage: dmod_loader <path/to/file.dmf | module_name> [--module <module_name>] [--args <arguments>] - it was incorrectly skipping first argument in argv (name of the program was not given before)

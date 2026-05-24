@@ -89,8 +89,9 @@ MONITOR_LOG="$BUILD_DIR/monitor.log"
 timeout "$MONITOR_TIMEOUT" cmake --build "$BUILD_DIR" --target monitor-gdb > "$MONITOR_LOG" 2>&1 &
 MONITOR_PID=$!
 
-# Give the firmware time to produce log output
-sleep "$MONITOR_TIMEOUT"
+# Wait for monitor-gdb to complete (with timeout)
+echo "Waiting for monitor-gdb to complete..."
+wait $MONITOR_PID 2>/dev/null || true
 
 echo "Monitor output:"
 cat "$MONITOR_LOG"

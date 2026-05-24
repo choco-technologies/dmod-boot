@@ -18,6 +18,10 @@
                 {
                     "label": "STM32F407G (Cortex-M4, 1MB Flash, 128KB RAM)",
                     "value": "STM32F407G"
+                },
+                {
+                    "label": "ESP32S3 (Xtensa ESP32-S3, 240MHz, 16MB Flash, 8MB PSRAM)",
+                    "value": "ESP32S3"
                 }
             ]
         }

@@ -1,5 +1,5 @@
 #
 # ESP32-S3FN16R8 flash modules – MCU-specific modules for flash
 #
-dmclk
-dmgpio
+#dmclk
+#dmgpio

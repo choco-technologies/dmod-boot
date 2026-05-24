@@ -1,5 +1,5 @@
 # ======================================================================
-#               Startup library – Xtensa LX7
+#               Startup library – Xtensa ESP32-S3
 # ======================================================================
 add_library(dmboot_startup STATIC
     startup.S
