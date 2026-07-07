@@ -41,7 +41,7 @@ set(DMOD_USE_TIME_H OFF CACHE BOOL "Enable to use the time.h library")
 set(DMOD_IMPLEMENT_PRINTF ON CACHE BOOL "Enable to implement printf function inside DMOD")
 
 # Implement custom scanf
-set(DMOD_IMPLEMENT_SCANF OFF CACHE BOOL "Enable to implement scanf function inside DMOD")
+set(DMOD_IMPLEMENT_SCANF ON CACHE BOOL "Enable to implement scanf function inside DMOD")
 
 # Maximum number of modules
 set(DMOD_MAX_MODULES 100 CACHE STRING "Maximum number of modules")

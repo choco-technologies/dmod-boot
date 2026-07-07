@@ -17,6 +17,10 @@
 #define CONTROL_THREAD_UNPRIVILEGED         (1 << CONTROL_THREAD_UNPRIVILEGED_bit)
 #define CONTROL_ALTERNATE_STACK             (1 << CONTROL_ALTERNATE_STACK_bit)
 
+.equ VECTOR_TABLE_MAX_WORD_INDEX, (0x1C4 / 4)
+.equ VECTOR_TABLE_CORE_WORDS, 16
+.equ VECTOR_TABLE_IRQ_WORDS, (VECTOR_TABLE_MAX_WORD_INDEX + 1 - VECTOR_TABLE_CORE_WORDS)
+
 /*==============================================================================
 Vector table for ARM Cortex-M7
 ==============================================================================*/
@@ -42,6 +46,9 @@ vectors:
     .word   0                                /* 13: Reserved */
     .word   dmosi_context_switch_handler     /* 14: PendSV Handler */
     .word   dmosi_tick_handler               /* 15: SysTick Handler */
+   .rept   VECTOR_TABLE_IRQ_WORDS
+   .word   dmod_irq_generic_handler
+   .endr
 
 /*==============================================================================
 ARMv7-M (Cortex-M7) startup code
@@ -53,6 +60,7 @@ ARMv7-M (Cortex-M7) startup code
 .thumb
 .thumb_func
 .global Reset_Handler
+.extern Dmod_IrqAll
 
 Reset_Handler:
 /*==============================================================================
@@ -162,6 +170,26 @@ Default exception handlers - infinite loop for unhandled exceptions
 
 __default_handler:
    b      __default_handler
+
+/*==============================================================================
+Generic IRQ handler - forwards IRQ number to Dmod_IrqAll()
+==============================================================================*/
+
+.text
+.balign 2
+.syntax unified
+.thumb
+.thumb_func
+.global dmod_irq_generic_handler
+
+dmod_irq_generic_handler:
+   push     {lr}
+   mrs      r0, IPSR
+   subs     r0, #16
+   ldr      r1, =Dmod_IrqAll
+   blx      r1
+   pop      {lr}
+   bx       lr
 
 /*==============================================================================
 assign undefined low_level_init_0() and/or low_level_init_1() to

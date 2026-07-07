@@ -457,7 +457,7 @@ int main(int argc, char** argv)
     }
     dmenv_set_root_context(dmenv_ctx);
 
-    if(!Dmod_Initialize(0,0))
+    if(!Dmod_Initialize(DMBOOT_IRQ_COUNT, DMBOOT_IRQ_MAX_HANDLERS_PER_IRQ))
     {
         DMOD_LOG_ERROR("DMOD initialization failed!\n");
         while(1);

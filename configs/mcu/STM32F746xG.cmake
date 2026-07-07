@@ -26,6 +26,7 @@ set(OPENOCD_TARGET "target/stm32f7x.cfg" CACHE STRING "OpenOCD target configurat
 # ======================================================================
 # Name of the target cpu (if empty, the target is generic)
 set(DMOD_CPU_NAME   ${DMBOOT_MCU_NAME} CACHE STRING "Name of the target cpu, if empty, the target is generic")
+set(DMBOOT_IRQ_COUNT 98 CACHE STRING "Number of external IRQ lines for this MCU")
 
 # ======================================================================
 #               Renode Configuration
