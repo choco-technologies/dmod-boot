@@ -34,7 +34,12 @@ void delay(int cycles)
 
 void HardFault_Handler(void)
 {
-    DMOD_LOG_ERROR("HardFault_Handler invoked!\n");
+    // A hard fault means system state is already suspect, and the normal Dmod_Printf
+    // path (Dmod_LockStdio -> dmosi_process_current() -> ...) can itself hard-fault a
+    // second time if whatever corrupted state caused the original fault also affects
+    // that lookup. Force raw kernel writes first so DMOD_ASSERT_MSG below stays safe
+    // without changing how/where it logs.
+    Dmod_SetForceKernelWrite(true);
     DMOD_ASSERT_MSG(false, "A hard fault occurred. System halted.");
 }
 
@@ -212,7 +217,7 @@ static void start_main_module(Dmod_Context_t* main_ctx)
         char argv0[] = "main_module";
         char* argv[] = { argv0 };
         int argc = 1;
-        if( Dmod_RunDetached(main_ctx, argc, argv) == 0 )
+        if( Dmod_RunDetached(main_ctx, argc, argv, NULL) == 0 )
         {
             DMOD_ASSERT_MSG(false, "Failed to run main application module. System halted.");
         }
