@@ -433,7 +433,7 @@ static void boot_shell(dmlog_ctx_t ctx)
 
 int main(int argc, char** argv) 
 {
-    Dmod_SetLogLevel(Dmod_LogLevel_Verbose);
+    Dmod_SetLogLevel(Dmod_LogLevel_Info);
     void* logs_start = &__logs_start__;
     void* logs_end = &__logs_end__;
     dmlog_index_t  logs_size = (dmlog_index_t)((uintptr_t)logs_end - (uintptr_t)logs_start);
