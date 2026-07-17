@@ -9,3 +9,8 @@ ls
 mkdir
 cat
 catini
+tty
+memory
+dmsystem
+service
+dmtty dmtty.ini

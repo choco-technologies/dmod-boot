@@ -6,6 +6,3 @@ dmgpio board/stm32f746g-disco.ini
 dmuart board/stm32f746g-disco/usart1.ini
 dmuart board/stm32f746g-disco/usart6.ini
 dmfmc board/stm32f746g-disco/sdram.ini
-dmtty dmtty.ini
-tty
-memory
