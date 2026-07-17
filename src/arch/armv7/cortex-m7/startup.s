@@ -77,6 +77,22 @@ Thread mode uses process stack (PSP) and is privileged
    isb
 
 /*==============================================================================
+Enable the FPU (full access to CP10/CP11) before any compiled C code runs.
+All modules are built with -mfpu=fpv5-sp-d16 -mfloat-abi=hard, so the
+compiler is free to emit VFP instructions (e.g. for struct copies) even
+without explicit float usage. The RTOS port only enables the FPU once the
+scheduler starts, which is too late for code that runs during early boot -
+without this, such code traps as an unhandled NOCP UsageFault that
+escalates straight to HardFault.
+==============================================================================*/
+   ldr      r0, =0xE000ED88                 // CPACR
+   ldr      r1, [r0]
+   orr      r1, r1, #(0xF << 20)            // full access to CP10 and CP11
+   str      r1, [r0]
+   dsb
+   isb
+
+/*==============================================================================
 Branch to low_level_init_0() function (.data and .bss are not initialized!)
 ==============================================================================*/
    ldr      r0, =low_level_init_0
