@@ -71,12 +71,19 @@ foreach(_EXTRA_SDCARD_DMD IN LISTS DMBOOT_EXTRA_SDCARD_DMD_FILES)
 endforeach()
 
 # ======================================================================
-#               Downloading modules from DMD 
+#               Downloading modules from DMD
 # ======================================================================
 find_program(DMF_GET dmf-get HINTS ${DMBOOT_TOOLS_DIR})
 if(NOT DMF_GET)
     message(FATAL_ERROR "dmf-get tool not found. Please build and install dmod tools first.")
 endif()
+
+# Routes tagged configuration entries in *.dmd files ("driver=", "rule=", "service=")
+# to their own subdirectory under DMBOOT_CONFIG_DIR, instead of all landing together.
+# The ';' separators must be escaped: an unescaped ';' makes CMake treat this
+# as a 3-element list, which add_custom_command() then expands into 3 separate
+# command-line arguments instead of a single "--config-map <value>" pair.
+set(DMBOOT_CONFIG_MAP "driver:${DMBOOT_CONFIG_DIR}/drivers\;rule:${DMBOOT_CONFIG_DIR}/rules\;service:${DMBOOT_CONFIG_DIR}/services")
 
 set(DMBOOT_MODULES_OUT_DIR "${CMAKE_BINARY_DIR}/dmf")
 set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_OUT_DIR}/.download_complete")
@@ -112,12 +119,12 @@ if(DMBOOT_FLASH_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _FLASH_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
             )
         else()
             list(APPEND _FLASH_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
             )
         endif()
     endforeach()
@@ -203,12 +210,12 @@ if(DMBOOT_SDCARD_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
             )
         else()
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
             )
         endif()
     endforeach()

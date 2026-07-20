@@ -1,8 +1,8 @@
 #
 # STM32F746G Discovery board flash modules - board-specific modules with configs
 #
-dmclk board/stm32f746g-disco.ini
-dmgpio board/stm32f746g-disco.ini
-dmuart board/stm32f746g-disco/usart1.ini
-dmuart board/stm32f746g-disco/usart6.ini
-dmfmc board/stm32f746g-disco/sdram.ini
+dmclk driver=board/stm32f746g-disco.ini
+dmgpio driver=board/stm32f746g-disco.ini
+dmuart driver=board/stm32f746g-disco/usart1.ini
+dmuart driver=board/stm32f746g-disco/usart6.ini
+dmfmc driver=board/stm32f746g-disco/sdram.ini

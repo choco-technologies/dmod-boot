@@ -11,6 +11,7 @@ cat
 catini
 tty
 memory
-dmsystem
+systemd
 service
-dmtty dmtty.ini
+dmtty driver=dmtty.ini
+console 
