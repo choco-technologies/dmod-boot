@@ -200,9 +200,95 @@ static bool prepare_argv_for_run(const char* input, char*** argv_out, int* argc_
     return true;
 }
 
+/**
+ * @brief Free an argv array allocated by prepare_argv_for_run() or prepare_main_module_argv()
+ *
+ * @param argv Argument array to free
+ * @param argc Number of arguments in the array
+ */
+static void free_argv(char** argv, int argc)
+{
+    for(int i = 0; i < argc; i++)
+    {
+        Dmod_FreeEx(argv[i], false);
+    }
+    Dmod_FreeEx(argv, false);
+}
+
+/**
+ * @brief Build an argv array for the main module from its name and a space-separated argument string
+ *
+ * argv[0] is always set to module_name; each whitespace-separated token in args_string becomes
+ * one additional argument. args_string may be empty, in which case argc will be 1.
+ *
+ * @param module_name Module name to use as argv[0]
+ * @param args_string Space-separated extra arguments (e.g. DMBOOT_MAIN_MODULE_ARGS_STRING)
+ * @param argv_out Pointer to store the allocated argv array
+ * @param argc_out Pointer to store the argument count
+ *
+ * @return true if argv was prepared successfully, false otherwise
+ */
+static bool prepare_main_module_argv(const char* module_name, const char* args_string, char*** argv_out, int* argc_out)
+{
+    // Count arguments (argv[0] is always the module name)
+    int argc = 1;
+    const char* ptr = args_string;
+    while(*ptr != '\0')
+    {
+        while(*ptr == ' ') ptr++;
+        if(*ptr != '\0')
+        {
+            argc++;
+            while(*ptr != ' ' && *ptr != '\0') ptr++;
+        }
+    }
+
+    char** argv = (char**)Dmod_MallocEx(sizeof(char*) * argc, module_name);
+    if(argv == NULL)
+    {
+        return false;
+    }
+
+    size_t module_name_len = strlen(module_name);
+    argv[0] = (char*)Dmod_MallocEx(module_name_len + 1, module_name);
+    if(argv[0] == NULL)
+    {
+        Dmod_FreeEx(argv, false);
+        return false;
+    }
+    strcpy(argv[0], module_name);
+
+    // Fill remaining argv entries from args_string
+    int index = 1;
+    ptr = args_string;
+    while(*ptr != '\0' && index < argc)
+    {
+        while(*ptr == ' ') ptr++;
+        if(*ptr != '\0')
+        {
+            const char* arg_start = ptr;
+            while(*ptr != ' ' && *ptr != '\0') ptr++;
+            size_t arg_len = (size_t)(ptr - arg_start);
+            argv[index] = (char*)Dmod_MallocEx(arg_len + 1, module_name);
+            if(argv[index] == NULL)
+            {
+                free_argv(argv, index);
+                return false;
+            }
+            strncpy(argv[index], arg_start, arg_len);
+            argv[index][arg_len] = '\0';
+            index++;
+        }
+    }
+
+    *argv_out = argv;
+    *argc_out = argc;
+    return true;
+}
+
 static void start_main_module(Dmod_Context_t* main_ctx)
 {
-    Dmod_SetLogLevel(Dmod_LogLevel_Warn);
+    Dmod_SetLogLevel(Dmod_LogLevel_Info);
     Dmod_ModuleType_t moduleType = Dmod_GetModuleType( main_ctx );
     if( moduleType == Dmod_ModuleType_Library )
     {
@@ -213,10 +299,15 @@ static void start_main_module(Dmod_Context_t* main_ctx)
     }
     else if( moduleType == Dmod_ModuleType_Application )
     {
-        DMOD_LOG_INFO("Main module is an application module\n");
-        char argv0[] = "main_module";
-        char* argv[] = { argv0 };
-        int argc = 1;
+        const char* moduleName = Dmod_GetName(main_ctx);
+        DMOD_LOG_INFO("Main module is an application module, starting: %s\n", moduleName);
+        char** argv = NULL;
+        int argc = 0;
+        if( !prepare_main_module_argv(moduleName, DMBOOT_MAIN_MODULE_ARGS_STRING, &argv, &argc) )
+        {
+            DMOD_ASSERT_MSG(false, "Failed to prepare arguments for main application module. System halted.");
+            return;
+        }
         if( Dmod_RunDetached(main_ctx, argc, argv, NULL) == 0 )
         {
             DMOD_ASSERT_MSG(false, "Failed to run main application module. System halted.");
@@ -307,7 +398,7 @@ static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
-    dmvfs_mount_fs("dmdevfs", "/dev", "/configs");
+    dmvfs_mount_fs("dmdevfs", "/dev", "/configs/drivers");
 }
 
 static void boot_shell(dmlog_ctx_t ctx)
@@ -406,12 +497,7 @@ static void boot_shell(dmlog_ctx_t ctx)
                     dmlog_puts(ctx, "Failed to run module.\n");
                 }
 
-                // Free allocated argv
-                for(int i = 0; i < run_argc; i++)
-                {
-                    Dmod_FreeEx(run_argv[i], false);
-                }
-                Dmod_FreeEx(run_argv, false);
+                free_argv(run_argv, run_argc);
 
             }
             else if(strncmp(input_buffer, "list", 4) == 0)
@@ -482,6 +568,7 @@ int main(int argc, char** argv)
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);
     dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", DMBOOT_EMULATION_ENABLED);
+    dmenv_set(dmenv_ctx, "DMOD_SHELL", DMBOOT_SHELL_STRING);
     dmenv_set(dmenv_ctx, "PWD", "/");
     
     // Set user_data environment variables if embedded in ROM

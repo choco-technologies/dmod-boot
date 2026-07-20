@@ -11,11 +11,13 @@ set(BOARD "" CACHE STRING "Board name (optional). If set, TARGET is derived from
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
-set(DMBOOT_MAIN_MODULE "dmell" CACHE STRING "Name of the main module to start after boot")
+set(DMBOOT_MAIN_MODULE "systemd" CACHE STRING "Name of the main module to start after boot")
 set(DMBOOT_MAIN_MODULE_CONFIG "" CACHE STRING "Configuration file for the main module (e.g. board/stm32f746g-disco.ini)")
+set(DMBOOT_MAIN_MODULE_ARGS "/configs/services /configs/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)")
 set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_MANIFEST_URL "" CACHE STRING "Manifest path/URL to use with dmf-get -m flag for all module downloads")
+set(DMBOOT_SHELL "dmell" CACHE STRING "Shell to use by default")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 
 # Convert relative manifest path to absolute so it remains valid when the
@@ -160,6 +162,8 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_IRQ_COUNT=${DMBOOT_IRQ_COUNT}
         DMBOOT_IRQ_MAX_HANDLERS_PER_IRQ=${DMBOOT_IRQ_MAX_HANDLERS_PER_IRQ}
         DMBOOT_EMULATION_ENABLED=${DMBOOT_EMULATION}
+        DMBOOT_SHELL_STRING="${DMBOOT_SHELL}"
+        DMBOOT_MAIN_MODULE_ARGS_STRING="${DMBOOT_MAIN_MODULE_ARGS}"
 )
 
 target_link_options(${MODULE_NAME}.elf
