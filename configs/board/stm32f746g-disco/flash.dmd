@@ -6,3 +6,4 @@ dmgpio driver=board/stm32f746g-disco.ini
 dmuart driver=board/stm32f746g-disco/usart1.ini
 dmuart driver=board/stm32f746g-disco/usart6.ini
 dmfmc driver=board/stm32f746g-disco/sdram.ini
+dmdma driver=board/stm32f746g-disco/dma.ini
