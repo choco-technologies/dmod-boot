@@ -14,6 +14,8 @@ extern void* __dmod_inputs_start;
 extern void* __dmod_inputs_end;
 extern void* __heap_start__;
 extern void* __heap_end__;
+extern void* __dma_start__;
+extern void* __dma_end__;
 extern void* __startup_dmp_start;
 extern void* __startup_dmp_end;
 extern void* __startup_dmp_size;
@@ -517,7 +519,38 @@ static void boot_shell(dmlog_ctx_t ctx)
     }
 }
 
-int main(int argc, char** argv) 
+/**
+ * @brief Initialize the DMA-capable heap, if the target defines a non-empty "dma" region
+ *
+ * The resulting context is named "dma" and added to the default heap list so that
+ * modules can find it later via dmheap_get_context_by_name("dma") even without
+ * holding onto the pointer returned here.
+ */
+static void init_dma_heap(void)
+{
+    void* dma_start = &__dma_start__;
+    void* dma_end   = &__dma_end__;
+    size_t dma_size = (size_t)((uintptr_t)dma_end - (uintptr_t)dma_start);
+
+    if(dma_size == 0)
+    {
+        DMOD_LOG_INFO("No DMA region defined for this target, skipping DMA heap initialization\n");
+        return;
+    }
+
+    dmheap_context_t* dma_heap = dmheap_init(dma_start, dma_size, sizeof(void*));
+    if(dma_heap == NULL)
+    {
+        DMOD_LOG_ERROR("DMA heap initialization failed!\n");
+        return;
+    }
+
+    dmheap_set_context_name(dma_heap, "dma");
+    dmheap_add_default_context(dma_heap);
+    DMOD_LOG_INFO("DMA heap initialized: Start=0x%X, Size=%u bytes\n", (uintptr_t)dma_start, (unsigned int)dma_size);
+}
+
+int main(int argc, char** argv)
 {
     Dmod_SetLogLevel(Dmod_LogLevel_Info);
     void* logs_start = &__logs_start__;
@@ -539,6 +572,9 @@ int main(int argc, char** argv)
         while(1);
     }
     DMOD_LOG_INFO("Heap initialized: Start=0x%X, Size=%u bytes\n", (uintptr_t)heap_start, (unsigned int)heap_size);
+
+    // Initialize the DMA-capable heap (named "dma"), if the target defines one
+    init_dma_heap();
 
     dmenv_ctx_t dmenv_ctx = dmenv_create(NULL);
     if(dmenv_ctx == NULL)
