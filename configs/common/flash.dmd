@@ -18,3 +18,4 @@ console rules=console.rules
 console service=console@.ini
 dmdma_test_dev
 dmdma_test_port
+#ifconfig
