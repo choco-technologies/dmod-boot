@@ -63,7 +63,13 @@ jobs:
         mkdir -p build
         cd build
         cmake .. -DDMOD_MODE=DMOD_SYSTEM -DDMOD_TOOLS_NAME=arch/x86_64
-        cmake --build .
+        # Build only the todmp tool, not the default "all" target: dmod's own
+        # examples/system/dmod_loader (built as part of "all" in SYSTEM mode) statically
+        # links prebuilt system libraries (dmosi, dmosi-posix, ...) via a "dmf-get lib"
+        # download that the dmf-get shipped in the CI toolchain image doesn't support,
+        # which leaves dmod_loader failing to link. todmp doesn't depend on that example,
+        # so building it alone sidesteps the unrelated, unbuildable example entirely.
+        cmake --build . --target todmp
         # Now reconfigure to MODULE mode to build DMF files (reusing same build directory)
         cmake .. -DDMOD_MODE=DMOD_MODULE -DDMOD_TOOLS_NAME=arch/x86_64
         cmake --build .
