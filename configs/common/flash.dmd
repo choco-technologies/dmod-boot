@@ -6,6 +6,7 @@ dmffs
 dmramfs
 dmdevfs
 ls
+ps
 mkdir
 cat
 catini
