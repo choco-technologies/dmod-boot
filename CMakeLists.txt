@@ -151,6 +151,8 @@ add_executable(${MODULE_NAME}.elf
     ${EMBEDDED_OBJECTS}
 )
 
+dmod_set_current_allocator(${MODULE_NAME}.elf)
+
 target_compile_definitions(${MODULE_NAME}.elf
     PRIVATE 
         DMBOOT_MCU_SERIES=${DMBOOT_MCU_SERIES}
