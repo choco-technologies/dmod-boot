@@ -14,7 +14,6 @@ dmarp
 dmroute
 dmip
 dmicmp service=icmp.ini
-dmicmp icmp-start.dme
 ifconfig
 ip
 ping
