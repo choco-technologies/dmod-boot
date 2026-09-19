@@ -10,5 +10,14 @@ dmdma driver=board/stm32f746g-disco/dma.ini
 dmeth driver=board/stm32f746g-disco/eth0.ini
 dmnetbridge
 dmnetif
-dmicmp
+dmarp
+dmroute
+dmip
+dmicmp service=icmp.ini
+dmicmp icmp-start.dme
 ifconfig
+ip
+ping
+networkd service=networkd@.ini
+networkd rules=networkd.rules
+test_dmeth

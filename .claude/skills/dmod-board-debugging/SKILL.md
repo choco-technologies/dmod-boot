@@ -100,6 +100,57 @@ kernel stdin/stdout (i.e. the dmlog path above) rather than the ST-Link VCP.
 The VCP (USART1, PA9/PB7, 921600 8N1) only carries the shell if a `backing`
 device is configured for it.
 
+## Loading a module is not the same as enabling it
+
+These are two distinct steps, and mixing them up produces a failure with no
+error message anywhere:
+
+| | What it does |
+| --- | --- |
+| `module load <name>` | Creates the module's context - its code is mapped, nothing has run |
+| `module enable <name>` | Runs `dmod_init()`, **and loads+enables everything the module requires** (`Dmod_RMod_EnableRequiredModules()`) |
+
+A module that is only *loaded* never runs `dmod_init()`, so it registers
+nothing, and none of the APIs it imports have been bound yet. It therefore
+sits there doing nothing - and because nothing was bound, nothing crashes
+either. `module list` shows it with a text address like any other module;
+only the context's `Enabled` flag tells the two apart.
+
+Dependencies come in through the enable step, not the load step. Enabling
+`dmicmp` is what pulls in `dmip`; loading `dmicmp` on its own leaves `dmip`
+absent entirely, which looks exactly like a broken dependency declaration
+but is not one.
+
+**Application modules get both steps for free**: running an app does the same
+load-then-enable, so its required modules are there by the time `main()` runs.
+The distinction only bites for library modules, which something else has to
+bring up - typically a `.dme` script run by a `libsystemd` unit, and such a
+script needs *both* lines:
+
+```
+module load dmicmp
+module enable dmicmp
+```
+
+`module enable` alone is not enough: `Dmod_EnableModule()` looks the context
+up and fails with "module not found" if nothing loaded it first.
+
+Checking the real state from GDB (`Enabled`, and `UsageCounter` for who is
+holding the module resident) beats reading `module list`:
+
+```
+set $i=0
+while $i < (int)(sizeof(Dmod_Contexts)/sizeof(Dmod_Contexts[0]))
+  if Dmod_Contexts[$i] != 0
+    printf "%2d %-14s en=%d use=%d\n", $i, Dmod_Contexts[$i]->Header->Name, \
+           Dmod_Contexts[$i]->Enabled, Dmod_Contexts[$i]->UsageCounter
+  end
+  set $i=$i+1
+end
+```
+
+`RequiredModules[]` on the same context lists what enabling will pull in.
+
 ## Debugging a dynamic module (.dmf) on target
 
 Modules are position-independent blobs loaded at a runtime address, so GDB needs
