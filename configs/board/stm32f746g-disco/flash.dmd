@@ -19,4 +19,7 @@ ip
 ping
 networkd service=networkd@.ini
 networkd rules=networkd.rules
+dmudp
+dhcpc service=dhcp@.ini
+dhcpc rules=dhcp.rules
 test_dmeth

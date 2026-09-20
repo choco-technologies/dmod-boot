@@ -44,7 +44,7 @@ if(DMBOOT_CONFIG_DIR)
     add_custom_command(
         OUTPUT "${CONFIG_FS_IMAGE}"
         COMMAND ${MAKE_DMFFS_COMMAND} "${DMBOOT_CONFIG_DIR}" "${CONFIG_FS_IMAGE}"
-        DEPENDS "${DMBOOT_CONFIG_DIR}" download_modules
+        DEPENDS "${DMBOOT_CONFIG_DIR}" "${DMBOOT_MODULES_MARKER_FILE}" download_modules
         COMMENT "Creating config filesystem image from ${DMBOOT_CONFIG_DIR}"
         VERBATIM
     )

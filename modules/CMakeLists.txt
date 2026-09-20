@@ -87,6 +87,11 @@ set(DMBOOT_CONFIG_MAP "driver:${DMBOOT_CONFIG_DIR}/drivers\;rules:${DMBOOT_CONFI
 
 set(DMBOOT_MODULES_OUT_DIR "${CMAKE_BINARY_DIR}/dmf")
 set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_OUT_DIR}/.download_complete")
+# scripts/romfs.cmake keys the config filesystem image off this marker: dmf-get
+# drops each module's service=/rules= files into DMBOOT_CONFIG_DIR's existing
+# subdirectories, which leaves that directory's own mtime untouched, so a
+# directory-only dependency silently ships a stale config_fs.dmffs.
+set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_MARKER_FILE}" PARENT_SCOPE)
 
 # The .dmd format (comments, $include, $from, versions, config files, variable
 # substitution, ...) is understood by dmf-get itself - we don't re-implement
@@ -218,7 +223,7 @@ if(DMBOOT_MAIN_MODULE)
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
         COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
-        DEPENDS download_modules
+        DEPENDS "${DMBOOT_MODULES_MARKER_FILE}" download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM
     )
@@ -230,7 +235,7 @@ else()
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
         COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found, skipping DMP creation'; fi"
-        DEPENDS download_modules
+        DEPENDS "${DMBOOT_MODULES_MARKER_FILE}" download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM
     )
