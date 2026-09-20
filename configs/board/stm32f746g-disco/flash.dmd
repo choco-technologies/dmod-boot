@@ -22,7 +22,8 @@ networkd service=networkd@.ini
 networkd rules=networkd.rules
 dmudp
 dmtcp
-dmftp service=ftpd.ini
+ftpd service=ftpd@.ini
+ftpd service=ftpd@public.ini
 dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
 test_dmeth
