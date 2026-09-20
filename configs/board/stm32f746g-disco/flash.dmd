@@ -20,6 +20,7 @@ ping
 networkd service=networkd@.ini
 networkd rules=networkd.rules
 dmudp
+dmtcp
 dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
 test_dmeth
