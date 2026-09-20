@@ -123,7 +123,7 @@ add_custom_command(
     OUTPUT "${MODULES_DMP_OBJECT}"
     COMMAND ${CMAKE_COMMAND} -E echo "Checking for modules.dmp..."
     COMMAND bash -c "if [ -f ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents /dev/null ${MODULES_DMP_OBJECT}; fi"
-    DEPENDS prepare_modules_dmp
+    DEPENDS "${MODULES_DMP_FILE}" prepare_modules_dmp
     COMMENT "Conditionally embedding modules.dmp if it exists"
     VERBATIM
 )
