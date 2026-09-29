@@ -17,3 +17,6 @@ service
 dmtty driver=dmtty.ini
 console rules=console.rules
 console service=console@.ini
+dmdevmon
+dmdevmon service=dmdevmon@.ini
+dmdevmon rules=dmdevmon.rules
