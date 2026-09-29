@@ -7,6 +7,13 @@ dmuart driver=board/stm32f746g-disco/usart1.ini
 dmuart driver=board/stm32f746g-disco/usart6.ini
 dmfmc driver=board/stm32f746g-disco/sdram.ini
 dmdma driver=board/stm32f746g-disco/dma.ini
+#
+# Network: eth0 on the on-board RMII PHY. dmnetif reports the interface as a
+# "netif" device, networkd.rules and dhcp.rules then start networkd@eth0 (RX
+# pump) and dhcp@eth0 (lease) for it. The pump brings eth0 up by itself once
+# the PHY reports a link (dmnetbridge 1.2.4+), so DHCP needs no manual
+# "ifconfig eth0 up".
+#
 dmeth driver=board/stm32f746g-disco/eth0.ini
 dmnetbridge
 dmnetif
@@ -23,3 +30,11 @@ dmudp
 dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
 test_dmeth
+#
+# SD card: on-board microSD slot (CN3) on SDMMC1. dmdevfs creates the host
+# node /dev/dmsdio0, the dmdevmon service (common flash.dmd) monitors the
+# card detect pin and announces /dev/dmsdio0/0 when a card is inserted.
+# The DMA2 controller (dma.ini) and CLK48 from dmclk must be up before it.
+#
+dmsdio driver=board/stm32f746g-disco/sdmmc1.ini
+blkid
