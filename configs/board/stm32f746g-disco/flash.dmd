@@ -11,11 +11,11 @@ dmdma driver=board/stm32f746g-disco/dma.ini
 # Network: eth0 on the on-board RMII PHY. dmnetif reports the interface as a
 # "netif" device, networkd.rules and dhcp.rules then start networkd@eth0 (RX
 # pump) and dhcp@eth0 (lease) for it. The pump brings eth0 up by itself once
-# the PHY reports a link (dmnetbridge >= 1.2.4), so DHCP needs no manual
+# the PHY reports a link (dmnetbridge 1.2.4+), so DHCP needs no manual
 # "ifconfig eth0 up".
 #
 dmeth driver=board/stm32f746g-disco/eth0.ini
-dmnetbridge@>=1.2.4<2.0
+dmnetbridge
 dmnetif
 dmarp
 dmroute
