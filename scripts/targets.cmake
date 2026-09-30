@@ -29,6 +29,15 @@ if(DMBOOT_RENODE_WAIT_FOR_GDB)
 else()
     set(DMBOOT_RENODE_START "start")
 endif()
+# Expose the board's console UART (if it names one) as a raw TCP terminal, so
+# the shell running on it can be driven from outside the emulator
+set(DMBOOT_RENODE_UART_PORT "3456" CACHE STRING "TCP port of the Renode terminal attached to the console UART")
+if(DMBOOT_RENODE_CONSOLE_UART AND DMBOOT_RENODE_UART_PORT)
+    set(DMBOOT_RENODE_UART_TERMINAL
+        "emulation CreateServerSocketTerminal ${DMBOOT_RENODE_UART_PORT} \"console_uart\" false\nconnector Connect ${DMBOOT_RENODE_CONSOLE_UART} console_uart")
+else()
+    set(DMBOOT_RENODE_UART_TERMINAL "")
+endif()
 set(RENODE_SCRIPT_PATH "${CMAKE_BINARY_DIR}/renode.resc")
 configure_file(
     ${CMAKE_SOURCE_DIR}/configs/renode/renode.resc.in
