@@ -6,4 +6,4 @@ sysbus LoadELF @@CMAKE_BINARY_DIR@/renode_firmware.elf
 
 machine StartGdbServer 3333
 
-start
+@DMBOOT_RENODE_START@

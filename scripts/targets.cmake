@@ -22,6 +22,13 @@ configure_file(
 )
 
 # Configure Renode script path
+# With DMBOOT_RENODE_WAIT_FOR_GDB the machine is not started by the script, the
+# first GDB 'continue' starts it - so nothing runs before a debugger attaches
+if(DMBOOT_RENODE_WAIT_FOR_GDB)
+    set(DMBOOT_RENODE_START "")
+else()
+    set(DMBOOT_RENODE_START "start")
+endif()
 set(RENODE_SCRIPT_PATH "${CMAKE_BINARY_DIR}/renode.resc")
 configure_file(
     ${CMAKE_SOURCE_DIR}/configs/renode/renode.resc.in

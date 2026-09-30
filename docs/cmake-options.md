@@ -19,6 +19,7 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `DMBOOT_EXTRA_SDCARD_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `sdcard.dmd` files to include. Each file adds more sdcard modules to download at build time. |
 | `DMBOOT_MANIFEST_URL` | STRING | *(empty)* | Manifest path/URL to use with `dmf-get -m` flag for all module downloads. |
 | `DMBOOT_EMULATION` | BOOL | `OFF` | Enable Renode emulation mode instead of hardware mode (OpenOCD). |
+| `DMBOOT_RENODE_WAIT_FOR_GDB` | BOOL | `OFF` | In emulation mode, keep the Renode machine paused until a GDB client (e.g. `monitor-gdb`) continues it, so no log output is produced before the monitor attaches. |
 
 ## VFS Options
 
