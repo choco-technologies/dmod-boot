@@ -45,6 +45,9 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -S "$SOURCE_DIR" \
       -B "$BUILD_DIR"
 cmake --build "$BUILD_DIR" --config Debug
+# Build the host monitor now: building it inside monitor-gdb delays attaching
+# by a minute, and by then the boot log has wrapped the 8 KiB dmlog ring
+cmake --build "$BUILD_DIR" --target build_dmlog_monitor extract_ring_buffer_config
 echo "✓ Build completed"
 echo ""
 
