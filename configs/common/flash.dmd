@@ -8,6 +8,8 @@ dmdevfs
 ls
 ps
 mkdir
+mount
+umount
 cat
 catini
 tty

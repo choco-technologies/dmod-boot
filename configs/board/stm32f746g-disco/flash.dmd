@@ -38,3 +38,13 @@ test_dmeth
 #
 dmsdio driver=board/stm32f746g-disco/sdmmc1.ini
 blkid
+#
+# SD card file systems: dmfatfs mounts FAT/exFAT, mkfatfs formats a card.
+# automount (dmblock) mounts every FAT/exFAT volume dmdevfs reports as a
+# block device at /mnt/<label> (or /mnt/<node name>) and unmounts it when
+# the card is removed.
+#
+dmfatfs
+mkfatfs
+automount service=automount@.ini
+automount rules=automount.rules
