@@ -42,11 +42,13 @@ echo "[1/4] Building firmware with emulation mode enabled..."
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DBOARD="$BOARD" \
       -DDMBOOT_EMULATION=ON \
+      -DDMBOOT_RENODE_WAIT_FOR_GDB=ON \
       -S "$SOURCE_DIR" \
       -B "$BUILD_DIR"
 cmake --build "$BUILD_DIR" --config Debug
-# Build the host monitor now: building it inside monitor-gdb delays attaching
-# by a minute, and by then the boot log has wrapped the 8 KiB dmlog ring
+# The boot log is much larger than the 8 KiB dmlog ring, so the machine waits
+# for monitor-gdb to attach (DMBOOT_RENODE_WAIT_FOR_GDB) - build the monitor
+# now, so it does not eat into the monitoring time
 cmake --build "$BUILD_DIR" --target build_dmlog_monitor extract_ring_buffer_config
 echo "✓ Build completed"
 echo ""

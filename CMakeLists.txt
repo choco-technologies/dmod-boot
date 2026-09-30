@@ -19,6 +19,7 @@ set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files t
 set(DMBOOT_MANIFEST_URL "" CACHE STRING "Manifest path/URL to use with dmf-get -m flag for all module downloads")
 set(DMBOOT_SHELL "dmell" CACHE STRING "Shell to use by default")
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
+option(DMBOOT_RENODE_WAIT_FOR_GDB "Keep the Renode machine paused until a GDB client continues it" OFF)
 
 # Convert relative manifest path to absolute so it remains valid when the
 # working directory changes during the build (e.g. dmf-get is invoked from a
