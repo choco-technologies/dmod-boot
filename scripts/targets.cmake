@@ -38,6 +38,16 @@ if(DMBOOT_RENODE_CONSOLE_UART AND DMBOOT_RENODE_UART_PORT)
 else()
     set(DMBOOT_RENODE_UART_TERMINAL "")
 endif()
+# Connect the board's Ethernet (if it names one) to a TAP interface on the
+# host through a Renode switch, so the host can talk to the board over IP.
+# Opening a TAP needs root (CAP_NET_ADMIN) and /dev/net/tun, so it is opt-in.
+set(DMBOOT_RENODE_TAP "" CACHE STRING "Host TAP interface the board's Ethernet is connected to in emulation mode (needs root and /dev/net/tun); empty: not connected")
+if(DMBOOT_RENODE_ETHERNET AND DMBOOT_RENODE_TAP)
+    set(DMBOOT_RENODE_NETWORK
+        "emulation CreateSwitch \"switch\"\nconnector Connect ${DMBOOT_RENODE_ETHERNET} switch\nemulation CreateTap \"${DMBOOT_RENODE_TAP}\" \"tap\"\nconnector Connect host.tap switch")
+else()
+    set(DMBOOT_RENODE_NETWORK "")
+endif()
 set(RENODE_SCRIPT_PATH "${CMAKE_BINARY_DIR}/renode.resc")
 configure_file(
     ${CMAKE_SOURCE_DIR}/configs/renode/renode.resc.in
