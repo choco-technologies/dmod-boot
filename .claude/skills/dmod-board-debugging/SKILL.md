@@ -18,7 +18,7 @@ the board.
 | Firmware repo | `/data/projects/chocotechnologies/public/dmod-boot` |
 | Build dir (already configured) | `<dmod-boot>/build` |
 | Firmware ELF | `<dmod-boot>/build/dmboot.elf` |
-| Modules staged into the ROM image | `<dmod-boot>/build/dmf/*.dmf` |
+| Modules staged into the ROM image | `<dmod-boot>/build/dmf/*.dmfc` (or `*.dmf` when a package has no `.dmfc`, or with `-DDMBOOT_MODULE_TYPE=dmf`) |
 | Source of **every** dynamic module | `/data/projects/chocotechnologies/public/<module>` (e.g. `dmudp`, `dmell`, `dmeth`) |
 | dmod library itself | `/data/projects/chocotechnologies/public/dmod` (also vendored as `<dmod-boot>/lib/dmod`) |
 
@@ -195,9 +195,10 @@ cmake --build <dmod-boot>/build && cmake --build <dmod-boot>/build --target inst
 Two things bite here, both silently - the build succeeds and the board runs the
 *old* module:
 
-- **Delete the `.dmfc`.** `todmp` packs the whole `build/dmf/` directory and
-  prefers the compressed `.dmfc` over the `.dmf` of the same name, so a stale
-  `.dmfc` shadows the `.dmf` you just staged. `module list` on target shows
+- **Delete the `.dmfc`.** The build downloads `.dmfc` files by default
+  (`DMBOOT_MODULE_TYPE=dmfc`), and `todmp` packs the whole `build/dmf/`
+  directory preferring the compressed `.dmfc` over the `.dmf` of the same
+  name, so the downloaded `.dmfc` shadows the `.dmf` you just staged. `module list` on target shows
   such modules with version `compressed`.
 - **Delete `modules.dmp` and `__modules_dmp.o`.** An incremental build does not
   notice a `.dmf` that was dropped in or overwritten in place.

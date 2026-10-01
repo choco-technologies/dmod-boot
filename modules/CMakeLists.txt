@@ -130,12 +130,12 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     if(DMBOOT_MANIFEST_URL)
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules (manifest: ${DMBOOT_MANIFEST_URL})..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
+            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
         )
     else()
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
+            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
         )
     endif()
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
@@ -175,12 +175,12 @@ if(DMBOOT_SDCARD_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
             )
         else()
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type dmf --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}"
             )
         endif()
     endforeach()
@@ -213,7 +213,7 @@ if(NOT TODMP)
 endif()
 set(DMBOOT_MODULES_DMP "${CMAKE_BINARY_DIR}/modules.dmp")
 
-# When a main module is expected, fail the build if no .dmf files are found
+# When a main module is expected, fail the build if no .dmf/.dmfc files are found
 # after the download step. Otherwise, just print a notice and succeed.
 if(DMBOOT_MAIN_MODULE)
     add_custom_command(
@@ -222,7 +222,7 @@ if(DMBOOT_MAIN_MODULE)
         COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'ERROR: No .dmf files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
+        COMMAND bash -c "if compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmf' > /dev/null || compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmfc' > /dev/null; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP} ${DMBOOT_MAIN_MODULE}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf ${DMBOOT_MODULES_OUT_DIR}/*.dmfc 2> /dev/null || true; else echo 'ERROR: No .dmf/.dmfc files found in ${DMBOOT_MODULES_OUT_DIR} but main module ${DMBOOT_MAIN_MODULE} was expected. Module download may have failed.'; exit 1; fi"
         DEPENDS "${DMBOOT_MODULES_MARKER_FILE}" download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM
@@ -234,7 +234,7 @@ else()
         COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-        COMMAND bash -c "if ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf 1> /dev/null 2>&1; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf; else echo 'No .dmf files found, skipping DMP creation'; fi"
+        COMMAND bash -c "if compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmf' > /dev/null || compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmfc' > /dev/null; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf ${DMBOOT_MODULES_OUT_DIR}/*.dmfc 2> /dev/null || true; else echo 'No .dmf/.dmfc files found, skipping DMP creation'; fi"
         DEPENDS "${DMBOOT_MODULES_MARKER_FILE}" download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM

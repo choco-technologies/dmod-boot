@@ -18,6 +18,11 @@ set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to 
 set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_MANIFEST_URL "" CACHE STRING "Manifest path/URL to use with dmf-get -m flag for all module downloads")
 set(DMBOOT_SHELL "dmell" CACHE STRING "Shell to use by default")
+set(DMBOOT_MODULE_TYPE "dmfc" CACHE STRING "Preferred module file type to download (dmfc or dmf). dmf-get falls back to the other type when a package does not provide the preferred one")
+set_property(CACHE DMBOOT_MODULE_TYPE PROPERTY STRINGS dmfc dmf)
+if(NOT DMBOOT_MODULE_TYPE MATCHES "^(dmf|dmfc)$")
+    message(FATAL_ERROR "DMBOOT_MODULE_TYPE must be either 'dmf' or 'dmfc' (got '${DMBOOT_MODULE_TYPE}')")
+endif()
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 option(DMBOOT_RENODE_WAIT_FOR_GDB "Keep the Renode machine paused until a GDB client continues it" OFF)
 
