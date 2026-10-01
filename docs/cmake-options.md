@@ -21,6 +21,7 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `DMBOOT_EMULATION` | BOOL | `OFF` | Enable Renode emulation mode instead of hardware mode (OpenOCD). |
 | `DMBOOT_RENODE_WAIT_FOR_GDB` | BOOL | `OFF` | In emulation mode, keep the Renode machine paused until a GDB client (e.g. `monitor-gdb`) continues it, so no log output is produced before the monitor attaches. |
 | `DMBOOT_RENODE_UART_PORT` | STRING | `3456` | In emulation mode, TCP port of the raw Renode terminal attached to the board's console UART (`DMBOOT_RENODE_CONSOLE_UART`, set by the board config, e.g. `sysbus.usart1` for `stm32f746g-disco`). Connect to it (e.g. `nc localhost 3456`) to use the shell on that UART. Empty disables it. |
+| `DMBOOT_RENODE_TAP` | STRING | *(empty)* | In emulation mode, host TAP interface (e.g. `tap0`) that the board's Ethernet controller (`DMBOOT_RENODE_ETHERNET`, set by the board config, e.g. `sysbus.ethernet` for `stm32f746g-disco`) is connected to through a Renode switch, so the host can reach the board over IP. Needs root and `/dev/net/tun`; empty leaves the Ethernet unconnected. |
 
 ## VFS Options
 

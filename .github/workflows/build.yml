@@ -144,6 +144,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: chocotechnologies/dmboot:1.0.0
+      # The network test connects the emulated Ethernet to a TAP interface
+      options: --cap-add=NET_ADMIN --device=/dev/net/tun
     
     permissions:
       contents: read
@@ -166,6 +168,9 @@ jobs:
         git submodule update --recursive
     
     - name: Run Renode emulation tests
+      env:
+        # Fail instead of skipping the network test if the TAP can't be opened
+        DMBOOT_TEST_NETWORK: "1"
       run: |
         ./scripts/run_renode_tests.sh
     
