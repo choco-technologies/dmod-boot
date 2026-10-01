@@ -18,6 +18,7 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `DMBOOT_EXTRA_FLASH_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `flash.dmd` files to include. Each file adds more flash modules to download at build time. |
 | `DMBOOT_EXTRA_SDCARD_DMD_FILES` | STRING | *(empty)* | Semicolon-separated list of additional `sdcard.dmd` files to include. Each file adds more sdcard modules to download at build time. |
 | `DMBOOT_MANIFEST_URL` | STRING | *(empty)* | Manifest path/URL to use with `dmf-get -m` flag for all module downloads. |
+| `DMBOOT_MODULE_TYPE` | STRING | `dmfc` | Preferred module file type passed to `dmf-get --type` (`dmfc` or `dmf`). Only the preferred type is downloaded; a module whose package has no file of that type falls back to the other one. |
 | `DMBOOT_EMULATION` | BOOL | `OFF` | Enable Renode emulation mode instead of hardware mode (OpenOCD). |
 | `DMBOOT_RENODE_WAIT_FOR_GDB` | BOOL | `OFF` | In emulation mode, keep the Renode machine paused until a GDB client (e.g. `monitor-gdb`) continues it, so no log output is produced before the monitor attaches. |
 | `DMBOOT_RENODE_UART_PORT` | STRING | `3456` | In emulation mode, TCP port of the raw Renode terminal attached to the board's console UART (`DMBOOT_RENODE_CONSOLE_UART`, set by the board config, e.g. `sysbus.usart1` for `stm32f746g-disco`). Connect to it (e.g. `nc localhost 3456`) to use the shell on that UART. Empty disables it. |
