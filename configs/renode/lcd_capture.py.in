@@ -1,0 +1,39 @@
+# lcd_capture.py - written by CMake from configs/renode/lcd_capture.py.in,
+# included by renode.resc when DMBOOT_RENODE_LCD_CAPTURE is set.
+#
+# Writes every frame the LCD controller (@DMBOOT_RENODE_LCD@) renders, when
+# it differs from the previous one, to @DMBOOT_RENODE_LCD_CAPTURE@:
+# a text header line "DMLCD <width> <height> <pixel format> <endianness>"
+# followed by the raw pixels in that format. The file is replaced, never
+# written in place, so a reader always sees a whole frame.
+import System
+from System.IO import File, FileMode, FileStream
+from System.Security.Cryptography import MD5
+from System.Text import Encoding
+
+lcd_video = monitor.Machine["@DMBOOT_RENODE_LCD@"]
+lcd_capture_path = "@DMBOOT_RENODE_LCD_CAPTURE@"
+lcd_capture_md5 = MD5.Create()
+lcd_capture_last = [None]
+
+
+def lcd_capture_frame(frame):
+    digest = System.Convert.ToBase64String(lcd_capture_md5.ComputeHash(frame))
+    if digest == lcd_capture_last[0]:
+        return
+    lcd_capture_last[0] = digest
+    header = Encoding.ASCII.GetBytes("DMLCD %d %d %s %s\n" % (
+        lcd_video.Width, lcd_video.Height, lcd_video.Format, lcd_video.Endianess))
+    temporary = lcd_capture_path + ".tmp"
+    stream = FileStream(temporary, FileMode.Create)
+    try:
+        stream.Write(header, 0, header.Length)
+        stream.Write(frame, 0, frame.Length)
+    finally:
+        stream.Close()
+    if File.Exists(lcd_capture_path):
+        File.Delete(lcd_capture_path)
+    File.Move(temporary, lcd_capture_path)
+
+
+lcd_video.FrameRendered += lcd_capture_frame

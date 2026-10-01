@@ -63,6 +63,20 @@ if(DMBOOT_RENODE_SDMMC AND DMBOOT_RENODE_SDCARD)
 else()
     set(DMBOOT_RENODE_SDCARD_SETUP "")
 endif()
+# Write the frames the board's LCD controller (if it names one) renders to a
+# file, so they can be checked from outside the emulator - see
+# configs/renode/lcd_capture.py.in for the format
+set(DMBOOT_RENODE_LCD_CAPTURE "" CACHE FILEPATH "File the frames the board's LCD controller renders are written to in emulation mode, whenever one changes; empty: not captured")
+if(DMBOOT_RENODE_LCD AND DMBOOT_RENODE_LCD_CAPTURE)
+    configure_file(
+        ${CMAKE_SOURCE_DIR}/configs/renode/lcd_capture.py.in
+        ${CMAKE_BINARY_DIR}/lcd_capture.py
+        @ONLY
+    )
+    set(DMBOOT_RENODE_LCD_SETUP "include @${CMAKE_BINARY_DIR}/lcd_capture.py")
+else()
+    set(DMBOOT_RENODE_LCD_SETUP "")
+endif()
 set(RENODE_SCRIPT_PATH "${CMAKE_BINARY_DIR}/renode.resc")
 configure_file(
     ${CMAKE_SOURCE_DIR}/configs/renode/renode.resc.in
