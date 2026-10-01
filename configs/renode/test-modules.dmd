@@ -1,0 +1,9 @@
+#
+# Modules the Renode emulation tests (scripts/run_renode_tests.sh) add to
+# the firmware through DMBOOT_EXTRA_FLASH_DMD_FILES - test tools only, not
+# part of the board's own flash.dmd.
+#
+# lcdtest (dmlcdtft): draws the patterns test_renode_lcd.py compares the
+# frames the emulated LCD controller renders against.
+#
+lcdtest

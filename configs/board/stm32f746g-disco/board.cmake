@@ -21,3 +21,8 @@ set(DMBOOT_RENODE_SDMMC_MODEL "${CMAKE_SOURCE_DIR}/configs/renode/STM32F7_SDMMC.
 set(DMBOOT_RENODE_SDMMC_DESCRIPTION "sdmmc: SD.STM32F7_SDMMC @ sysbus 0x40012c00 { IRQ -> nvic@49; DMAReceive -> dma2@3 }")
 set(DMBOOT_RENODE_SDCARD_DETECT_GPIO "sysbus.gpioPortC")
 set(DMBOOT_RENODE_SDCARD_DETECT_PIN 13)
+
+# LCD-TFT controller (LTDC, dmlcdtft) as named in the Renode platform -
+# emulation mode can write the frames it renders to a file (see
+# DMBOOT_RENODE_LCD_CAPTURE)
+set(DMBOOT_RENODE_LCD "sysbus.ltdc" CACHE STRING "Renode peripheral of the LCD controller")

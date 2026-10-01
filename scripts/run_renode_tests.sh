@@ -5,9 +5,13 @@
 # It builds the firmware with emulation mode, starts Renode, runs monitor-gdb
 # to capture firmware logs, verifies the expected log messages, checks that
 # the shell answers on the console UART, checks the SD card (an image with a
-# FAT16 partition inserted in the card slot: read, write, remount) and - when
-# it can open a TAP interface - checks the network (DHCP, ping both ways,
-# telnet).
+# FAT16 partition inserted in the card slot: read, write, remount), checks the
+# LCD (the frames the display controller renders show what lcdtest draws)
+# and - when it can open a TAP interface - checks the network (DHCP, ping
+# both ways, telnet).
+#
+# Test tools the steps need (lcdtest) come from configs/renode/test-modules.dmd,
+# added to the firmware through DMBOOT_EXTRA_FLASH_DMD_FILES.
 #
 # The network step needs root and /dev/net/tun (in Docker:
 # --cap-add=NET_ADMIN --device=/dev/net/tun). Without them it is skipped,
@@ -35,6 +39,9 @@ UART_PORT=3456
 SDCARD_IMAGE_SCRIPT="$SOURCE_DIR/scripts/make_sdcard_image.py"
 SDCARD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_sdcard.py"
 SDCARD_IMAGE="$BUILD_DIR/sdcard.img"
+LCD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_lcd.py"
+LCD_FRAME_FILE="$BUILD_DIR/lcd_frame.bin"
+TEST_MODULES_DMD="$SOURCE_DIR/configs/renode/test-modules.dmd"
 NETWORK_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_network.py"
 TAP_INTERFACE=tap0
 
@@ -43,9 +50,10 @@ TAP_INTERFACE=tap0
 MONITOR_TIMEOUT=300
 UART_TIMEOUT=90
 SDCARD_TIMEOUT=90
+LCD_TIMEOUT=120
 NETWORK_TIMEOUT=120
-# Renode has to outlive the monitor and the UART, SD card and network tests
-TESTS_TIMEOUT=$((UART_TIMEOUT + SDCARD_TIMEOUT + NETWORK_TIMEOUT))
+# Renode has to outlive the monitor and the UART, SD card, LCD and network tests
+TESTS_TIMEOUT=$((UART_TIMEOUT + SDCARD_TIMEOUT + LCD_TIMEOUT + NETWORK_TIMEOUT))
 CONNECT_TIMEOUT=$((MONITOR_TIMEOUT + TESTS_TIMEOUT + 60))
 
 # The network test needs a TAP interface: root and /dev/net/tun
@@ -72,7 +80,7 @@ echo ""
 # -------------------------------------------------------
 # Step 1 – Build firmware with emulation mode enabled
 # -------------------------------------------------------
-echo "[1/7] Building firmware with emulation mode enabled..."
+echo "[1/8] Building firmware with emulation mode enabled..."
 # The card image has to exist when CMake writes the Renode script
 mkdir -p "$BUILD_DIR"
 python3 "$SDCARD_IMAGE_SCRIPT" "$SDCARD_IMAGE"
@@ -83,6 +91,8 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DDMBOOT_RENODE_UART_PORT="$UART_PORT" \
       -DDMBOOT_RENODE_TAP="$RENODE_TAP" \
       -DDMBOOT_RENODE_SDCARD="$SDCARD_IMAGE" \
+      -DDMBOOT_RENODE_LCD_CAPTURE="$LCD_FRAME_FILE" \
+      -DDMBOOT_EXTRA_FLASH_DMD_FILES="$TEST_MODULES_DMD" \
       -S "$SOURCE_DIR" \
       -B "$BUILD_DIR"
 cmake --build "$BUILD_DIR" --config Debug
@@ -96,7 +106,7 @@ echo ""
 # -------------------------------------------------------
 # Step 2 – Verify install-firmware target
 # -------------------------------------------------------
-echo "[2/7] Testing install-firmware target..."
+echo "[2/8] Testing install-firmware target..."
 cmake --build "$BUILD_DIR" --target install-firmware
 if [ ! -f "$BUILD_DIR/renode_firmware.elf" ]; then
     echo "✗ renode_firmware.elf not found after install-firmware"
@@ -109,8 +119,10 @@ echo ""
 # -------------------------------------------------------
 # Step 3 – Start Renode in the background
 # -------------------------------------------------------
-echo "[3/7] Starting Renode emulation..."
+echo "[3/8] Starting Renode emulation..."
 CONNECT_LOG="$BUILD_DIR/connect.log"
+# No frame of an earlier run may pass for one of this run
+rm -f "$LCD_FRAME_FILE"
 timeout "$CONNECT_TIMEOUT" cmake --build "$BUILD_DIR" --target connect > "$CONNECT_LOG" 2>&1 &
 CONNECT_PID=$!
 
@@ -129,9 +141,9 @@ echo ""
 # -------------------------------------------------------
 # Step 4 – Run monitor-gdb and verify firmware logs
 # -------------------------------------------------------
-echo "[4/7] Running monitor-gdb to capture firmware logs..."
+echo "[4/8] Running monitor-gdb to capture firmware logs..."
 MONITOR_LOG="$BUILD_DIR/monitor.log"
-# The monitor stays attached through steps 5 to 7: it keeps resuming the
+# The monitor stays attached through steps 5 to 8: it keeps resuming the
 # target between its reads, whereas stopping it mid-read could leave the
 # target halted
 timeout "$((MONITOR_TIMEOUT + TESTS_TIMEOUT))" cmake --build "$BUILD_DIR" --target monitor-gdb > "$MONITOR_LOG" 2>&1 &
@@ -157,7 +169,7 @@ echo ""
 # -------------------------------------------------------
 # Step 5 – Check that the shell answers on the console UART
 # -------------------------------------------------------
-echo "[5/7] Checking the shell on the console UART..."
+echo "[5/8] Checking the shell on the console UART..."
 UART_STATUS=0
 python3 "$UART_TEST_SCRIPT" --port "$UART_PORT" --timeout "$UART_TIMEOUT" || UART_STATUS=$?
 echo ""
@@ -165,7 +177,7 @@ echo ""
 # -------------------------------------------------------
 # Step 6 – Check the SD card: read, write, remount
 # -------------------------------------------------------
-echo "[6/7] Checking the SD card..."
+echo "[6/8] Checking the SD card..."
 SDCARD_STATUS=0
 if [ "$UART_STATUS" -ne 0 ]; then
     echo "Skipped: the shell on the console UART does not work"
@@ -175,9 +187,22 @@ fi
 echo ""
 
 # -------------------------------------------------------
-# Step 7 – Check the network: DHCP, ping both ways, telnet
+# Step 7 – Check the LCD: the display shows what lcdtest draws
 # -------------------------------------------------------
-echo "[7/7] Checking the network..."
+echo "[7/8] Checking the LCD..."
+LCD_STATUS=0
+if [ "$UART_STATUS" -ne 0 ]; then
+    echo "Skipped: the shell on the console UART does not work"
+else
+    python3 "$LCD_TEST_SCRIPT" --frame-file "$LCD_FRAME_FILE" --port "$UART_PORT" \
+        --timeout "$LCD_TIMEOUT" || LCD_STATUS=$?
+fi
+echo ""
+
+# -------------------------------------------------------
+# Step 8 – Check the network: DHCP, ping both ways, telnet
+# -------------------------------------------------------
+echo "[8/8] Checking the network..."
 NETWORK_STATUS=0
 if [ "$UART_STATUS" -ne 0 ]; then
     echo "Skipped: the shell on the console UART does not work"
@@ -189,16 +214,16 @@ else
 fi
 pkill -f dmlog_monitor 2>/dev/null || true
 
-TEST_STATUS=$((UART_STATUS | SDCARD_STATUS | NETWORK_STATUS))
+TEST_STATUS=$((UART_STATUS | SDCARD_STATUS | LCD_STATUS | NETWORK_STATUS))
 echo ""
 echo "=============================================="
 if [ "$TEST_STATUS" -eq 0 ]; then
     echo " Renode emulation tests PASSED"
 else
     echo " Renode emulation tests FAILED"
-    # The monitor kept logging during steps 5 to 7 - whatever stopped the
-    # shell, the SD card or the network (e.g. a stack overflow) is at the end
-    # of its log
+    # The monitor kept logging during steps 5 to 8 - whatever stopped the
+    # shell, the SD card, the LCD or the network (e.g. a stack overflow) is at
+    # the end of its log
     echo "--- monitor.log (tail) ---"
     tail -n 40 "$MONITOR_LOG"
     echo "--- connect.log (tail) ---"
