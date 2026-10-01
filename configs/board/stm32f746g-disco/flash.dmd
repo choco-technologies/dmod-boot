@@ -53,3 +53,4 @@ dmfatfs
 mkfatfs
 automount service=automount@.ini
 automount rules=automount.rules
+dmlcdtft driver=board/stm32f746g-disco/lcd.ini
