@@ -48,6 +48,21 @@ if(DMBOOT_RENODE_ETHERNET AND DMBOOT_RENODE_TAP)
 else()
     set(DMBOOT_RENODE_NETWORK "")
 endif()
+# Insert an SD card image in the board's card slot (if it names one): the
+# board's SD host is replaced with its model (DMBOOT_RENODE_SDMMC_MODEL, C#
+# Renode compiles when it loads the script), the image attached to it and the
+# card detect pin driven low (inserted). Changes to the card are discarded.
+set(DMBOOT_RENODE_SDCARD "" CACHE FILEPATH "SD card image inserted in the board's card slot in emulation mode; empty: no card")
+if(DMBOOT_RENODE_SDMMC AND DMBOOT_RENODE_SDCARD)
+    if(NOT EXISTS "${DMBOOT_RENODE_SDCARD}")
+        message(FATAL_ERROR "DMBOOT_RENODE_SDCARD: ${DMBOOT_RENODE_SDCARD} does not exist")
+    endif()
+    file(SIZE "${DMBOOT_RENODE_SDCARD}" DMBOOT_RENODE_SDCARD_SIZE)
+    set(DMBOOT_RENODE_SDCARD_SETUP
+        "include @${DMBOOT_RENODE_SDMMC_MODEL}\nsysbus Unregister ${DMBOOT_RENODE_SDMMC}\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_SDMMC_DESCRIPTION}\"\nmachine SdCardFromFile @${DMBOOT_RENODE_SDCARD} ${DMBOOT_RENODE_SDMMC} ${DMBOOT_RENODE_SDCARD_SIZE} false \"sdcard\"\n${DMBOOT_RENODE_SDCARD_DETECT_GPIO} OnGPIO ${DMBOOT_RENODE_SDCARD_DETECT_PIN} false")
+else()
+    set(DMBOOT_RENODE_SDCARD_SETUP "")
+endif()
 set(RENODE_SCRIPT_PATH "${CMAKE_BINARY_DIR}/renode.resc")
 configure_file(
     ${CMAKE_SOURCE_DIR}/configs/renode/renode.resc.in
