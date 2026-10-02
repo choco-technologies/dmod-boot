@@ -7,3 +7,8 @@
 # frames the emulated LCD controller renders against.
 #
 lcdtest
+#
+# touchtest (dmft5336): prints the touches test_renode_touch.py injects into
+# the emulated touch panel.
+#
+touchtest
