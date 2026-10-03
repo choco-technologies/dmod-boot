@@ -14,6 +14,7 @@ TARGET_NAME="$2"
 PLATFORM_REPL="$3"
 MACHINE_NAME="$4"
 RENODE_SCRIPT="$5"
+MONITOR_PORT="$6"
 BUILD_DIR=$(dirname "$FIRMWARE_FILE")
 
 # Check if firmware file exists
@@ -28,6 +29,9 @@ echo "Platform: ${PLATFORM_REPL}"
 echo "Machine: ${MACHINE_NAME}"
 echo "Renode script: ${RENODE_SCRIPT}"
 echo "GDB server will be available on localhost:3333"
+if [ -n "$MONITOR_PORT" ]; then
+    echo "Renode monitor will be available on localhost:${MONITOR_PORT}"
+fi
 echo ""
 
 # Find Renode executable in PATH
@@ -44,9 +48,15 @@ RENODE_DIR=$(dirname "$RENODE_BIN")
 # Launch Renode with the temporary script
 # --disable-xwt: no GUI
 # --hide-monitor: no console (headless mode)
-# --port -2: random telnet port (we don't use telnet)
+# --port: the monitor on a telnet port instead (DMBOOT_RENODE_MONITOR_PORT),
+#         e.g. for tests that drive emulated peripherals
 # Change to Renode directory so platform files can be found
-cd "$RENODE_DIR" && renode --disable-xwt --hide-monitor -e "include @${RENODE_SCRIPT}" &
+if [ -n "$MONITOR_PORT" ]; then
+    MONITOR_OPTION="--port $MONITOR_PORT"
+else
+    MONITOR_OPTION="--hide-monitor"
+fi
+cd "$RENODE_DIR" && renode --disable-xwt $MONITOR_OPTION -e "include @${RENODE_SCRIPT}" &
 
 RENODE_PID=$!
 echo "Renode started with PID: $RENODE_PID"

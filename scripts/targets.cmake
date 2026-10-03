@@ -32,6 +32,9 @@ endif()
 # Expose the board's console UART (if it names one) as a raw TCP terminal, so
 # the shell running on it can be driven from outside the emulator
 set(DMBOOT_RENODE_UART_PORT "3456" CACHE STRING "TCP port of the Renode terminal attached to the console UART")
+# The Renode monitor on a telnet port, so the emulated peripherals can be
+# driven from outside (e.g. touches on the touch panel in the Renode tests)
+set(DMBOOT_RENODE_MONITOR_PORT "" CACHE STRING "TCP port of the Renode monitor in emulation mode; empty: no monitor port")
 if(DMBOOT_RENODE_CONSOLE_UART AND DMBOOT_RENODE_UART_PORT)
     set(DMBOOT_RENODE_UART_TERMINAL
         "emulation CreateServerSocketTerminal ${DMBOOT_RENODE_UART_PORT} \"console_uart\" false\nconnector Connect ${DMBOOT_RENODE_CONSOLE_UART} console_uart")
@@ -99,7 +102,8 @@ if(DMBOOT_EMULATION)
         ${TARGET}
         ${DMBOOT_RENODE_PLATFORM}
         ${DMBOOT_MCU_NAME}
-        ${RENODE_SCRIPT_PATH})
+        ${RENODE_SCRIPT_PATH}
+        "${DMBOOT_RENODE_MONITOR_PORT}")
     set(CONNECT_COMMENT "Starting Renode for ${TARGET}...")
 else()
     set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}

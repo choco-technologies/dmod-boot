@@ -54,3 +54,12 @@ mkfatfs
 automount service=automount@.ini
 automount rules=automount.rules
 dmlcdtft driver=board/stm32f746g-disco/lcd.ini
+#
+# Touch panel of the LCD: FT5336 on I2C3. dmft5336's touch.ini configures
+# the I2C3 pins, the dmi2c bus (/dev/dmi2cx/touch_i2c, its i2c_bus friend)
+# and the panel (/dev/touch, polled: its INT pin shares EXTI13 with the
+# microSD card detect) - dmi2c is only needed as a module here, its own
+# i2c3.ini would configure the same controller a second time.
+#
+dmi2c
+dmft5336 driver=board/stm32f746g-disco/touch.ini
