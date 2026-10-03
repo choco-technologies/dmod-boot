@@ -66,7 +66,8 @@ class Monitor:
 
 
 def point_line(x, y):
-    return re.compile(rf"^touch: 1/1 id=\d+ x={x} y={y} (down|contact)$")
+    # "move" since the standard dmdrvi input state, "contact" before it
+    return re.compile(rf"^touch: 1/1 id=\d+ x={x} y={y} (down|move|contact)$")
 
 
 def check_touches(term, monitor, touchscreen):
