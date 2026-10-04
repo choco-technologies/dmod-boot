@@ -150,6 +150,19 @@ SECTIONS
    __exidx_end__ = .;
    PROVIDE(__exidx_end__ = __exidx_end__);
 
+   /* The log ring buffer first in the RAM: aligned to its size, so that a
+    * Cortex-M7 can make it non-cacheable with one MPU region (the debugger
+    * reads and writes it behind the data cache) */
+   .logs (NOLOAD) :
+   {
+      . = ALIGN(__logs_size__);
+      __logs_start__ = .;
+      PROVIDE(__logs_start__ = __logs_start__);
+      . = __logs_start__ + __logs_size__;
+      __logs_end__ = .;
+      PROVIDE(__logs_end__ = __logs_end__);
+   } > ram
+
    .data :
    {
       . = ALIGN(4);
@@ -168,16 +181,6 @@ SECTIONS
    . = ALIGN(4);
    __data_end__ = .;
    PROVIDE(__data_end__ = __data_end__);
-
-    .logs (NOLOAD) :
-   {
-      . = ALIGN(4);
-      __logs_start__ = .;
-      PROVIDE(__logs_start__ = __logs_start__);
-      . = __logs_start__ + __logs_size__;
-      __logs_end__ = .;
-      PROVIDE(__logs_end__ = __logs_end__);
-   } > ram
 
    . = ALIGN(4);
 

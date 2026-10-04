@@ -237,6 +237,20 @@ cmake --build . --target monitor
 
 The monitor will display logs from the firmware in real-time. Press Ctrl+C to exit.
 
+The log buffer is the first section of the RAM (`.logs`): on a Cortex-M7 it
+is made non-cacheable with an MPU region, so the monitor reads and writes it
+past the data cache.
+
+### Caches (Cortex-M7)
+
+The instruction and data caches are enabled before `main()` runs
+(`src/arch/armv7/cortex-m7/caches.c`). External SDRAM is cached once its
+driver (dmfmc) has verified it; drivers that let a DMA controller or a
+peripheral see cached memory clean and invalidate it by address (dmsdio,
+dmlcdtft), the `dma` heap is the DTCM, which is never cached, and the module
+loader calls `Dmod_SyncCode()` once a module is in place, so its code
+reaches the instruction fetch.
+
 ### `monitor-gdb`
 Monitor logs from the firmware in real-time via GDB server. This target:
 - Automatically builds the `dmlog_monitor` tool for the host architecture
