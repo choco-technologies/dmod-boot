@@ -28,6 +28,7 @@ DMOD Boot supports embedding binary files into ROM at build time. This allows yo
    - Holds the views (`.dmv`) of the modules installed to flash: `dmf-get --views-dir` puts the views of module `X` in `DMBOOT_EVIEWS_DIR/X/`, i.e. `/eviews/X/` at boot time
    - Each module has its own directory, so views of different modules never overwrite each other
    - Views of the sdcard modules are not embedded - they stay in `build/sdcard/views/<module>/`
+   - Also holds the splash logo picked by `DMBOOT_SPLASH_LOGO`, unpacked into a `.dmvir` at `DMBOOT_SPLASH_LOGO_PATH` (default `/eviews/splash_logo.dmvir`, passed to the display driver in `$SPLASH_LOGO`)
 
 ## How It Works
 

@@ -6,6 +6,9 @@ has Renode write every frame the LCD controller renders to a file
 (DMBOOT_RENODE_LCD_CAPTURE). Driving the shell on the console UART, this
 script checks:
 
+- the splash screen (with --splash-logo): before anything is drawn, the
+  display shows the splash logo in the middle of a screen of SPLASH_COLOR
+  (the clear_color of dmlcdtft's lcd.ini for the board)
 - `lcdtest info`: the display's geometry and pixel format
 - `lcdtest selftest`: drawing and reading back the framebuffer
 - `lcdtest fill`, `bars` and `gradient` (the last one drawn through write()):
@@ -17,7 +20,7 @@ The expected pictures mirror dmlcdtft's tools/lcdtest. A frame matches when
 every channel of every pixel is within TOLERANCE of the 24-bit color drawn -
 the display stores RGB565, which loses the low bits.
 
-Usage: test_renode_lcd.py --frame-file FILE [--port PORT] [--timeout SECONDS]
+Usage: test_renode_lcd.py --frame-file FILE [--splash-logo DMVIR] [--port PORT] [--timeout SECONDS]
 """
 import argparse
 import os
@@ -35,6 +38,8 @@ HEIGHT = 272
 PIXEL_FORMAT = "rgb565"
 # RGB565 keeps 5/6 bits a channel: up to 7 levels lost by truncation
 TOLERANCE = 8
+# Background of the splash screen - clear_color in dmlcdtft's lcd.ini
+SPLASH_COLOR = (0x04, 0x14, 0x31)
 # Time the emulated display takes to show a new picture (it repaints at a
 # fixed rate) and the capture to reach the file
 FRAME_TIMEOUT = 15
@@ -61,6 +66,27 @@ def gradient_picture(x, y):
     """lcdtest gradient: red grows left to right, green top to bottom, blue the other way than red."""
     red = x * 255 // (WIDTH - 1)
     return (red, y * 255 // (HEIGHT - 1), 255 - red)
+
+
+def splash_picture(path):
+    """The splash screen: the logo of a .dmvir (RGB565A8) blended over SPLASH_COLOR, in the middle."""
+    with open(path, "rb") as logo:
+        data = logo.read()
+    if data[:4] != b"DMVI" or data[16] != 3:
+        raise ValueError(f"{path} is not an RGB565A8 .dmvir")
+    width, height = struct.unpack_from("<HH", data, 12)
+    stride, pixels, alpha_stride, alpha = struct.unpack_from("<IIII", data, 20)
+    left, top = (WIDTH - width) // 2, (HEIGHT - height) // 2
+
+    def picture(x, y):
+        lx, ly = x - left, y - top
+        if not (0 <= lx < width and 0 <= ly < height):
+            return SPLASH_COLOR
+        value, = struct.unpack_from("<H", data, pixels + ly * stride + 2 * lx)
+        a = data[alpha + ly * alpha_stride + lx]
+        color = ((value >> 11) * 255 // 31, ((value >> 5) & 63) * 255 // 63, (value & 31) * 255 // 31)
+        return tuple((c * a + b * (255 - a) + 127) // 255 for c, b in zip(color, SPLASH_COLOR))
+    return picture
 
 
 def decode_frame(data):
@@ -157,6 +183,7 @@ def wait_for_picture(path, picture, description):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--frame-file", required=True, help="DMBOOT_RENODE_LCD_CAPTURE of the build")
+    parser.add_argument("--splash-logo", help="the .dmvir of the splash logo (build/eviews/splash_logo.dmvir)")
     parser.add_argument("--port", type=int, default=3456)
     parser.add_argument("--timeout", type=float, default=60, help="seconds to wait for the shell")
     args = parser.parse_args()
@@ -164,6 +191,11 @@ def main():
     term = Terminal(connect("127.0.0.1", args.port, time.monotonic() + args.timeout))
     if not wait_for_prompt(term, time.monotonic() + args.timeout):
         print("✗ No shell prompt on the console UART")
+        return 1
+
+    # Nothing has drawn on the display yet: it still shows the splash screen
+    if args.splash_logo and not wait_for_picture(args.frame_file, splash_picture(args.splash_logo),
+                                                 "the display shows the splash screen"):
         return 1
 
     info = [f"resolution:   {WIDTH}x{HEIGHT}", f"pixel format: {PIXEL_FORMAT}"]
