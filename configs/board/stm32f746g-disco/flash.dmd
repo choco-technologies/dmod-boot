@@ -15,6 +15,7 @@ dmdma driver=board/stm32f746g-disco/dma.ini
 # "ifconfig eth0 up".
 #
 dmeth driver=board/stm32f746g-disco/eth0.ini
+telnetd driver=telnetd.ini
 dmnetbridge
 dmnetif
 dmarp
@@ -27,6 +28,9 @@ ping
 networkd service=networkd@.ini
 networkd rules=networkd.rules
 dmudp
+dmtcp
+ftpd service=ftpd@.ini
+ftpd service=ftpd@public.ini
 dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
 test_dmeth
