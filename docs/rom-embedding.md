@@ -22,6 +22,13 @@ DMOD Boot supports embedding binary files into ROM at build time. This allows yo
    - If no modules are defined, the file won't exist, which is not an error
    - Can contain library modules to be enabled or application modules to be run
 
+4. **`config_fs.dmffs`** (automatic) - dmffs image of `DMBOOT_CONFIG_DIR`, mounted at `/configs/`
+
+5. **`eviews_fs.dmffs`** (automatic) - dmffs image of `DMBOOT_EVIEWS_DIR`, mounted at `/eviews/`
+   - Holds the views (`.dmv`) of the modules installed to flash: `dmf-get --views-dir` puts the views of module `X` in `DMBOOT_EVIEWS_DIR/X/`, i.e. `/eviews/X/` at boot time
+   - Each module has its own directory, so views of different modules never overwrite each other
+   - Views of the sdcard modules are not embedded - they stay in `build/sdcard/views/<module>/`
+
 ## How It Works
 
 When DMOD Boot starts:
@@ -144,6 +151,9 @@ grep "__startup_dmp" build/dmboot.map
 
 # Check for user_data symbols
 grep "__user_data" build/dmboot.map
+
+# Check for config and embedded views filesystem symbols
+grep "__config_fs\|__eviews_fs" build/dmboot.map
 ```
 
 All should show the start, end, and size symbols with their addresses. Note that `modules.dmp` symbols will always be present, but may show zero size if no modules were defined.
