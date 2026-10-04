@@ -28,6 +28,9 @@ extern void* __modules_dmp_size;
 extern void* __config_fs_start;
 extern void* __config_fs_end;
 extern void* __config_fs_size;
+extern void* __eviews_fs_start;
+extern void* __eviews_fs_end;
+extern void* __eviews_fs_size;
 
 void delay(int cycles)
 {
@@ -365,41 +368,44 @@ static void setup_embedded_user_data(dmenv_ctx_t dmenv_ctx)
     }
 }
 
+static void mount_rom_filesystem(const char* name, void* fs_start, void* fs_end, const char* mount_point)
+{
+    size_t fs_size = (size_t)((uintptr_t)fs_end - (uintptr_t)fs_start);
+
+    DMOD_LOG_INFO("%s filesystem found in ROM: addr=0x%X, size=%u bytes\n",
+                  name, (uintptr_t)fs_start, (unsigned int)fs_size);
+
+    // Mount the dmffs filesystem at the given mount point
+    char mount_opts[128];
+    Dmod_SnPrintf(mount_opts, sizeof(mount_opts), "flash_addr=0x%X;flash_size=%u",
+             (uintptr_t)fs_start, (unsigned int)fs_size);
+
+    if(dmvfs_mount_fs("dmffs", mount_point, mount_opts))
+    {
+        DMOD_LOG_INFO("%s filesystem mounted at %s/\n", name, mount_point);
+    }
+    else
+    {
+        DMOD_LOG_ERROR("Failed to mount %s filesystem at %s/\n", name, mount_point);
+    }
+}
+
 static void mount_config_filesystem(void)
 {
-    void* config_fs_start = &__config_fs_start;
-    void* config_fs_end   = &__config_fs_end;
-    size_t config_fs_size = (size_t)((uintptr_t)config_fs_end - (uintptr_t)config_fs_start);
-    
-    // if(config_fs_size > 0)
-    {
-        DMOD_LOG_INFO("Config filesystem found in ROM: addr=0x%X, size=%u bytes\n", 
-                      (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
-        
-        // Mount the dmffs filesystem at /configs/
-        char mount_opts[128];
-        Dmod_SnPrintf(mount_opts, sizeof(mount_opts), "flash_addr=0x%X;flash_size=%u", 
-                 (uintptr_t)config_fs_start, (unsigned int)config_fs_size);
-        
-        if(dmvfs_mount_fs("dmffs", "/configs", mount_opts))
-        {
-            DMOD_LOG_INFO("Config filesystem mounted at /configs/\n");
-        }
-        else
-        {
-            DMOD_LOG_ERROR("Failed to mount config filesystem at /configs/\n");
-        }
-    }
-    // else
-    // {
-    //     DMOD_LOG_INFO("No config filesystem embedded in ROM\n");
-    // }
+    mount_rom_filesystem("Config", &__config_fs_start, &__config_fs_end, "/configs");
+}
+
+static void mount_eviews_filesystem(void)
+{
+    // Views of the modules installed to flash, one directory per module
+    mount_rom_filesystem("Embedded views", &__eviews_fs_start, &__eviews_fs_end, "/eviews");
 }
 
 static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
+    mount_eviews_filesystem();
     dmvfs_mount_fs("dmdevfs", "/dev", "/configs/drivers");
 }
 

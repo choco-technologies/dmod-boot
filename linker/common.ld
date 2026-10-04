@@ -125,6 +125,18 @@ SECTIONS
        PROVIDE(__config_fs_size = __config_fs_end - __config_fs_start);
    } > rom AT > rom
 
+   . = ALIGN(16);
+   .embedded.eviews_fs :
+   {
+       __eviews_fs_start = .;
+       PROVIDE(__eviews_fs_start = .);
+       KEEP(*(.embedded.eviews_fs))
+       __eviews_fs_end = .;
+       PROVIDE(__eviews_fs_end = .);
+       __eviews_fs_size = __eviews_fs_end - __eviews_fs_start;
+       PROVIDE(__eviews_fs_size = __eviews_fs_end - __eviews_fs_start);
+   } > rom AT > rom
+
    . = ALIGN(4);
    __exidx_start__ = .;
    PROVIDE(__exidx_start__ = __exidx_start__);

@@ -85,9 +85,11 @@ endif()
 # command-line arguments instead of a single "--config-map <value>" pair.
 set(DMBOOT_CONFIG_MAP "driver:${DMBOOT_CONFIG_DIR}/drivers\;rules:${DMBOOT_CONFIG_DIR}/rules\;service:${DMBOOT_CONFIG_DIR}/services")
 
-# Applications may ship views (.dmv); dmf-get installs them into DMBOOT_VIEWS_DIR
-# (the "views" resource of the module's .dmr, see ${views_dir} in docs/dmr-file-format.md).
-file(MAKE_DIRECTORY "${DMBOOT_VIEWS_DIR}")
+# Applications may ship views (.dmv - the "views" resource of the module's .dmr).
+# dmf-get installs them into <views dir>/<module>: views of the flash modules go to
+# DMBOOT_EVIEWS_DIR (embedded and mounted as /eviews/, see scripts/romfs.cmake),
+# views of the sdcard modules stay on the sdcard, in DMBOOT_SDCARD_VIEWS_DIR.
+file(MAKE_DIRECTORY "${DMBOOT_EVIEWS_DIR}")
 
 set(DMBOOT_MODULES_OUT_DIR "${CMAKE_BINARY_DIR}/dmf")
 set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_OUT_DIR}/.download_complete")
@@ -134,12 +136,12 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     if(DMBOOT_MANIFEST_URL)
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules (manifest: ${DMBOOT_MANIFEST_URL})..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_VIEWS_DIR}"
+            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}"
         )
     else()
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_VIEWS_DIR}"
+            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}"
         )
     endif()
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
@@ -169,6 +171,7 @@ endif()
 # ======================================================================
 set(DMBOOT_SDCARD_OUT_DIR "${CMAKE_BINARY_DIR}/sdcard")
 set(DMBOOT_SDCARD_MARKER_FILE "${DMBOOT_SDCARD_OUT_DIR}/.download_complete")
+set(DMBOOT_SDCARD_VIEWS_DIR "${DMBOOT_SDCARD_OUT_DIR}/views")
 
 if(DMBOOT_SDCARD_DMD_FILES)
     set(_SDCARD_DOWNLOAD_COMMANDS
@@ -179,12 +182,12 @@ if(DMBOOT_SDCARD_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_VIEWS_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}"
             )
         else()
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_VIEWS_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}"
             )
         endif()
     endforeach()

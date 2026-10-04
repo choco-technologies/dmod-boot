@@ -11,7 +11,7 @@ set(BOARD "" CACHE STRING "Board name (optional). If set, TARGET is derived from
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
-set(DMBOOT_VIEWS_DIR "${DMBOOT_CONFIG_DIR}/views" CACHE PATH "Directory where views (.dmv) of the selected applications are installed by dmf-get (defaults to <config dir>/views, i.e. /configs/views at boot time)")
+set(DMBOOT_EVIEWS_DIR "${CMAKE_BINARY_DIR}/eviews" CACHE PATH "Directory with views (.dmv) of the flash modules, one subdirectory per module; embedded as a dmffs image and mounted as /eviews/ (defaults to build/eviews)")
 set(DMBOOT_MAIN_MODULE "systemd" CACHE STRING "Name of the main module to start after boot")
 set(DMBOOT_MAIN_MODULE_CONFIG "" CACHE STRING "Configuration file for the main module (e.g. board/stm32f746g-disco.ini)")
 set(DMBOOT_MAIN_MODULE_ARGS "/configs/services /configs/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)")
@@ -114,10 +114,13 @@ else()
     message(STATUS "No user data file provided (USER_DATA_FILE not set or file doesn't exist)")
 endif()
 
-# Include romfs.cmake to handle config filesystem embedding
+# Include romfs.cmake to handle config and embedded views filesystems embedding
 include(scripts/romfs.cmake)
 if(CONFIG_FS_OBJECT)
     list(APPEND EMBEDDED_OBJECTS "${CONFIG_FS_OBJECT}")
+endif()
+if(EVIEWS_FS_OBJECT)
+    list(APPEND EMBEDDED_OBJECTS "${EVIEWS_FS_OBJECT}")
 endif()
 
 # Embed modules.dmp if it exists after build
