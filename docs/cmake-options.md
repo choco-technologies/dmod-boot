@@ -12,6 +12,7 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `BOARD` | STRING | *(empty)* | Board name (optional). When set, `TARGET` is derived from `configs/board/<BOARD>/board.cmake`. Examples: `stm32f746g-disco`, `t-deck-pro`. |
 | `STARTUP_DMP_FILE` | FILEPATH | *(empty)* | Path to an optional `.dmp` startup package file to embed in ROM. Loaded using `Dmod_AddPackageBuffer` at boot. |
 | `USER_DATA_FILE` | FILEPATH | *(empty)* | Path to an optional user data file to embed in ROM. Its address and size are accessible via `USER_DATA_ADDR` and `USER_DATA_SIZE` environment variables. |
+| `DMBOOT_VIEWS_DIR` | PATH | `<DMBOOT_CONFIG_DIR>/views` | Directory where `dmf-get --views-dir` installs views (`.dmv`) of the selected applications (`${views_dir}` in their `.dmr`). By default inside the config filesystem, i.e. `/configs/views` at boot time. |
 | `DMBOOT_CONFIG_DIR` | PATH | `<build>/configs` | Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time. |
 | `DMBOOT_MAIN_MODULE` | STRING | `dmell` | Name of the main module to start after boot. |
 | `DMBOOT_MAIN_MODULE_CONFIG` | STRING | *(empty)* | Configuration file for the main module (e.g. `board/stm32f746g-disco.ini`). Passed to `dmf-get` when downloading the main module. |
