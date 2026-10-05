@@ -9,7 +9,7 @@
 # LCD (the display shows the splash screen at boot, then what lcdtest draws),
 # checks the touch panel (touches injected through the Renode monitor reach
 # touchtest) and - when it can open a TAP interface - checks the network
-# (DHCP, ping both ways, telnet).
+# (DHCP, ping both ways, telnet, DNS lookup with the server from the lease).
 #
 # Test tools the steps need (lcdtest, touchtest) come from configs/renode/test-modules.dmd,
 # added to the firmware through DMBOOT_EXTRA_FLASH_DMD_FILES.
@@ -219,7 +219,7 @@ fi
 echo ""
 
 # -------------------------------------------------------
-# Step 9 – Check the network: DHCP, ping both ways, telnet
+# Step 9 – Check the network: DHCP, ping both ways, telnet, DNS
 # -------------------------------------------------------
 echo "[9/9] Checking the network..."
 NETWORK_STATUS=0
