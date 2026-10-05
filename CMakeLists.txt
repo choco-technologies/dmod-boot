@@ -195,6 +195,16 @@ target_link_options(${MODULE_NAME}.elf
         -Wl,-Map=${MODULE_NAME}.map
 )
 
+if(DMBOOT_EMULATION)
+    # Larger dmlog ring in emulation: the Renode tests attach the monitor
+    # after the board has booted and must still find the start of the log.
+    set(DMBOOT_EMULATION_LOGS_SIZE 65536 CACHE STRING "dmlog ring buffer size (bytes, power of two) in emulation builds")
+    target_link_options(${MODULE_NAME}.elf
+        PRIVATE
+            -Wl,--defsym=__dmboot_logs_size__=${DMBOOT_EMULATION_LOGS_SIZE}
+    )
+endif()
+
 target_link_libraries(${MODULE_NAME}.elf
     PRIVATE 
         dmod
