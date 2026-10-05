@@ -6,7 +6,7 @@
 # to capture firmware logs, verifies the expected log messages, checks that
 # the shell answers on the console UART, checks the SD card (an image with a
 # FAT16 partition inserted in the card slot: read, write, remount), checks the
-# LCD (the frames the display controller renders show what lcdtest draws),
+# LCD (the display shows the splash screen at boot, then what lcdtest draws),
 # checks the touch panel (touches injected through the Renode monitor reach
 # touchtest) and - when it can open a TAP interface - checks the network
 # (DHCP, ping both ways, telnet).
@@ -42,6 +42,7 @@ SDCARD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_sdcard.py"
 SDCARD_IMAGE="$BUILD_DIR/sdcard.img"
 LCD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_lcd.py"
 LCD_FRAME_FILE="$BUILD_DIR/lcd_frame.bin"
+SPLASH_LOGO="$BUILD_DIR/eviews/splash_logo.dmvir"
 TEST_MODULES_DMD="$SOURCE_DIR/configs/renode/test-modules.dmd"
 TOUCH_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_touch.py"
 MONITOR_PORT=3457
@@ -199,8 +200,8 @@ LCD_STATUS=0
 if [ "$UART_STATUS" -ne 0 ]; then
     echo "Skipped: the shell on the console UART does not work"
 else
-    python3 "$LCD_TEST_SCRIPT" --frame-file "$LCD_FRAME_FILE" --port "$UART_PORT" \
-        --timeout "$LCD_TIMEOUT" || LCD_STATUS=$?
+    python3 "$LCD_TEST_SCRIPT" --frame-file "$LCD_FRAME_FILE" --splash-logo "$SPLASH_LOGO" \
+        --port "$UART_PORT" --timeout "$LCD_TIMEOUT" || LCD_STATUS=$?
 fi
 echo ""
 

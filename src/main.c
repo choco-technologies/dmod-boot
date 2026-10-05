@@ -618,6 +618,11 @@ int main(int argc, char** argv)
     dmenv_seti(dmenv_ctx, "DMBOOT_EMULATION", DMBOOT_EMULATION_ENABLED);
     dmenv_set(dmenv_ctx, "DMOD_SHELL", DMBOOT_SHELL_STRING);
     dmenv_set(dmenv_ctx, "PWD", "/");
+    if(DMBOOT_SPLASH_LOGO_PATH_STRING[0] != '\0')
+    {
+        // Splash logo the display driver shows as soon as the display is up
+        dmenv_set(dmenv_ctx, "SPLASH_LOGO", DMBOOT_SPLASH_LOGO_PATH_STRING);
+    }
     
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);

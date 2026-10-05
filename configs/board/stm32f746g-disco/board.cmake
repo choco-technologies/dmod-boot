@@ -2,6 +2,10 @@
 # Sets TARGET for the build system
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller" FORCE)
 
+# Splash logo dmlcdtft shows on the 480x272 LCD as soon as it is up (an asset
+# of assets/splash/, see DMBOOT_SPLASH_LOGO)
+set(DMBOOT_SPLASH_LOGO "dmodos_logo_128" CACHE STRING "Splash logo the display driver shows at start")
+
 # UART the first console (tty0, dmuart "stlink_vcp" = USART1, the ST-Link
 # virtual COM port) runs on, as named in the Renode platform - emulation mode
 # exposes it as a TCP terminal (see DMBOOT_RENODE_UART_PORT)

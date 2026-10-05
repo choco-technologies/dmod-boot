@@ -49,6 +49,10 @@ endif()
 
 include(configs/mcu/${TARGET}.cmake)
 
+# Splash logo - after the board configuration, which picks the asset
+set(DMBOOT_SPLASH_LOGO "" CACHE STRING "Splash logo the display driver shows at start: name of an asset in assets/splash/ (e.g. dmodos_logo_128) or a path to a .dmvi file; empty: no logo")
+set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target, passed to the display driver in the SPLASH_LOGO environment variable; empty: not set")
+
 # Include toolchain configuration before project() to set compilers
 # Check for a local override first, then fall back to the dmod library
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
@@ -114,6 +118,9 @@ else()
     message(STATUS "No user data file provided (USER_DATA_FILE not set or file doesn't exist)")
 endif()
 
+# Splash logo, built into the embedded views filesystem (sets DMBOOT_SPLASH_LOGO_FILE)
+include(scripts/splash.cmake)
+
 # Include romfs.cmake to handle config and embedded views filesystems embedding
 include(scripts/romfs.cmake)
 if(CONFIG_FS_OBJECT)
@@ -176,6 +183,7 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_EMULATION_ENABLED=${DMBOOT_EMULATION}
         DMBOOT_SHELL_STRING="${DMBOOT_SHELL}"
         DMBOOT_MAIN_MODULE_ARGS_STRING="${DMBOOT_MAIN_MODULE_ARGS}"
+        DMBOOT_SPLASH_LOGO_PATH_STRING="${DMBOOT_SPLASH_LOGO_PATH}"
 )
 
 target_link_options(${MODULE_NAME}.elf

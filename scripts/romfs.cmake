@@ -43,11 +43,13 @@ endfunction()
 # Create a dmffs image from a directory and embed it into a ROM section
 #
 # Usage:
-#   dmboot_embed_dmffs(<name> <source_dir> <section> <out_object_var>)
+#   dmboot_embed_dmffs(<name> <source_dir> <section> <out_object_var> [<file>...])
 #
 # <name>     base name of the generated files (<build>/<name>.dmffs, <build>/__<name>.o)
 #            and of the generate_<name> target
 # <section>  linker section the image is placed in (see linker/common.ld)
+# <file>...  files the build itself puts into <source_dir> (the image is
+#            rebuilt when they change)
 #
 function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     file(MAKE_DIRECTORY "${sourceDir}")
@@ -62,7 +64,7 @@ function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     add_custom_command(
         OUTPUT "${FS_IMAGE}"
         COMMAND ${MAKE_DMFFS_COMMAND} "${sourceDir}" "${FS_IMAGE}"
-        DEPENDS "${sourceDir}" "${DMBOOT_MODULES_MARKER_FILE}" download_modules
+        DEPENDS "${sourceDir}" "${DMBOOT_MODULES_MARKER_FILE}" download_modules ${ARGN}
         COMMENT "Creating ${name} filesystem image from ${sourceDir}"
         VERBATIM
     )
@@ -102,7 +104,8 @@ endif()
 # one subdirectory per module (created by dmf-get --views-dir)
 if(DMBOOT_EVIEWS_DIR)
     message(STATUS "Embedded views directory specified: ${DMBOOT_EVIEWS_DIR}")
-    dmboot_embed_dmffs(eviews_fs "${DMBOOT_EVIEWS_DIR}" .embedded.eviews_fs EVIEWS_FS_OBJECT)
+    # The splash logo (scripts/splash.cmake) is built into it too
+    dmboot_embed_dmffs(eviews_fs "${DMBOOT_EVIEWS_DIR}" .embedded.eviews_fs EVIEWS_FS_OBJECT ${DMBOOT_SPLASH_LOGO_FILE})
     set(EVIEWS_FS_IMAGE "${CMAKE_BINARY_DIR}/eviews_fs.dmffs")
 else()
     message(STATUS "No embedded views directory specified (DMBOOT_EVIEWS_DIR not set)")
