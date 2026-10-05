@@ -22,6 +22,21 @@ the board.
 | Source of **every** dynamic module | `/data/projects/chocotechnologies/public/<module>` (e.g. `dmudp`, `dmell`, `dmeth`) |
 | dmod library itself | `/data/projects/chocotechnologies/public/dmod` (also vendored as `<dmod-boot>/lib/dmod`) |
 
+**Always build and flash from `<dmod-boot>/build`** - the user keeps it
+current. Do not create other `build-*` directories (in the repo or the
+scratchpad) to flash from; an old one holds old modules (once: dmfmc 1.0.2
+without the SDRAM cache - every frame 15x slower) and nobody notices. Make
+another one only to compare two builds, say so, and delete it afterwards.
+Stage locally built modules into `build/dmf` (see below) and add what the
+board lacks (e.g. dmview) through `DMBOOT_EXTRA_FLASH_DMD_FILES` /
+`DMBOOT_MANIFEST_URL` pointing at files that outlive the session - not the
+scratchpad.
+
+**dmf-get caches manifests.** A module it fetches can be older than its
+latest release (dmview 0.6 with 0.7 out). Check `build/dmf/<module>_version.txt`
+against `gh release list -R choco-technologies/<module>`; when it is behind,
+`dmf-get --clear-cache` and `rm build/dmf/.download_complete` before the build.
+
 Current build config: `-DBOARD=stm32f746g-disco` (→ `TARGET=STM32F746xG`,
 `DMOD_TOOLS_NAME=arch/armv7/cortex-m7`), `CMAKE_BUILD_TYPE=Debug`.
 Re-configure from scratch with:
