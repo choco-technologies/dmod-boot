@@ -137,3 +137,37 @@ add_custom_target(debug
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Starting GDB and connecting to OpenOCD..."
 )
+
+# ======================================================================
+#               Uploading Files (YMODEM over the console)
+# ======================================================================
+# Files the firmware does not hold - the sdcard modules' views, anything
+# for the SD card - sent to the device over its UART console: dmell's
+# `ymodem` command receives them (scripts/ymodem_send.py types it).
+#   upload-files   the files, to the device running (its console on DMBOOT_UPLOAD_PORT)
+#   install-all    the firmware, then the files (waiting for the device to start)
+set(DMBOOT_UPLOAD_PORT "/dev/ttyACM0" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
+set(DMBOOT_UPLOAD_BAUD "921600" CACHE STRING "Baud rate of DMBOOT_UPLOAD_PORT")
+set(DMBOOT_UPLOAD_DEST "/mnt/dmsdio0_0p1" CACHE STRING "Directory on the device the uploaded files go to (their paths under it)")
+set(DMBOOT_UPLOAD_SOURCES "${CMAKE_BINARY_DIR}/sdcard" CACHE STRING "Files and directories uploaded (semicolon-separated; SRC=NAME puts SRC as NAME); default: build/sdcard")
+set(DMBOOT_UPLOAD_BLOCK "1024" CACHE STRING "YMODEM block size, 128 or 1024")
+set(DMBOOT_UPLOAD_WAIT "60" CACHE STRING "install-all: seconds the device may take to start before it receives the files")
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    set(DMBOOT_UPLOAD_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py
+        --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --dest ${DMBOOT_UPLOAD_DEST} --block ${DMBOOT_UPLOAD_BLOCK})
+    add_custom_target(upload-files
+        COMMAND ${DMBOOT_UPLOAD_COMMAND} ${DMBOOT_UPLOAD_SOURCES}
+        USES_TERMINAL
+        COMMENT "Uploading files to ${DMBOOT_UPLOAD_DEST} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
+    )
+    add_custom_target(install-all
+        COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
+        DEPENDS install-firmware
+        USES_TERMINAL
+        COMMENT "Uploading files to ${DMBOOT_UPLOAD_DEST} once ${TARGET} has started..."
+    )
+else()
+    message(STATUS "Python 3 not found - the upload-files and install-all targets are not available")
+endif()

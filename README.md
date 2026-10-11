@@ -283,3 +283,32 @@ Start GDB and connect to OpenOCD for debugging.
 ```bash
 cmake --build . --target debug
 ```
+
+### `upload-files` / `install-all`
+Send files the firmware does not hold (views, configurations, anything for
+the SD card) to the device over its UART console, with YMODEM: dmell's
+`ymodem recv` command receives them, `scripts/ymodem_send.py` (Python 3,
+no pyserial needed) types it and sends the files - their paths kept under
+the destination directory.
+
+- `upload-files` - to a device that is running
+- `install-all` - `install-firmware`, then the files once the device has started
+
+```bash
+cmake --build . --target upload-files
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DMBOOT_UPLOAD_PORT` | `/dev/ttyACM0` | The device's console |
+| `DMBOOT_UPLOAD_BAUD` | `921600` | Its baud rate |
+| `DMBOOT_UPLOAD_DEST` | `/mnt/dmsdio0_0p1` | Directory on the device |
+| `DMBOOT_UPLOAD_SOURCES` | `build/sdcard` | Files and directories (`SRC=NAME` sends SRC as NAME) |
+| `DMBOOT_UPLOAD_BLOCK` | `1024` | YMODEM block size (128 or 1024) |
+| `DMBOOT_UPLOAD_WAIT` | `60` | `install-all`: seconds the device may take to start |
+
+The script works on its own too:
+
+```bash
+scripts/ymodem_send.py --dest /mnt/dmsdio0_0p1/views view.dmv fonts/
+```
