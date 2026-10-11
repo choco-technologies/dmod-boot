@@ -144,6 +144,13 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
             COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}"
         )
     endif()
+    if(DMBOOT_EMULATION)
+        # Renode's USART cannot be served by DMA: the UARTs receive by interrupt
+        list(APPEND _FLASH_DOWNLOAD_COMMANDS
+            COMMAND ${CMAKE_COMMAND} -DDMUART_CONFIG_DIR=${DMBOOT_CONFIG_DIR}/drivers/dmuart
+                -P "${CMAKE_SOURCE_DIR}/scripts/emulation_uart_config.cmake"
+        )
+    endif()
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
     )
