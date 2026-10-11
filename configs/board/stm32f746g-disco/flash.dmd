@@ -74,3 +74,24 @@ dmft5336 driver=board/stm32f746g-disco/touch.ini
 #
 dmsai
 dmwm8994 driver=board/stm32f746g-disco/codec-with-touch.ini
+#
+# The audio service: dmaudio.rules starts a dmaudio@<name> for every audio
+# device dmdevfs reports - here /dev/wm8994 -, mixing what the applications
+# play (libdmaudio) into it.
+#
+dmaudio service=dmaudio@.ini
+dmaudio rules=dmaudio.rules
+#
+# The display service: dmview.rules starts a dmview@<name> for the LCD
+# (/dev/dmlcdtft0), which shows what the applications claim for it - with
+# the channel between an application and its view (0.10), which carhmi needs.
+#
+dmview@>=0.10
+dmview@>=0.10 service=dmview@.ini
+dmview@>=0.10 rules=dmview.rules
+#
+# The car HMI demo (choco-technologies/carhmi-demo): a service that claims the
+# display for its view - on the SD card, see sdcard.dmd - and plays the MP3
+# files of the card's music/ directory through dmaudio.
+#
+carhmi service=carhmi.ini

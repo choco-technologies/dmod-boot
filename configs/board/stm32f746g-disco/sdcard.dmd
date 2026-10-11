@@ -1,3 +1,9 @@
 #
 # STM32F746G Discovery board sdcard modules - board-specific modules for sdcard
 #
+#
+# The car HMI's view (carhmi.dmv with its fonts and images, ~320 kB - too big
+# for the flash): installed to build/sdcard/views/carhmi_view/, it goes to
+# <card>/views/carhmi_view/ (upload-files), where carhmi.ini looks for it.
+#
+carhmi_view
