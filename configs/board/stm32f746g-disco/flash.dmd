@@ -63,3 +63,14 @@ dmlcdtft driver=board/stm32f746g-disco/lcd.ini
 #
 dmi2c
 dmft5336 driver=board/stm32f746g-disco/touch.ini
+#
+# Audio: the WM8994 codec - stereo headphone output and the board's digital
+# microphone - on SAI2 (PCM, dmsai) with I2C3 for its registers. The config
+# joins the touch panel's I2C3 bus node (touch.ini above) instead of
+# configuring I2C3 again, so both work at once. The nodes are /dev/wm8994
+# (codec controls and stereo PCM) and /dev/dmsai1 (the raw SAI stream the codec
+# drives); an application plays through /dev/wm8994 with the DMDRVI_IOCTL_AUDIO_*
+# commands (dmdrvi 2.7). dmsai needs dmclk (SAI clock), dmdma (DMA2) and dmheap.
+#
+dmsai
+dmwm8994 driver=board/stm32f746g-disco/codec-with-touch.ini

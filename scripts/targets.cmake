@@ -51,6 +51,21 @@ if(DMBOOT_RENODE_ETHERNET AND DMBOOT_RENODE_TAP)
 else()
     set(DMBOOT_RENODE_NETWORK "")
 endif()
+# Play audio through the board's codec (if it names the models): the DMA2
+# controller is replaced with one that has circular mode and half-transfer
+# interrupts, and the SAI and the WM8994 codec are added (see
+# DMBOOT_RENODE_AUDIO_MODEL, a C# model Renode compiles when it loads the
+# script). What the codec plays is written to a file as raw stereo 16-bit
+# little-endian samples. The SD card setup below connects to DMA2 by name, so
+# DMA2 has to be replaced first.
+set(DMBOOT_RENODE_AUDIO_CAPTURE "" CACHE FILEPATH "File the board's audio codec writes what it plays to in emulation mode (raw stereo s16le); empty: the audio models are not loaded")
+if(DMBOOT_RENODE_AUDIO_MODEL AND DMBOOT_RENODE_AUDIO_CAPTURE)
+    string(REPLACE "<capture>" "${DMBOOT_RENODE_AUDIO_CAPTURE}" _AUDIO_CODEC "${DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION}")
+    set(DMBOOT_RENODE_AUDIO_SETUP
+        "include @${DMBOOT_RENODE_AUDIO_MODEL}\nsysbus Unregister ${DMBOOT_RENODE_AUDIO_DMA}\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION}\"\nmachine LoadPlatformDescriptionFromString \"${_AUDIO_CODEC}\"\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION}\"")
+else()
+    set(DMBOOT_RENODE_AUDIO_SETUP "")
+endif()
 # Insert an SD card image in the board's card slot (if it names one): the
 # board's SD host is replaced with its model (DMBOOT_RENODE_SDMMC_MODEL, C#
 # Renode compiles when it loads the script), the image attached to it and the

@@ -6,6 +6,8 @@ sysbus LoadELF @@CMAKE_BINARY_DIR@/renode_firmware.elf
 
 machine StartGdbServer 3333
 
+@DMBOOT_RENODE_AUDIO_SETUP@
+
 @DMBOOT_RENODE_SDCARD_SETUP@
 
 @DMBOOT_RENODE_LCD_SETUP@
