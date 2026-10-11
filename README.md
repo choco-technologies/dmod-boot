@@ -104,6 +104,32 @@ cmake --build build
 
 Board configuration files are located in `configs/board/<BOARD>/board.cmake`. When `BOARD` is set, the `TARGET` parameter is ignored.
 
+### STM32F746G-DISCO: the Car HMI Demo
+
+The `stm32f746g-disco` board runs the [car HMI demo](https://github.com/choco-technologies/carhmi-demo)
+out of the box: its `flash.dmd` starts the display (`dmview`), audio
+(`dmaudio`, on the WM8994 codec) and the `carhmi` service, and its
+`sdcard.dmd` downloads the view, which is too big for the flash, to
+`build/sdcard`. Flash the firmware, then send the view to the card in the slot
+(FAT, first partition):
+
+```bash
+cmake -DBOARD=stm32f746g-disco -S . -B build
+cmake --build build
+cmake --build build --target install-all     # the firmware, then build/sdcard over the console
+```
+
+The player plays the MP3 files of `music/` on the card. Copy them there on a
+PC, or send them over the console:
+
+```bash
+scripts/ymodem_send.py --dest /mnt/dmsdio0_0p1/music *.mp3
+```
+
+carhmi reads the directory when it starts: restart it (`service restart carhmi`)
+or the board after adding files - a few seconds after the transfer, so FAT has
+written them to the card.
+
 ### Building for LILYGO T-Deck Pro
 
 The T-Deck Pro is based on the **ESP32-S3FN16R8** (Xtensa LX7 dual-core, 240 MHz, 16 MB flash, 8 MB PSRAM).

@@ -12,6 +12,7 @@ mount
 umount
 cat
 catini
+ymodem
 tty
 memory
 systemd
