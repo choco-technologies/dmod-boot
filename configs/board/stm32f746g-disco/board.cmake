@@ -30,3 +30,16 @@ set(DMBOOT_RENODE_SDCARD_DETECT_PIN 13)
 # emulation mode can write the frames it renders to a file (see
 # DMBOOT_RENODE_LCD_CAPTURE)
 set(DMBOOT_RENODE_LCD "sysbus.ltdc" CACHE STRING "Renode peripheral of the LCD controller")
+
+# Audio (WM8994 codec on I2C3 address 0x1A, fed by SAI2): Renode has neither
+# peripheral, and its DMA2 has no circular mode or half-transfer interrupt,
+# which the SAI stream needs - configs/renode/STM32F7_Audio.cs supplies all
+# three. Emulation mode loads them when DMBOOT_RENODE_AUDIO_CAPTURE is set
+# (see there); DMA2 is replaced by a model that moves peripheral-to-memory
+# data like Renode's own, so the SD host still works. <capture> stands for the
+# file the codec writes what it plays to.
+set(DMBOOT_RENODE_AUDIO_MODEL "${CMAKE_SOURCE_DIR}/configs/renode/STM32F7_Audio.cs")
+set(DMBOOT_RENODE_AUDIO_DMA "sysbus.dma2")
+set(DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION "dma2: DMA.STM32F7_AudioDMA @ sysbus 0x40026400 { [0-7] -> nvic@[56-60,68-70] }")
+set(DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION "wm8994: Sound.WM8994 @ i2c3 0x1A { outputFile: \\\"<capture>\\\" }")
+set(DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION "sai2: Sound.STM32F7_SAI @ sysbus 0x40015C00 { codec: wm8994; DmaRequestA -> dma2@4; DmaRequestB -> dma2@6 }")

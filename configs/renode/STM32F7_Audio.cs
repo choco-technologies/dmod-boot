@@ -21,9 +21,9 @@
 // LRCLK/BCLK inversion) and writes the DAC1 samples it receives to OutputFile
 // as raw stereo s16le (silence while DAC1 is muted).
 //
-// Not wired into renode.resc yet. To use it, add to the script before
-// LoadELF (the codec node also needs dmsai/dmwm8994 in the firmware and the
-// FT5336 touch config left out, since both own I2C3):
+// Loaded by renode.resc when DMBOOT_RENODE_AUDIO_CAPTURE names a file (the
+// board's board.cmake names the peripherals, scripts/targets.cmake writes the
+// script lines):
 //
 //   include @configs/renode/STM32F7_Audio.cs
 //   sysbus Unregister sysbus.dma2
@@ -31,7 +31,10 @@
 //   machine LoadPlatformDescriptionFromString "wm8994: Sound.WM8994 @ i2c3 0x1A { outputFile: \"/tmp/codec.pcm\" }"
 //   machine LoadPlatformDescriptionFromString "sai2: Sound.STM32F7_SAI @ sysbus 0x40015C00 { codec: wm8994; DmaRequestA -> dma2@4; DmaRequestB -> dma2@6 }"
 //
-// and convert the capture with e.g. "sox -t raw -r 48000 -e signed -b 16 -c 2 /tmp/codec.pcm out.wav".
+// DMA2 has to be replaced before anything that connects to it by name (the SD
+// host). The codec shares I2C3 with the touch panel, as on the board
+// (flash.dmd). Convert the capture with e.g.
+// "sox -t raw -r 48000 -e signed -b 16 -c 2 /tmp/codec.pcm out.wav".
 //
 using System;
 using System.Collections.Generic;
