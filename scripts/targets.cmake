@@ -184,14 +184,16 @@ if(Python3_Interpreter_FOUND)
     else()
         set(DMBOOT_UPLOAD_WHERE "the SD card (${DMBOOT_UPLOAD_CARD})/${DMBOOT_UPLOAD_DEST}")
     endif()
+    # (build/sdcard - the sdcard modules - is made by download_sdcard_modules: first)
     add_custom_target(upload-files
         COMMAND ${DMBOOT_UPLOAD_COMMAND} ${DMBOOT_UPLOAD_SOURCES}
+        DEPENDS download_sdcard_modules
         USES_TERMINAL
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
     )
     add_custom_target(install-all
         COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
-        DEPENDS install-firmware
+        DEPENDS install-firmware download_sdcard_modules
         USES_TERMINAL
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
