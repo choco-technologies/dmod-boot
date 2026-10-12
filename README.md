@@ -123,7 +123,7 @@ The player plays the MP3 files of `music/` on the card. Copy them there on a
 PC, or send them over the console:
 
 ```bash
-scripts/ymodem_send.py --dest /mnt/dmsdio0_0p1/music *.mp3
+scripts/ymodem_send.py --dest music *.mp3
 ```
 
 carhmi reads the directory when it starts: restart it (`service restart carhmi`)
@@ -317,6 +317,12 @@ the SD card) to the device over its UART console, with YMODEM: dmell's
 no pyserial needed) types it and sends the files - their paths kept under
 the destination directory.
 
+The files go to the SD card: the script asks the device what is mounted in
+`/mnt` - automount mounts a card at `/mnt/<label>`, or `/mnt/<node name>`
+without one (`/mnt/dmsdio0_0p1`) - and sends them there when there is one
+card. With several, `DMBOOT_UPLOAD_CARD` names it; an absolute
+`DMBOOT_UPLOAD_DEST` is used as it is.
+
 - `upload-files` - to a device that is running
 - `install-all` - `install-firmware`, then the files once the device has started
 
@@ -328,7 +334,8 @@ cmake --build . --target upload-files
 |----------|---------|-------------|
 | `DMBOOT_UPLOAD_PORT` | `/dev/ttyACM0` | The device's console |
 | `DMBOOT_UPLOAD_BAUD` | `921600` | Its baud rate |
-| `DMBOOT_UPLOAD_DEST` | `/mnt/dmsdio0_0p1` | Directory on the device |
+| `DMBOOT_UPLOAD_DEST` | empty | Directory on the card (relative, empty: its root), or an absolute one |
+| `DMBOOT_UPLOAD_CARD` | `auto` | The card: its name in `/mnt`, `auto` (the one there is), `none` (the shell's directory) |
 | `DMBOOT_UPLOAD_SOURCES` | `build/sdcard` | Files and directories (`SRC=NAME` sends SRC as NAME) |
 | `DMBOOT_UPLOAD_BLOCK` | `1024` | YMODEM block size (128 or 1024) |
 | `DMBOOT_UPLOAD_WAIT` | `60` | `install-all`: seconds the device may take to start |
@@ -336,5 +343,7 @@ cmake --build . --target upload-files
 The script works on its own too:
 
 ```bash
-scripts/ymodem_send.py --dest /mnt/dmsdio0_0p1/views view.dmv fonts/
+scripts/ymodem_send.py --dest views view.dmv fonts/            # views/ on the card
+scripts/ymodem_send.py --card bootfs --dest views view.dmv      # of the card in /mnt/bootfs
+scripts/ymodem_send.py --dest /mnt/sd/views view.dmv            # an absolute directory
 ```
