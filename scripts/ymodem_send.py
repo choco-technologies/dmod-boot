@@ -192,14 +192,14 @@ def mounted_cards(link):
     link.write(b'ls /mnt\r')
     said = link.drain(0.5).decode(errors='replace')
     said = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', said)
-    if 'ERROR' in said:
-        return []                       # (no /mnt)
-    said = said.replace('ls /mnt', '', 1)                   # (the echo - it may run into what follows)
+    if 'ls /mnt' not in said or 'ERROR' in said:
+        return []                       # (the shell not answering yet - starting -, or no /mnt)
+    said = said.split('ls /mnt', 1)[1]                      # (what the echo is followed by - it may run into it)
     said = re.sub(r'\S*@\S*>', '', said)                   # (the prompts)
     names = []
     for line in said.replace('\r', '\n').split('\n'):
         names += [n for n in re.split(r'\s{2,}', line.strip()) if n]
-    return names
+    return [n for n in names if re.fullmatch(r'[\x21-\x7e][\x20-\x7e]*', n)]   # (not what the line had before)
 
 
 def find_card(link, card, wait, log):
