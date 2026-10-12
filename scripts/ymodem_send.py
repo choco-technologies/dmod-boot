@@ -5,9 +5,14 @@ The device's dmell receives them with its `ymodem` command: this script
 types `ymodem recv -d DEST` into the console, waits for the receiver's
 'C' and sends every file - its name (with directories) under DEST:
 
-    ymodem_send.py --port /dev/ttyACM0 --dest /mnt/dmsdio0_0p1 build/sdcard
-    ymodem_send.py --dest /mnt/dmsdio0_0p1/views view.dmv fonts/
-    ymodem_send.py --dest /mnt/sd local/dir=remote/dir
+    ymodem_send.py build/sdcard                         (the card's root)
+    ymodem_send.py --dest views view.dmv fonts/         (views/ on the card)
+    ymodem_send.py --dest /mnt/sd local/dir=remote/dir  (that directory)
+
+A DEST that is not absolute is on the SD card: the card is found on the
+device - `ls /mnt`, where automount mounts every card (/mnt/<label>, or
+/mnt/<node name>) - when it has one; --card NAME picks one of several,
+--card none sends under the shell's current directory instead.
 
 A FILE is sent by its name, a DIR with everything in it (names relative
 to it), SRC=NAME as NAME (a directory: under NAME). Only the standard
@@ -16,6 +21,7 @@ library (termios): no pyserial needed.
 
 import argparse
 import os
+import re
 import select
 import sys
 import termios
@@ -179,6 +185,52 @@ def receiver_ready(link, command, timeout):
     return False
 
 
+def mounted_cards(link):
+    """What /mnt holds on the device - the cards automount mounted"""
+    link.write(b'\r')
+    link.drain()
+    link.write(b'ls /mnt\r')
+    said = link.drain(0.5).decode(errors='replace')
+    said = re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', said)
+    if 'ERROR' in said:
+        return []                       # (no /mnt)
+    said = said.replace('ls /mnt', '', 1)                   # (the echo - it may run into what follows)
+    said = re.sub(r'\S*@\S*>', '', said)                   # (the prompts)
+    names = []
+    for line in said.replace('\r', '\n').split('\n'):
+        names += [n for n in re.split(r'\s{2,}', line.strip()) if n]
+    return names
+
+
+def find_card(link, card, wait, log):
+    """The card's directory: CARD, or the one card mounted - looked for again for `wait` seconds"""
+    until = time.monotonic() + wait
+    while True:
+        cards = mounted_cards(link)
+        if card != 'auto' and card in cards:
+            return f'/mnt/{card}'
+        if card == 'auto' and len(cards) == 1:
+            return f'/mnt/{cards[0]}'
+        if card == 'auto' and len(cards) > 1:
+            raise Failure(f'more than one card on the device ({", ".join(cards)}): pick one with --card, '
+                          'or give an absolute --dest')
+        if time.monotonic() >= until:
+            what = f'no card {card} in /mnt' if card != 'auto' else 'no card mounted in /mnt'
+            raise Failure(f'{what} (found: {", ".join(cards) or "nothing"}) - is the card in, formatted (FAT)?')
+        log('  waiting for the card ...')
+        time.sleep(2.0)
+
+
+def destination(link, args, log):
+    """Where the files go: --dest as it is (absolute), or under the card"""
+    if args.dest.startswith('/') or args.card == 'none':
+        return args.dest
+    root = find_card(link, args.card, args.wait, log)
+    dest = f'{root}/{args.dest.strip("/")}' if args.dest.strip('/') else root
+    log(f'  to {dest}')
+    return dest
+
+
 def files_of(sources):
     """(local path, name sent) of every source"""
     out = []
@@ -205,7 +257,11 @@ def main():
     ap.add_argument('sources', nargs='+', help='FILE, DIR or SRC=NAME')
     ap.add_argument('--port', default='/dev/ttyACM0', help='the device console (default /dev/ttyACM0)')
     ap.add_argument('--baud', type=int, default=921600)
-    ap.add_argument('--dest', default='', help='the directory on the device the names are under')
+    ap.add_argument('--dest', default='', help='the directory on the device the names are under: absolute, '
+                    'or on the SD card (default: the card\'s root)')
+    ap.add_argument('--card', default='auto', metavar='NAME',
+                    help='the card a relative --dest is on: its name in /mnt (auto: the one there is; none: '
+                    'under the shell\'s current directory)')
     ap.add_argument("--block", type=int, choices=(128, 1024), default=1024,
                     help='YMODEM block size (default 1024)')
     ap.add_argument('--no-command', action='store_true', help='ymodem recv is already running')
@@ -227,7 +283,8 @@ def main():
         if args.no_command:
             wait_for(link, (CRC,), 15.0, 'the receiver')
         else:
-            command = f'ymodem recv -d {args.dest}' if args.dest else 'ymodem recv'
+            dest = destination(link, args, log)
+            command = f'ymodem recv -d {dest}' if dest else 'ymodem recv'
             until = time.monotonic() + args.wait
             while True:
                 link.write(b'\r')

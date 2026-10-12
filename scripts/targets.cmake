@@ -161,9 +161,13 @@ add_custom_target(debug
 # `ymodem` command receives them (scripts/ymodem_send.py types it).
 #   upload-files   the files, to the device running (its console on DMBOOT_UPLOAD_PORT)
 #   install-all    the firmware, then the files (waiting for the device to start)
+# They go to the SD card the script finds on the device (in /mnt, where
+# automount mounts it by its label or node name) - or to an absolute
+# DMBOOT_UPLOAD_DEST.
 set(DMBOOT_UPLOAD_PORT "/dev/ttyACM0" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
 set(DMBOOT_UPLOAD_BAUD "921600" CACHE STRING "Baud rate of DMBOOT_UPLOAD_PORT")
-set(DMBOOT_UPLOAD_DEST "/mnt/dmsdio0_0p1" CACHE STRING "Directory on the device the uploaded files go to (their paths under it)")
+set(DMBOOT_UPLOAD_DEST "" CACHE STRING "Directory the uploaded files go to (their paths under it): on the SD card (relative; empty: its root), or absolute")
+set(DMBOOT_UPLOAD_CARD "auto" CACHE STRING "The card a relative DMBOOT_UPLOAD_DEST is on: its name in /mnt, auto (the one the device has), none (the shell's directory)")
 set(DMBOOT_UPLOAD_SOURCES "${CMAKE_BINARY_DIR}/sdcard" CACHE STRING "Files and directories uploaded (semicolon-separated; SRC=NAME puts SRC as NAME); default: build/sdcard")
 set(DMBOOT_UPLOAD_BLOCK "1024" CACHE STRING "YMODEM block size, 128 or 1024")
 set(DMBOOT_UPLOAD_WAIT "60" CACHE STRING "install-all: seconds the device may take to start before it receives the files")
@@ -171,17 +175,25 @@ set(DMBOOT_UPLOAD_WAIT "60" CACHE STRING "install-all: seconds the device may ta
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     set(DMBOOT_UPLOAD_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py
-        --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --dest ${DMBOOT_UPLOAD_DEST} --block ${DMBOOT_UPLOAD_BLOCK})
+        --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --card ${DMBOOT_UPLOAD_CARD} --block ${DMBOOT_UPLOAD_BLOCK})
+    if(NOT "${DMBOOT_UPLOAD_DEST}" STREQUAL "")
+        list(APPEND DMBOOT_UPLOAD_COMMAND --dest ${DMBOOT_UPLOAD_DEST})
+    endif()
+    if("${DMBOOT_UPLOAD_DEST}" MATCHES "^/")
+        set(DMBOOT_UPLOAD_WHERE "${DMBOOT_UPLOAD_DEST}")
+    else()
+        set(DMBOOT_UPLOAD_WHERE "the SD card (${DMBOOT_UPLOAD_CARD})/${DMBOOT_UPLOAD_DEST}")
+    endif()
     add_custom_target(upload-files
         COMMAND ${DMBOOT_UPLOAD_COMMAND} ${DMBOOT_UPLOAD_SOURCES}
         USES_TERMINAL
-        COMMENT "Uploading files to ${DMBOOT_UPLOAD_DEST} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
+        COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
     )
     add_custom_target(install-all
         COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
         DEPENDS install-firmware
         USES_TERMINAL
-        COMMENT "Uploading files to ${DMBOOT_UPLOAD_DEST} once ${TARGET} has started..."
+        COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
 else()
     message(STATUS "Python 3 not found - the upload-files and install-all targets are not available")
