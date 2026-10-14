@@ -54,6 +54,7 @@ jobs:
         arm-none-eabi-objcopy --version
         arm-none-eabi-size --version
         cmake --version
+        file --version
     
     - name: Build dmod examples and create test DMP package
       run: |
@@ -151,6 +152,9 @@ jobs:
       contents: read
     
     steps:
+    - name: Verify Renode installation
+      run: renode --version
+
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
