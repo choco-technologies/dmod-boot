@@ -48,6 +48,7 @@ NETWORK_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_network.py"
 TAP_INTERFACE=tap0
 
 # Timeouts (seconds)
+RENODE_READY_TIMEOUT=60
 # Upper bound only: step 4 stops as soon as the monitor reads the ring header
 MONITOR_READY_TIMEOUT=60
 UART_TIMEOUT=90
@@ -57,7 +58,7 @@ TOUCH_TIMEOUT=120
 NETWORK_TIMEOUT=120
 # Renode has to outlive the monitor and the UART, SD card, LCD, touch and network tests
 TESTS_TIMEOUT=$((UART_TIMEOUT + SDCARD_TIMEOUT + LCD_TIMEOUT + TOUCH_TIMEOUT + NETWORK_TIMEOUT))
-CONNECT_TIMEOUT=$((MONITOR_READY_TIMEOUT + TESTS_TIMEOUT + 60))
+CONNECT_TIMEOUT=$((RENODE_READY_TIMEOUT + MONITOR_READY_TIMEOUT + TESTS_TIMEOUT + 60))
 
 # The network test needs a TAP interface: root and /dev/net/tun
 NETWORK_TEST=0
@@ -126,14 +127,26 @@ echo "[3/9] Starting Renode emulation..."
 CONNECT_LOG="$BUILD_DIR/connect.log"
 # No frame of an earlier run may pass for one of this run
 rm -f "$LCD_FRAME_FILE"
+# Clear a previous run's readiness marker before the background process starts.
+: > "$CONNECT_LOG"
 timeout "$CONNECT_TIMEOUT" cmake --build "$BUILD_DIR" --target connect > "$CONNECT_LOG" 2>&1 &
 CONNECT_PID=$!
 
-echo "Waiting for Renode GDB server to start (PID $CONNECT_PID)..."
-sleep 5
+echo "Waiting for Renode setup to finish (PID $CONNECT_PID)..."
+# The generated script emits this after the GDB server and all peripherals
+# are configured. Do not probe GDB by connecting: disconnecting a probe can
+# resume the guest before the monitor attaches.
+RENODE_READY_PATTERN="DMBOOT_RENODE_READY"
+RENODE_DEADLINE=$((SECONDS + RENODE_READY_TIMEOUT))
+while [ "$SECONDS" -lt "$RENODE_DEADLINE" ] && kill -0 "$CONNECT_PID" 2>/dev/null; do
+    if grep -Fq "$RENODE_READY_PATTERN" "$CONNECT_LOG"; then
+        break
+    fi
+    sleep 1
+done
 
-if ! ps -p "$CONNECT_PID" > /dev/null 2>&1; then
-    echo "✗ Renode failed to start"
+if ! kill -0 "$CONNECT_PID" 2>/dev/null || ! grep -Fq "$RENODE_READY_PATTERN" "$CONNECT_LOG"; then
+    echo "✗ Renode failed to become ready within ${RENODE_READY_TIMEOUT}s"
     echo "--- connect.log ---"
     cat "$CONNECT_LOG"
     exit 1

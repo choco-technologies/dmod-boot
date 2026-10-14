@@ -17,3 +17,6 @@ machine StartGdbServer 3333
 @DMBOOT_RENODE_NETWORK@
 
 @DMBOOT_RENODE_START@
+
+# The test runner waits for complete setup before attaching its GDB monitor.
+log "DMBOOT_RENODE_READY"
