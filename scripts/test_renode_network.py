@@ -10,9 +10,12 @@ board side is needed:
 - the board pings the host (`ping` in the shell)
 - the host pings the board (ICMP echo)
 - a telnet session to the board gets a shell that runs `echo <token>`
+- the board resolves a name (`nslookup` in the shell) through the dns
+  service, with the name server it got from the DHCP lease (option 6) -
+  the host answers on UDP port 53 itself
 
-Needs root (TAP address, DHCP port, raw ICMP socket) - only the standard
-library, no ip/ping/telnet tools.
+Needs root (TAP address, DHCP and DNS ports, raw ICMP socket) - only the
+standard library, no ip/ping/telnet/DNS server tools.
 
 Usage: test_renode_network.py [--tap TAP] [--uart-port PORT] [--timeout SECONDS]
 """
@@ -34,6 +37,16 @@ BOARD_ADDR = "192.168.100.2"
 NETMASK = "255.255.255.0"
 PREFIX_LEN = 24
 TELNET_PORT = 23
+DNS_PORT = 53
+
+# Names the host's DNS server knows - everything else is NXDOMAIN
+DNS_TEST_NAME = "dmod-boot.test"
+DNS_TEST_ADDR = "192.168.100.77"
+DNS_MISSING_NAME = "no-such-host.test"
+DNS_TTL = 60
+DNS_TYPE_A = 1
+DNS_CLASS_IN = 1
+DNS_RCODE_NXDOMAIN = 3
 
 # Linux ioctls / socket options used to configure the TAP without iproute2
 SIOCSIFADDR, SIOCSIFNETMASK, SIOCGIFFLAGS, SIOCSIFFLAGS = 0x8916, 0x891C, 0x8913, 0x8914
@@ -85,6 +98,7 @@ class DhcpServer(threading.Thread):
             (51, struct.pack("!I", 3600)),
             (1, socket.inet_aton(self.netmask)),
             (3, socket.inet_aton(self.server_addr)),
+            (6, socket.inet_aton(self.server_addr)),   # DNS server: DnsServer below
         ]
         for code, value in options:
             packet += bytes([code, len(value)]) + value
@@ -116,6 +130,61 @@ class DhcpServer(threading.Thread):
                 return options[i + 2]
             i += 2 + options[i + 1]
         return None
+
+
+class DnsServer(threading.Thread):
+    """Answers DNS queries on one interface: DNS_TEST_NAME has one A record, every other name is NXDOMAIN.
+
+    A query for another type of DNS_TEST_NAME (AAAA) gets an empty NOERROR
+    answer (NODATA). Records which names it was asked about, and from where.
+    """
+
+    def __init__(self, interface, addr):
+        super().__init__(daemon=True)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.setsockopt(socket.SOL_SOCKET, SO_BINDTODEVICE, interface.encode() + b"\0")
+        self.sock.bind((addr, DNS_PORT))
+        self.sock.settimeout(0.5)
+        self.queries = []
+        self.running = True
+
+    @staticmethod
+    def parse_question(query):
+        """Return (name, qtype, end of question) of a one-question query, or None."""
+        if len(query) < 12 or struct.unpack("!H", query[4:6])[0] != 1:
+            return None
+        labels, pos = [], 12
+        while pos < len(query) and query[pos] != 0:
+            length = query[pos]
+            labels.append(query[pos + 1:pos + 1 + length].decode(errors="replace"))
+            pos += 1 + length
+        if pos + 5 > len(query):
+            return None
+        qtype = struct.unpack("!H", query[pos + 1:pos + 3])[0]
+        return ".".join(labels).lower(), qtype, pos + 5
+
+    def answer(self, query, name, qtype, question_end):
+        found = name == DNS_TEST_NAME
+        records = b""
+        if found and qtype == DNS_TYPE_A:
+            records = (struct.pack("!HHHIH", 0xC00C, DNS_TYPE_A, DNS_CLASS_IN, DNS_TTL, 4)
+                       + socket.inet_aton(DNS_TEST_ADDR))
+        flags = 0x8180 | (0 if found else DNS_RCODE_NXDOMAIN)   # QR, RD, RA
+        header = query[0:2] + struct.pack("!HHHHH", flags, 1, 1 if records else 0, 0, 0)
+        return header + query[12:question_end] + records
+
+    def run(self):
+        while self.running:
+            try:
+                query, peer = self.sock.recvfrom(512)
+            except socket.timeout:
+                continue
+            question = self.parse_question(query)
+            if question is None:
+                continue
+            self.queries.append((peer[0], question[0]))
+            self.sock.sendto(self.answer(query, *question), peer)
 
 
 def icmp_checksum(data):
@@ -169,6 +238,19 @@ def wait_for_lease(term, deadline):
     return False
 
 
+def check_dns(uart, dns):
+    """Resolve names on the board with no server given: the dns service must use the one from the DHCP lease."""
+    if not check(uart, f"nslookup -4 {DNS_TEST_NAME}", lambda out: f"Address: {DNS_TEST_ADDR}" in "\n".join(out),
+                 f"board resolves {DNS_TEST_NAME} to {DNS_TEST_ADDR} (server from the DHCP lease)"):
+        return False
+    if (BOARD_ADDR, DNS_TEST_NAME) not in dns.queries:
+        print(f"✗ the host's DNS server was never asked about {DNS_TEST_NAME} by {BOARD_ADDR}: {dns.queries!r}")
+        return False
+    print(f"✓ the query reached the host's DNS server ({HOST_ADDR}:{DNS_PORT})")
+    return check(uart, f"nslookup -4 {DNS_MISSING_NAME}", lambda out: "NXDOMAIN" in "\n".join(out),
+                 f"board reports {DNS_MISSING_NAME} as a missing name (NXDOMAIN)")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tap", default="tap0")
@@ -183,6 +265,8 @@ def main():
     print(f"✓ Host end of {args.tap}: {HOST_ADDR}/{PREFIX_LEN}")
     dhcp = DhcpServer(args.tap, HOST_ADDR, BOARD_ADDR, NETMASK)
     dhcp.start()
+    dns = DnsServer(args.tap, HOST_ADDR)
+    dns.start()
 
     uart = Terminal(connect("127.0.0.1", args.uart_port, deadline))
     if not wait_for_prompt(uart, deadline):
@@ -218,7 +302,11 @@ def main():
         return 1
     telnet.sock.close()
 
+    if not check_dns(uart, dns):
+        return 1
+
     dhcp.running = False
+    dns.running = False
     return 0
 
 
