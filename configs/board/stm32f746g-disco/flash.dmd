@@ -10,6 +10,10 @@ dmdma driver=board/stm32f746g-disco/dma.ini
 # Hardware entropy source (/dev/rng); CLK48 comes from dmclk.
 dmrng driver=board/stm32f746g-disco/rng.ini
 test_dmrng
+# Civil RTC calendar; dmutc will supply UTC synchronization policy.
+dmrtc driver=board/stm32f746g-disco/rtc.ini
+rtc
+test_dmrtc
 #
 # Network: eth0 on the on-board RMII PHY. dmnetif reports the interface as a
 # "netif" device, networkd.rules and dhcp.rules then start networkd@eth0 (RX
