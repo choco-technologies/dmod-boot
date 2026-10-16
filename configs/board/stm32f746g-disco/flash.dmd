@@ -29,6 +29,15 @@ networkd rules=networkd.rules
 dmudp
 dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
+#
+# DNS: the dmdns resolver, brought up once for the whole system by the dns
+# unit (type=library) - no per-interface rule. Name servers come from the
+# DHCP lease (option 6): dmdhcp reports them through dmdns's
+# dmdns_provide_servers DIF on every lookup. nslookup looks names up from
+# the shell.
+#
+dmdns service=dns.ini
+nslookup
 test_dmeth
 #
 # Telnet: telnetd (dmtcp + dmtelnet) listens on TCP port 23; every connection
