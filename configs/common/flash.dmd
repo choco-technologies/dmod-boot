@@ -23,3 +23,6 @@ console service=console@.ini
 dmdevmon
 dmdevmon service=dmdevmon@.ini
 dmdevmon rules=dmdevmon.rules
+# Bind RTC devices to the shared UTC library through libsystemd rules.
+dmutc service=dmutc@.ini
+dmutc rules=dmutc.rules
