@@ -570,6 +570,18 @@ static dmheap_context_t* init_heap(void* start, void* end, const char* name, boo
     return heap;
 }
 
+static Dmod_Context_t* startup_module;
+static dmosi_thread_t startup_thread;
+
+static void startup_devices(void* arg)
+{
+    (void)arg;
+    mount_embedded_filesystems();
+    load_embedded_startup_dmp();
+    start_main_module(startup_module);
+    dmlog_puts(dmlog_get_default(), "DMOD-Boot started\n");
+}
+
 int main(int argc, char** argv)
 {
     Dmod_SetLogLevel(Dmod_LogLevel_Info);
@@ -630,20 +642,24 @@ int main(int argc, char** argv)
     // Load modules.dmp if embedded in ROM
     Dmod_Context_t* mainModule = load_embedded_modules_dmp();
 
-    // Mount embedded filesystems
-    mount_embedded_filesystems();
-
-    // Load startup.dmp if embedded in ROM
-    load_embedded_startup_dmp();
-
-    // Start main module if loaded
-    start_main_module(mainModule);
-    
-    // Mark that the boot process is done
-    dmlog_puts(ctx, "DMOD-Boot started\n");
-
-    // Initialize RTOS and start scheduler (if applicable)
-    dmosi_init();
+    /* Device creation may wait for IRQs using RTOS synchronization. Queue the
+     * boot worker before starting the scheduler; it mounts /dev and starts
+     * applications only after the scheduler is running. The kernel retains the
+     * handle; FreeRTOS reclaims the worker's stack after it returns. */
+    startup_module = mainModule;
+    startup_thread = dmosi_thread_create(startup_devices, NULL, 1, 8192, "boot", NULL);
+    DMOD_ASSERT_MSG(startup_thread != NULL, "Cannot create boot initialization task");
+    if (startup_thread == NULL) return 1;
+    if (!dmosi_init()) {
+        dmosi_thread_destroy(startup_thread);
+        DMOD_ASSERT_MSG(false, "Cannot start scheduler");
+        return 1;
+    }
+    /* Backends whose init returns while scheduling continues can join here.
+     * FreeRTOS normally stays in dmosi_init until the scheduler stops. */
+    if (dmosi_is_started()) dmosi_thread_join(startup_thread);
+    dmosi_thread_destroy(startup_thread);
+    startup_thread = NULL;
 
     // fallback to interactive shell
     boot_shell(ctx);
