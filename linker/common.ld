@@ -17,7 +17,12 @@ PROVIDE(__dma_end__   = __dma_start__ + __dma_size__);
 ENTRY(Reset_Handler);
 
 __stack_size__    = 4096;
-__logs_size__     = 8192;
+/* The dmlog ring buffer. Builds can pick another size with
+   -Wl,--defsym=__dmboot_logs_size__=<bytes> (power of two - the section is
+   aligned to its size); the Renode emulation build does, so the monitor,
+   which attaches only after the board has been running, still finds the
+   whole boot log in the ring. */
+__logs_size__     = DEFINED(__dmboot_logs_size__) ? __dmboot_logs_size__ : 8192;
 
 PROVIDE(__stack_size__ = __stack_size__);
 PROVIDE(__logs_size__  = __logs_size__ );
