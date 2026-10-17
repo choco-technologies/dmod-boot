@@ -118,3 +118,9 @@ dmview@>=0.10 rules=dmview.rules
 # files of the card's music/ directory through dmaudio.
 #
 carhmi service=carhmi.ini
+#
+# The decoders of the album covers carhmi makes of the MP3 files' pictures:
+# dmimg finds them by name, so they are not in carhmi's dependencies.
+#
+dmimg_jpeg
+dmimg_png

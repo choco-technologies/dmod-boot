@@ -49,6 +49,13 @@ endif()
 
 include(configs/mcu/${TARGET}.cmake)
 
+# The heaps' names - dmheap tags: kinds of memory, separated by commas, that
+# drivers find a heap by (dmheap_get_context_by_name("dma")) and modules ask
+# for (Dmod_MallocTagged("fast", ...)). After the MCU configuration, which
+# says what its memories are.
+set(DMBOOT_DMA_HEAP_TAGS "dma" CACHE STRING "Tags of the DMA heap (linker region dma): dma, and e.g. fast where it is fast internal RAM")
+set(DMBOOT_MAIN_HEAP_TAGS "main" CACHE STRING "Tags of the main heap (linker region ram)")
+
 # Splash logo - after the board configuration, which picks the asset
 set(DMBOOT_SPLASH_LOGO "" CACHE STRING "Splash logo the display driver shows at start: name of an asset in assets/splash/ (e.g. dmodos_logo_128) or a path to a .dmvi file; empty: no logo")
 set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target, passed to the display driver in the SPLASH_LOGO environment variable; empty: not set")
@@ -184,6 +191,8 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_SHELL_STRING="${DMBOOT_SHELL}"
         DMBOOT_MAIN_MODULE_ARGS_STRING="${DMBOOT_MAIN_MODULE_ARGS}"
         DMBOOT_SPLASH_LOGO_PATH_STRING="${DMBOOT_SPLASH_LOGO_PATH}"
+        DMBOOT_DMA_HEAP_TAGS_STRING="${DMBOOT_DMA_HEAP_TAGS}"
+        DMBOOT_MAIN_HEAP_TAGS_STRING="${DMBOOT_MAIN_HEAP_TAGS}"
 )
 
 target_link_options(${MODULE_NAME}.elf
