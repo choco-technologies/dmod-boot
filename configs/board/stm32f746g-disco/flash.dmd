@@ -45,6 +45,13 @@ dhcpc rules=dhcp.rules
 #
 dmdns service=dns.ini
 nslookup
+#
+# Time: dmntp, loaded at boot by the ntp unit (type=library), is one of
+# dmutc's external UTC sources - dmutc sets the RTC from it after the start
+# (again every minute until the network is up) and then once a day. The
+# servers: the DHCP lease's (option 42), else pool.ntp.org/time.google.com.
+#
+dmntp service=ntp.ini
 test_dmeth
 #
 # Telnet: telnetd (dmtcp + dmtelnet) listens on TCP port 23; every connection
