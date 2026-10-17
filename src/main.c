@@ -595,10 +595,10 @@ int main(int argc, char** argv)
     dmlog_set_as_default(ctx);
 
     // Initialize the DMA-capable heap (named "dma"), if the target defines one
-    init_heap(&__dma_start__, &__dma_end__, "dma", false);
+    init_heap(&__dma_start__, &__dma_end__, DMBOOT_DMA_HEAP_TAGS_STRING, false);
 
     // Initialize the main heap; a failure here is unrecoverable
-    init_heap(&__heap_start__, &__heap_end__, "main", true);
+    init_heap(&__heap_start__, &__heap_end__, DMBOOT_MAIN_HEAP_TAGS_STRING, true);
 
     dmenv_ctx_t dmenv_ctx = dmenv_create(NULL);
     if(dmenv_ctx == NULL)

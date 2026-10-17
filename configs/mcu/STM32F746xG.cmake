@@ -29,6 +29,15 @@ set(DMOD_CPU_NAME   ${DMBOOT_MCU_NAME} CACHE STRING "Name of the target cpu, if 
 set(DMBOOT_IRQ_COUNT 98 CACHE STRING "Number of external IRQ lines for this MCU")
 
 # ======================================================================
+#               Heaps
+# ======================================================================
+# The DMA heap is the DTCM: reached by DMA through the core's AHBS port, never
+# in the data cache - and the fastest RAM there is (no wait states, beside the
+# cache): also what modules get when they ask for "fast" memory (e.g. dmmp3's
+# decoder state - 70 % of the CPU in the SDRAM, 15 % here)
+set(DMBOOT_DMA_HEAP_TAGS "dma,fast,dtcm" CACHE STRING "Tags of the DMA heap (linker region dma)")
+
+# ======================================================================
 #               Renode Configuration
 # ======================================================================
 if(DMBOOT_EMULATION)

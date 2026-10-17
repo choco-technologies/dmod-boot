@@ -279,6 +279,17 @@ dmlcdtft), the `dma` heap is the DTCM, which is never cached, and the module
 loader calls `Dmod_SyncCode()` once a module is in place, so its code
 reaches the instruction fetch.
 
+### Heaps and their tags
+
+A heap's name is the list of its tags - kinds of memory (dmheap): drivers find
+the DMA heap by a tag (`dmheap_get_context_by_name("dma")`), modules ask for
+memory of a kind with `Dmod_MallocTagged("fast", ...)` and get the default
+memory when there is none. `DMBOOT_DMA_HEAP_TAGS` and `DMBOOT_MAIN_HEAP_TAGS`
+name the heaps (`dma`, `main` by default); an MCU's configuration says what its
+memories are - the STM32F746's DMA heap is the DTCM, `dma,fast,dtcm`: the
+fastest RAM there is, given to what is worked on all the time (dmmp3's decoder
+state: 70 % of the CPU in the SDRAM, 15 % there).
+
 ### `monitor-gdb`
 Monitor logs from the firmware in real-time via GDB server. This target:
 - Automatically builds the `dmlog_monitor` tool for the host architecture
