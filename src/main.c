@@ -401,12 +401,50 @@ static void mount_eviews_filesystem(void)
     mount_rom_filesystem("Embedded views", &__eviews_fs_start, &__eviews_fs_end, "/eviews");
 }
 
+#define DEVFS_CONFIG_PATH   "/configs/drivers"
+
+#ifdef DMBOOT_HAS_DEVICE_SECRET
+/* The device secret of this build (made by CMake, see DMBOOT_DEVICE_SECRET) */
+extern const char dmboot_device_secret[];
+#endif
+
+static void mount_devfs(void)
+{
+#ifdef DMBOOT_HAS_DEVICE_SECRET
+    /* dmdevfs takes the device secret after the first comma of its configuration string
+     * and serves it as /dev/devkey. The string is built here, on the stack, and wiped
+     * after the mount: dmvfs passes it to dmdevfs and keeps no copy. */
+    char config[sizeof(DEVFS_CONFIG_PATH) + 1 + 64 + 1];
+    size_t length = 0;
+
+    for(const char* p = DEVFS_CONFIG_PATH; *p != '\0' && length < sizeof(config) - 1; p++)
+    {
+        config[length++] = *p;
+    }
+    config[length++] = ',';
+    for(const char* p = dmboot_device_secret; *p != '\0' && length < sizeof(config) - 1; p++)
+    {
+        config[length++] = *p;
+    }
+    config[length] = '\0';
+
+    dmvfs_mount_fs("dmdevfs", "/dev", config);
+
+    for(volatile char* p = config; p < config + sizeof(config); p++)
+    {
+        *p = 0;
+    }
+#else
+    dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH);
+#endif
+}
+
 static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
     mount_eviews_filesystem();
-    dmvfs_mount_fs("dmdevfs", "/dev", "/configs/drivers");
+    mount_devfs();
 }
 
 static void boot_shell(dmlog_ctx_t ctx)
