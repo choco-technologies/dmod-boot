@@ -428,11 +428,19 @@ static void mount_devfs(void)
     }
     config[length] = '\0';
 
-    dmvfs_mount_fs("dmdevfs", "/dev", config);
+    bool mounted = dmvfs_mount_fs("dmdevfs", "/dev", config);
 
     for(volatile char* p = config; p < config + sizeof(config); p++)
     {
         *p = 0;
+    }
+
+    if(!mounted)
+    {
+        /* A dmdevfs that does not know the ",<secret>" form takes the whole string as the path
+         * and fails: mount it as it was before, without /dev/devkey */
+        Dmod_Printf("dmdevfs did not take the device secret (an older dmdevfs?) - mounting /dev without it\n");
+        dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH);
     }
 #else
     dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH);
