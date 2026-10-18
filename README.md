@@ -358,3 +358,17 @@ scripts/ymodem_send.py --dest views view.dmv fonts/            # views/ on the c
 scripts/ymodem_send.py --card bootfs --dest views view.dmv      # of the card in /mnt/bootfs
 scripts/ymodem_send.py --dest /mnt/sd/views view.dmv            # an absolute directory
 ```
+
+### Restarting the system
+
+The flash module set includes dmell's `reboot` command. On ARMv7-M targets
+(Cortex-M4 and Cortex-M7), it calls the `Dmod_Reboot()` SAL implementation
+and requests a system reset through SCB AIRCR (`SYSRESETREQ`). The implementation
+is linked as an object library so the weak SAL default cannot hide it.
+Other architectures retain the default `-ENOSYS` response until they implement
+this SAL operation.
+
+`reboot` resets immediately and does not stop services or flush filesystems.
+Save pending work first. `reboot --help` shows usage without resetting.
+Requires a dmell release containing the `reboot` module and a DMOD revision
+exporting `Dmod_Reboot()`.
