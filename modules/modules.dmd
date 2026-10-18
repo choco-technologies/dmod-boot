@@ -5,6 +5,7 @@ dmell
 dmffs
 dmramfs
 dmdevfs
+dmntp
 ls 
 mkdir
 dmclk driver=board/stm32f746g-disco.ini
