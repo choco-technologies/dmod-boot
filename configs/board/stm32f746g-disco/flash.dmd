@@ -37,6 +37,21 @@ dmudp
 dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
 #
+# Wi-Fi: wlan0 on an ESP32-C3 running ESP-Hosted (dmesphosted's coprocessor/
+# firmware, wired to the Arduino header over SPI2 - see the README of
+# dmesphosted's configs/board/stm32f746g-disco). dmesphosted's wifi.ini
+# configures the pins, the dmspi bus (dmspi moves the frames by DMA, dmdma
+# and dmheap must be up) and the device. dmnetif lists wlan0 only when the
+# ESP answered - without one there is no wlan0 and networkd.rules / dhcp.rules
+# start nothing for it; with one they start networkd@wlan0 and dhcp@wlan0 like
+# for eth0. No network is kept: connect from the shell, "wifi connect SSID"
+# (dmnet's wifi tool; it asks for the password).
+#
+dmspi
+dmspi_port
+dmesphosted driver=board/stm32f746g-disco/wifi.ini
+wifi
+#
 # DNS: the dmdns resolver, brought up once for the whole system by the dns
 # unit (type=library) - no per-interface rule. Name servers come from the
 # DHCP lease (option 6): dmdhcp reports them through dmdns's
