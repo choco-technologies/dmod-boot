@@ -218,6 +218,10 @@ target_link_libraries(${MODULE_NAME}.elf
         dmosi_freertos
 )
 
+if(TARGET dmboot_power)
+    target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_power)
+endif()
+
 # Core-specific code that replaces weak defaults (e.g. the Cortex-M7 caches)
 if(TARGET dmboot_cpu)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_cpu)

@@ -7,6 +7,7 @@ dmramfs
 dmdevfs
 ls
 ps
+reboot
 mkdir
 mount
 umount
