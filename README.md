@@ -360,7 +360,8 @@ When upgrading, non-binary entries previously downloaded into `build/dmf` or
 Existing backup entries are never overwritten. Files already on a physical card
 are not moved or removed by a build or upload.
 
-The default `DMOD_REPO_PATHS` includes `/mnt/*/bin`. The loader caches the
+The default `DMOD_REPO_PATHS` includes `/mnt/*/bin` and `/ext/bin` (the external
+flash of the board, see [docs/external-flash.md](docs/external-flash.md)). The loader caches the
 expanded directories and automount invalidates that cache after successful
 mounts and unmounts. Flash modules take precedence over card modules; cards
 are searched in alphabetical path order. New files uploaded into `bin`

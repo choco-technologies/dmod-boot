@@ -51,8 +51,9 @@ dhcpc rules=dhcp.rules
 # (/dev/devkey, DMBOOT_DEVICE_SECRET), so nobody types a passphrase. wifid, a
 # service libsystemd starts for every network interface (wifid.rules; it ends at
 # once on one that is not Wi-Fi), connects wlan0 to the saved network in range
-# with the strongest signal. The vault is a file: DMBOOT_DMSECRETS_PATH (e.g.
-# /mnt/<card>/secrets.vault) sets DMSECRETS_PATH - wifid waits for it to appear.
+# with the strongest signal. The vault is a file: DMBOOT_DMSECRETS_PATH (by default
+# /ext/secrets.vault on the external flash, or e.g. /mnt/<card>/secrets.vault) sets
+# DMSECRETS_PATH - wifid waits for it to appear.
 #
 dmspi
 dmspi_port
@@ -80,7 +81,6 @@ nslookup
 # servers: the DHCP lease's (option 42), else pool.ntp.org/time.google.com.
 #
 dmntp service=ntp.ini
-test_dmeth
 #
 # Telnet: telnetd (dmtcp + dmtelnet) listens on TCP port 23; every connection
 # becomes a tty node with its own console@ / dmell, like a UART does.
@@ -104,6 +104,21 @@ dmfatfs
 mkfatfs
 automount service=automount@.ini
 automount rules=automount.rules
+#
+# External flash: the 16 MB Micron N25Q128A on QUADSPI. dmspiflash identifies the chip and exports it as the
+# block node /dev/dmspiflashx/flash; its driver config holds everything - the pins, the dmqspi bus and the chip.
+# dmqspi and dmqspi_port are listed here because dmspiflash reaches the bus only through the file system
+# (an ioctl on its node), so nothing makes dmf-get pull them in. The bus uses DMA2 stream 7 (dmdma) and the
+# clock of dmclk, which must be up before. dmlittlefs keeps a littlefs on the chip, which the "ext" service
+# (configs/board/stm32f746g-disco/services/ext.ini) mounts at /ext - /ext/bin is on the module search path and
+# /ext/secrets.vault is the default dmsecrets vault. A new chip has no file system: create it once with
+# `mklittlefs /dev/dmspiflashx/flash` (ALL DATA IN THE FLASH IS LOST).
+#
+dmqspi
+dmqspi_port
+dmspiflash driver=board/stm32f746g-disco/n25q128.ini
+dmlittlefs
+mklittlefs
 dmlcdtft driver=board/stm32f746g-disco/lcd.ini
 #
 # Touch panel of the LCD: FT5336 on I2C3. dmft5336's touch.ini configures
@@ -141,14 +156,6 @@ dmview
 dmview service=dmview@.ini
 dmview rules=dmview.rules
 #
-# The car HMI demo (choco-technologies/carhmi-demo): a service that claims the
-# display for its view - on the SD card, see sdcard.dmd - and plays the MP3
-# files of the card's music/ directory through dmaudio.
+# The car HMI demo (carhmi) and what it needs - the image decoders, the MP3 decoder - are on the SD card, see
+# sdcard.dmd: it is loaded from /mnt/<label>/bin once automount has mounted the card.
 #
-carhmi service=carhmi.ini
-#
-# The decoders of the album covers carhmi makes of the MP3 files' pictures:
-# dmimg finds them by name, so they are not in carhmi's dependencies.
-#
-dmimg_jpeg
-dmimg_png

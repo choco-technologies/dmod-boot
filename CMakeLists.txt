@@ -19,6 +19,7 @@ set(DMBOOT_MAIN_MODULE_CONFIG "" CACHE STRING "Configuration file for the main m
 set(DMBOOT_MAIN_MODULE_ARGS "/configs/services /configs/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)")
 set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
+set(DMBOOT_EXTRA_EXT_DMD_FILES "" CACHE STRING "Additional ext.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_MANIFEST_URL "" CACHE STRING "Manifest path/URL to use with dmf-get -m flag for all module downloads")
 set(DMBOOT_SHELL "dmell" CACHE STRING "Shell to use by default")
 set(DMBOOT_MODULE_TYPE "dmfc" CACHE STRING "Preferred module file type to download (dmfc or dmf). dmf-get falls back to the other type when a package does not provide the preferred one")

@@ -1,0 +1,9 @@
+#
+# Common ext modules - modules for the external flash (/ext/bin) instead of the firmware
+#
+# Same format as flash.dmd and sdcard.dmd (a module per line, with the tags driver=, rules=, service= if it needs
+# them - though those are read at boot from the firmware's /configs, so a module with a driver or a service belongs in
+# flash.dmd). Moving a module from flash.dmd to here takes it out of the ROM: it is then loaded by name from
+# /ext/bin (on the module search path: flash modules first, then /ext/bin, then cards) - once /ext is mounted, so
+# nothing that runs before the "ext" service can be here. `upload-ext` sends build/ext to the device.
+#

@@ -197,6 +197,31 @@ if(Python3_Interpreter_FOUND)
         USES_TERMINAL
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
+
+    # The external flash (DMBOOT_EXT_DEVICE, set by the board): the console runs the commands, YMODEM sends build/ext.
+    #   format-ext   create the file system on the device and mount it (ALL DATA IN THE FLASH IS LOST) - once, on a new
+    #                chip; it is never part of another target. A mounted /ext is unmounted first.
+    #   upload-ext   the modules of ext.dmd (build/ext: bin/, views/) to the mounted file system
+    if(DMBOOT_EXT_DEVICE)
+        set(DMBOOT_EXT_CONSOLE_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py
+            --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --block ${DMBOOT_UPLOAD_BLOCK})
+        add_custom_target(format-ext
+            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5
+                --run "-umount ${DMBOOT_EXT_MOUNT}"
+                --run "${DMBOOT_EXT_MKFS} ${DMBOOT_EXT_DEVICE}"
+                --run "mount -t ${DMBOOT_EXT_FS} -o device=${DMBOOT_EXT_DEVICE} ${DMBOOT_EXT_MOUNT}"
+                --ensure-dir ${DMBOOT_EXT_MOUNT}
+            USES_TERMINAL
+            COMMENT "Creating ${DMBOOT_EXT_FS} on ${DMBOOT_EXT_DEVICE} over ${DMBOOT_UPLOAD_PORT} - ALL DATA IN IT IS LOST..."
+        )
+        add_custom_target(upload-ext
+            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 --ensure-dir ${DMBOOT_EXT_MOUNT}
+                --dest ${DMBOOT_EXT_MOUNT} --card none ${CMAKE_BINARY_DIR}/ext
+            DEPENDS download_ext_modules
+            USES_TERMINAL
+            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM); run format-ext first on a new chip..."
+        )
+    endif()
 else()
-    message(STATUS "Python 3 not found - the upload-files and install-all targets are not available")
+    message(STATUS "Python 3 not found - the upload-files, install-all, format-ext and upload-ext targets are not available")
 endif()
