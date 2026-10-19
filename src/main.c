@@ -401,12 +401,35 @@ static void mount_eviews_filesystem(void)
     mount_rom_filesystem("Embedded views", &__eviews_fs_start, &__eviews_fs_end, "/eviews");
 }
 
+#define DEVFS_CONFIG_PATH   "/configs/drivers"
+
+#ifdef DMBOOT_HAS_DEVICE_SECRET
+#include "device_secret.h"      /* DMBOOT_DEVICE_SECRET_STRING, made by CMake */
+#endif
+
+static void mount_devfs(void)
+{
+#ifdef DMBOOT_HAS_DEVICE_SECRET
+    /* dmdevfs takes the device secret after the first comma of its configuration string
+     * and serves it as /dev/devkey; dmvfs passes the string on and keeps no copy */
+    if(!dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH "," DMBOOT_DEVICE_SECRET_STRING))
+    {
+        /* A dmdevfs that does not know the ",<secret>" form takes the whole string as the path
+         * and fails: mount it as it was before, without /dev/devkey */
+        Dmod_Printf("dmdevfs did not take the device secret (an older dmdevfs?) - mounting /dev without it\n");
+        dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH);
+    }
+#else
+    dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH);
+#endif
+}
+
 static void mount_embedded_filesystems(void)
 {
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
     mount_eviews_filesystem();
-    dmvfs_mount_fs("dmdevfs", "/dev", "/configs/drivers");
+    mount_devfs();
 }
 
 static void boot_shell(dmlog_ctx_t ctx)

@@ -60,6 +60,16 @@ set(DMBOOT_MAIN_HEAP_TAGS "main" CACHE STRING "Tags of the main heap (linker reg
 set(DMBOOT_SPLASH_LOGO "" CACHE STRING "Splash logo the display driver shows at start: name of an asset in assets/splash/ (e.g. dmodos_logo_128) or a path to a .dmvi file; empty: no logo")
 set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target, passed to the display driver in the SPLASH_LOGO environment variable; empty: not set")
 
+# The device secret: the root of what the system keeps encrypted at rest (dmsecrets). dmod-boot hands
+# it to dmdevfs in the mount string ("/configs/drivers,<secret>"); dmdevfs serves it as the read-only
+# node /dev/devkey. It is whatever is given here (1..64 bytes of text), else the content of the
+# DMBOOT_DEVICE_SECRET_FILE, which is made with a random secret when it is missing (and keeps the
+# secret the same across rebuilds and fresh build directories: a firmware update does not change it).
+# Flashing a firmware built with another secret makes the vaults of the old one unreadable - they are
+# made again. Empty both: no secret, no /dev/devkey.
+set(DMBOOT_DEVICE_SECRET "" CACHE STRING "Device secret (1..64 bytes of text; no control characters). Empty: read from / generated into DMBOOT_DEVICE_SECRET_FILE")
+set(DMBOOT_DEVICE_SECRET_FILE "${CMAKE_CURRENT_SOURCE_DIR}/device.secret" CACHE FILEPATH "File holding the device secret (made with a random one when missing); empty (with an empty DMBOOT_DEVICE_SECRET): no device secret")
+
 # Include toolchain configuration before project() to set compilers
 # Check for a local override first, then fall back to the dmod library
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
@@ -170,10 +180,57 @@ add_subdirectory(lib/dmosi-freertos)
 # ======================================================================
 set(MODULE_NAME dmboot)
 
+# ----------------------------------------------------------------------
+#               The device secret
+# ----------------------------------------------------------------------
+set(DMBOOT_DEVICE_SECRET_VALUE "${DMBOOT_DEVICE_SECRET}")
+if("${DMBOOT_DEVICE_SECRET_VALUE}" STREQUAL "" AND NOT "${DMBOOT_DEVICE_SECRET_FILE}" STREQUAL "")
+    if(NOT EXISTS "${DMBOOT_DEVICE_SECRET_FILE}")
+        # 32 random bytes as 64 hex characters (the longest secret dmdevfs takes)
+        file(READ /dev/urandom DMBOOT_DEVICE_SECRET_RANDOM LIMIT 32 HEX)
+        string(LENGTH "${DMBOOT_DEVICE_SECRET_RANDOM}" DMBOOT_DEVICE_SECRET_RANDOM_LENGTH)
+        if(NOT DMBOOT_DEVICE_SECRET_RANDOM_LENGTH EQUAL 64)
+            message(FATAL_ERROR "Cannot read random bytes for the device secret: give DMBOOT_DEVICE_SECRET")
+        endif()
+        file(WRITE "${DMBOOT_DEVICE_SECRET_FILE}" "${DMBOOT_DEVICE_SECRET_RANDOM}\n")
+        message(STATUS "Device secret: made a random one in ${DMBOOT_DEVICE_SECRET_FILE} (keep it: a firmware built with another one cannot read the vaults of this one)")
+    endif()
+    file(READ "${DMBOOT_DEVICE_SECRET_FILE}" DMBOOT_DEVICE_SECRET_VALUE)
+    string(STRIP "${DMBOOT_DEVICE_SECRET_VALUE}" DMBOOT_DEVICE_SECRET_VALUE)
+    message(STATUS "Device secret: from ${DMBOOT_DEVICE_SECRET_FILE}")
+endif()
+
+if(NOT "${DMBOOT_DEVICE_SECRET_VALUE}" STREQUAL "")
+    string(LENGTH "${DMBOOT_DEVICE_SECRET_VALUE}" DMBOOT_DEVICE_SECRET_LENGTH)
+    if(DMBOOT_DEVICE_SECRET_LENGTH GREATER 64)
+        message(FATAL_ERROR "The device secret is ${DMBOOT_DEVICE_SECRET_LENGTH} bytes, dmdevfs takes at most 64")
+    endif()
+    if("${DMBOOT_DEVICE_SECRET_VALUE}" MATCHES "[^ -~]")
+        message(FATAL_ERROR "The device secret may only have printable ASCII characters")
+    endif()
+    # as the body of a C string literal
+    string(REPLACE "\\" "\\\\" DMBOOT_DEVICE_SECRET_C "${DMBOOT_DEVICE_SECRET_VALUE}")
+    string(REPLACE "\"" "\\\"" DMBOOT_DEVICE_SECRET_C "${DMBOOT_DEVICE_SECRET_C}")
+    set(DMBOOT_DEVICE_SECRET_HEADER "${CMAKE_BINARY_DIR}/device_secret.h")
+    file(WRITE "${DMBOOT_DEVICE_SECRET_HEADER}.tmp"
+        "/* Made by CMake from DMBOOT_DEVICE_SECRET / DMBOOT_DEVICE_SECRET_FILE - not for the repository. */\n"
+        "#define DMBOOT_DEVICE_SECRET_STRING \"${DMBOOT_DEVICE_SECRET_C}\"\n")
+    # touched only when it changes: a rebuild does not recompile for nothing
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DMBOOT_DEVICE_SECRET_HEADER}.tmp" "${DMBOOT_DEVICE_SECRET_HEADER}")
+    file(REMOVE "${DMBOOT_DEVICE_SECRET_HEADER}.tmp")
+else()
+    set(DMBOOT_DEVICE_SECRET_HEADER "")
+endif()
+
 add_executable(${MODULE_NAME}.elf
     src/main.c
     ${EMBEDDED_OBJECTS}
 )
+
+if(NOT "${DMBOOT_DEVICE_SECRET_HEADER}" STREQUAL "")
+    target_compile_definitions(${MODULE_NAME}.elf PRIVATE DMBOOT_HAS_DEVICE_SECRET=1)
+    target_include_directories(${MODULE_NAME}.elf PRIVATE ${CMAKE_BINARY_DIR})
+endif()
 
 dmod_set_current_allocator(${MODULE_NAME}.elf)
 
