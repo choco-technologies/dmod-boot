@@ -203,6 +203,8 @@ cmake --build build
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
 - `DMBOOT_CONFIG_DIR` (optional, defaults to `build/configs`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/configs/` at boot time. Configuration entries in `*.dmd` files are routed via `dmf-get --config-map` based on their tag (`driver=`, `rule=`, `service=`) into `drivers/`, `rules/` and `services/` subdirectories under this path; untagged entries fall back to the directory root.
 - `DMBOOT_MAIN_MODULE` (optional, defaults to `dmell`) - Name of the main module to start after boot. Set to empty string to disable.
+- `DMBOOT_LICENSE_DIR` (defaults to `build/lic`) - Flash module licenses collected on the host in `<dir>/<module>/`. SD card module licenses are installed separately to `build/sdcard/lic/<module>/`.
+- `DMBOOT_EMBED_LICENSES` (defaults to `OFF`) - Embed flash module licenses as `license_fs.dmffs` and mount them at `/lic/<module>/`. Enable only when there is enough flash space; this option does not affect licenses on the SD card.
 - `DMBOOT_EVIEWS_DIR` (optional, defaults to `build/eviews`) - Directory where `dmf-get` installs the views (`.dmv`) of the flash modules, each module in its own subdirectory (`<dir>/<module>`). It is converted to a dmffs filesystem image, embedded like the config filesystem and mounted at `/eviews/` at boot time, so the views of module `X` are in `/eviews/X/`. Views of the sdcard modules stay on the sdcard, in `build/sdcard/views/<module>/`. Selecting an application with views in a `*.dmd` file is enough to get its views installed.
 - `DMBOOT_SPLASH_LOGO` (optional, set by the board configuration - `dmodos_logo_128` for `stm32f746g-disco`) - Splash logo the display driver shows as soon as the display is up: the name of an asset in [`assets/splash/`](assets/splash/README.md) or a path to a `.dmvi` file. The build unpacks it into a `.dmvir` (raw pixels, nothing to decode) and puts it into the embedded views filesystem at `DMBOOT_SPLASH_LOGO_PATH`.
 - `DMBOOT_SPLASH_LOGO_PATH` (optional, defaults to `/eviews/splash_logo.dmvir`) - Path of the splash logo on the target, set as the `SPLASH_LOGO` environment variable at boot (read by dmlcdtft).
@@ -334,10 +336,29 @@ without one (`/mnt/dmsdio0_0p1`) - and sends them there when there is one
 card. With several, `DMBOOT_UPLOAD_CARD` names it; an absolute
 `DMBOOT_UPLOAD_DEST` is used as it is.
 
-Modules listed in `sdcard.dmd` are downloaded to `build/sdcard/bin/`,
-for both `.dmf` and `.dmfc` formats. With the default upload settings they
-arrive at `/mnt/<label>/bin/`. Views remain in `build/sdcard/views/<module>/`
-and arrive at `/mnt/<label>/views/<module>/`.
+Flash module binaries are installed into `build/dmf/`, and modules listed in
+`sdcard.dmd` into `build/sdcard/bin/`. Both directories contain only `.dmf` or
+`.dmfc` files. Package resources and `.dmd`/`.dmr` metadata stay on the host in
+`build/packages/flash/` and `build/packages/sdcard/`; download markers live under
+`build/modules/`.
+
+Flash module licenses are collected in `build/lic/<module>/` on the host. They
+are not embedded by default. Configure `-DDMBOOT_EMBED_LICENSES=ON` to include
+them in firmware and mount them at `/lic/<module>/`; this consumes flash space.
+SD module licenses go to `build/sdcard/lic/<module>/`, which the default upload
+copies to `/mnt/<label>/lic/<module>/`. Views remain in
+`build/sdcard/views/<module>/` and arrive at `/mnt/<label>/views/<module>/`.
+The binary files arrive at `/mnt/<label>/bin/`.
+
+This requires `dmf-get` with `--package-dir` and `--license-dir` support. Build
+the host tools from the pinned `lib/dmod` revision and install them, or configure
+`-DDMF_GET=/absolute/path/to/dmf-get`. CMake reports an error for older tools.
+
+When upgrading, non-binary entries previously downloaded into `build/dmf` or
+`build/sdcard/bin` are preserved under the corresponding
+`build/packages/<flash|sdcard>/legacy-output/` directory before downloading.
+Existing backup entries are never overwritten. Files already on a physical card
+are not moved or removed by a build or upload.
 
 The default `DMOD_REPO_PATHS` includes `/mnt/*/bin`. The loader caches the
 expanded directories and automount invalidates that cache after successful

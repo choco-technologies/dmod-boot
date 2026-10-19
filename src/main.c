@@ -31,6 +31,8 @@ extern void* __config_fs_size;
 extern void* __eviews_fs_start;
 extern void* __eviews_fs_end;
 extern void* __eviews_fs_size;
+extern void* __license_fs_start;
+extern void* __license_fs_end;
 
 void delay(int cycles)
 {
@@ -429,6 +431,10 @@ static void mount_embedded_filesystems(void)
     dmvfs_mount_fs("dmramfs", "/", NULL);
     mount_config_filesystem();
     mount_eviews_filesystem();
+    if((uintptr_t)&__license_fs_end > (uintptr_t)&__license_fs_start)
+    {
+        mount_rom_filesystem("Licenses", &__license_fs_start, &__license_fs_end, "/lic");
+    }
     mount_devfs();
 }
 

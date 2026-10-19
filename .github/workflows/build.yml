@@ -79,9 +79,12 @@ jobs:
         # Verify the DMP file was created correctly
         lib/dmod/build/bin/tools/todmp -l tests/data/test_startup.dmp
 
+    - name: Test module download layout
+      run: python3 tests/test_module_layout.py --dmf-get lib/dmod/build/bin/tools/dmf-get
+
     - name: Configure CMake for ${{ matrix.target }}
       run: |
-        cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=${{ matrix.target }} -S . -B build
+        cmake -DCMAKE_BUILD_TYPE=Debug -DTARGET=${{ matrix.target }} -DDMF_GET="$PWD/lib/dmod/build/bin/tools/dmf-get" -S . -B build
     
     - name: Build ${{ matrix.target }} with CMake (without embedded files)
       run: |
@@ -102,6 +105,7 @@ jobs:
         rm -rf build
         cmake -DCMAKE_BUILD_TYPE=Debug \
               -DTARGET=${{ matrix.target }} \
+              -DDMF_GET="$PWD/lib/dmod/build/bin/tools/dmf-get" \
               -DSTARTUP_DMP_FILE=tests/data/test_startup.dmp \
               -DUSER_DATA_FILE=tests/data/test_user_data.dat \
               -S . -B build

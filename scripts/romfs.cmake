@@ -2,6 +2,7 @@
 # It checks for the required tools, creates the dmffs images, and embeds them into the firmware:
 #   - DMBOOT_CONFIG_DIR -> section .embedded.config_fs, mounted at /configs/
 #   - DMBOOT_EVIEWS_DIR -> section .embedded.eviews_fs, mounted at /eviews/
+#   - DMBOOT_LICENSE_DIR -> section .embedded.license_fs, mounted at /lic/ (opt-in)
 
 # Find make_dmffs tool (sets MAKE_DMFFS_COMMAND)
 function(dmboot_find_make_dmffs)
@@ -109,4 +110,10 @@ if(DMBOOT_EVIEWS_DIR)
     set(EVIEWS_FS_IMAGE "${CMAKE_BINARY_DIR}/eviews_fs.dmffs")
 else()
     message(STATUS "No embedded views directory specified (DMBOOT_EVIEWS_DIR not set)")
+endif()
+
+# Licenses remain on the host by default; embedding them consumes flash space.
+if(DMBOOT_EMBED_LICENSES AND DMBOOT_LICENSE_DIR)
+    dmboot_embed_dmffs(license_fs "${DMBOOT_LICENSE_DIR}" .embedded.license_fs LICENSE_FS_OBJECT)
+    set(LICENSE_FS_IMAGE "${CMAKE_BINARY_DIR}/license_fs.dmffs")
 endif()

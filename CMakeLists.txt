@@ -12,6 +12,8 @@ set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in RO
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
 set(DMBOOT_EVIEWS_DIR "${CMAKE_BINARY_DIR}/eviews" CACHE PATH "Directory with views (.dmv) of the flash modules, one subdirectory per module; embedded as a dmffs image and mounted as /eviews/ (defaults to build/eviews)")
+set(DMBOOT_LICENSE_DIR "${CMAKE_BINARY_DIR}/lic" CACHE PATH "Flash module licenses on the host, one subdirectory per module")
+option(DMBOOT_EMBED_LICENSES "Embed flash module licenses and mount them at /lic/ (uses flash space)" OFF)
 set(DMBOOT_MAIN_MODULE "systemd" CACHE STRING "Name of the main module to start after boot")
 set(DMBOOT_MAIN_MODULE_CONFIG "" CACHE STRING "Configuration file for the main module (e.g. board/stm32f746g-disco.ini)")
 set(DMBOOT_MAIN_MODULE_ARGS "/configs/services /configs/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)")
@@ -143,13 +145,16 @@ endif()
 # Splash logo, built into the embedded views filesystem (sets DMBOOT_SPLASH_LOGO_FILE)
 include(scripts/splash.cmake)
 
-# Include romfs.cmake to handle config and embedded views filesystems embedding
+# Embed configuration, views and license filesystems
 include(scripts/romfs.cmake)
 if(CONFIG_FS_OBJECT)
     list(APPEND EMBEDDED_OBJECTS "${CONFIG_FS_OBJECT}")
 endif()
 if(EVIEWS_FS_OBJECT)
     list(APPEND EMBEDDED_OBJECTS "${EVIEWS_FS_OBJECT}")
+endif()
+if(LICENSE_FS_OBJECT)
+    list(APPEND EMBEDDED_OBJECTS "${LICENSE_FS_OBJECT}")
 endif()
 
 # Embed modules.dmp if it exists after build

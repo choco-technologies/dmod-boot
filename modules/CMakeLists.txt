@@ -78,6 +78,12 @@ if(NOT DMF_GET)
     message(FATAL_ERROR "dmf-get tool not found. Please build and install dmod tools first.")
 endif()
 
+execute_process(COMMAND "${DMF_GET}" --help
+    RESULT_VARIABLE _DMF_GET_RESULT OUTPUT_VARIABLE _DMF_GET_HELP ERROR_VARIABLE _DMF_GET_ERROR)
+if(NOT _DMF_GET_RESULT EQUAL 0 OR NOT _DMF_GET_HELP MATCHES "--package-dir" OR NOT _DMF_GET_HELP MATCHES "--license-dir")
+    message(FATAL_ERROR "dmf-get must support --package-dir and --license-dir. Build/install the tools from lib/dmod, then set DMF_GET to the updated executable. Selected: ${DMF_GET}")
+endif()
+
 # Routes tagged configuration entries in *.dmd files ("driver=", "rules=", "service=")
 # to their own subdirectory under DMBOOT_CONFIG_DIR, instead of all landing together.
 # The ';' separators must be escaped: an unescaped ';' makes CMake treat this
@@ -89,10 +95,16 @@ set(DMBOOT_CONFIG_MAP "driver:${DMBOOT_CONFIG_DIR}/drivers\;rules:${DMBOOT_CONFI
 # dmf-get installs them into <views dir>/<module>: views of the flash modules go to
 # DMBOOT_EVIEWS_DIR (embedded and mounted as /eviews/, see scripts/romfs.cmake),
 # views of the sdcard modules stay on the sdcard, in DMBOOT_SDCARD_VIEWS_DIR.
-file(MAKE_DIRECTORY "${DMBOOT_EVIEWS_DIR}")
+file(MAKE_DIRECTORY "${DMBOOT_EVIEWS_DIR}" "${DMBOOT_LICENSE_DIR}")
+
+# Package contents stay on the host, outside the directories embedded as binaries
+# or uploaded to the card. Download markers must not pollute binary directories.
+set(DMBOOT_FLASH_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/flash")
+set(DMBOOT_SDCARD_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/sdcard")
+set(DMBOOT_MODULE_OUTPUT_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/module_output.cmake")
 
 set(DMBOOT_MODULES_OUT_DIR "${CMAKE_BINARY_DIR}/dmf")
-set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_OUT_DIR}/.download_complete")
+set(DMBOOT_MODULES_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/flash.download_complete")
 # scripts/romfs.cmake keys the config filesystem image off this marker: dmf-get
 # drops each module's service=/rules= files into DMBOOT_CONFIG_DIR's existing
 # subdirectories, which leaves that directory's own mtime untouched, so a
@@ -131,17 +143,17 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     file(WRITE "${DMBOOT_COMBINED_FLASH_DMD}" "${_COMBINED_FLASH_DMD_CONTENT}")
 
     set(_FLASH_DOWNLOAD_COMMANDS
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_MODULES_OUT_DIR}"
+        COMMAND ${CMAKE_COMMAND} -DMODULE_DIR=${DMBOOT_MODULES_OUT_DIR} -DPACKAGE_DIR=${DMBOOT_FLASH_PACKAGE_DIR} -P "${DMBOOT_MODULE_OUTPUT_SCRIPT}"
     )
     if(DMBOOT_MANIFEST_URL)
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules (manifest: ${DMBOOT_MANIFEST_URL})..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}"
+            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
         )
     else()
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}"
+            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
         )
     endif()
     if(DMBOOT_EMULATION)
@@ -152,13 +164,14 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
         )
     endif()
     list(APPEND _FLASH_DOWNLOAD_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -DMODULE_DIR=${DMBOOT_MODULES_OUT_DIR} -DCHECK_ONLY=ON -P "${DMBOOT_MODULE_OUTPUT_SCRIPT}"
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}"
     )
 
     add_custom_command(
         OUTPUT "${DMBOOT_MODULES_MARKER_FILE}"
         ${_FLASH_DOWNLOAD_COMMANDS}
-        DEPENDS ${DMBOOT_FLASH_DMD_FILES} "${DMBOOT_COMBINED_FLASH_DMD}"
+        DEPENDS ${DMBOOT_FLASH_DMD_FILES} "${DMBOOT_COMBINED_FLASH_DMD}" "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
         COMMENT "Downloading flash modules from: ${DMBOOT_FLASH_DMD_FILES}; main module: ${DMBOOT_MAIN_MODULE}; shell: ${DMBOOT_SHELL}"
         VERBATIM
     )
@@ -180,35 +193,38 @@ set(DMBOOT_SDCARD_OUT_DIR "${CMAKE_BINARY_DIR}/sdcard")
 # Both module formats (.dmf and .dmfc) go to bin on the card. Keep views
 # beside bin, so upload-files preserves their existing paths.
 set(DMBOOT_SDCARD_BIN_DIR "${DMBOOT_SDCARD_OUT_DIR}/bin")
-set(DMBOOT_SDCARD_MARKER_FILE "${DMBOOT_SDCARD_BIN_DIR}/.download_complete")
+set(DMBOOT_SDCARD_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/sdcard.download_complete")
 set(DMBOOT_SDCARD_VIEWS_DIR "${DMBOOT_SDCARD_OUT_DIR}/views")
+set(DMBOOT_SDCARD_LICENSE_DIR "${DMBOOT_SDCARD_OUT_DIR}/lic")
 
 if(DMBOOT_SDCARD_DMD_FILES)
     set(_SDCARD_DOWNLOAD_COMMANDS
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_SDCARD_BIN_DIR}"
+        COMMAND ${CMAKE_COMMAND} -DMODULE_DIR=${DMBOOT_SDCARD_BIN_DIR} -DPACKAGE_DIR=${DMBOOT_SDCARD_PACKAGE_DIR} -P "${DMBOOT_MODULE_OUTPUT_SCRIPT}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_SDCARD_LICENSE_DIR}"
     )
     foreach(_DMD_FILE IN LISTS DMBOOT_SDCARD_DMD_FILES)
         set(_EFFECTIVE_MANIFEST "${DMBOOT_MANIFEST_URL}")
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
             )
         else()
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}"
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
             )
         endif()
     endforeach()
     list(APPEND _SDCARD_DOWNLOAD_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -DMODULE_DIR=${DMBOOT_SDCARD_BIN_DIR} -DCHECK_ONLY=ON -P "${DMBOOT_MODULE_OUTPUT_SCRIPT}"
         COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_SDCARD_MARKER_FILE}"
     )
 
     add_custom_command(
         OUTPUT "${DMBOOT_SDCARD_MARKER_FILE}"
         ${_SDCARD_DOWNLOAD_COMMANDS}
-        DEPENDS ${DMBOOT_SDCARD_DMD_FILES}
+        DEPENDS ${DMBOOT_SDCARD_DMD_FILES} "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
         COMMENT "Downloading sdcard modules from: ${DMBOOT_SDCARD_DMD_FILES}"
         VERBATIM
     )
