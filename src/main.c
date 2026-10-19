@@ -404,38 +404,15 @@ static void mount_eviews_filesystem(void)
 #define DEVFS_CONFIG_PATH   "/configs/drivers"
 
 #ifdef DMBOOT_HAS_DEVICE_SECRET
-/* The device secret of this build (made by CMake, see DMBOOT_DEVICE_SECRET) */
-extern const char dmboot_device_secret[];
+#include "device_secret.h"      /* DMBOOT_DEVICE_SECRET_STRING, made by CMake */
 #endif
 
 static void mount_devfs(void)
 {
 #ifdef DMBOOT_HAS_DEVICE_SECRET
     /* dmdevfs takes the device secret after the first comma of its configuration string
-     * and serves it as /dev/devkey. The string is built here, on the stack, and wiped
-     * after the mount: dmvfs passes it to dmdevfs and keeps no copy. */
-    char config[sizeof(DEVFS_CONFIG_PATH) + 1 + 64 + 1];
-    size_t length = 0;
-
-    for(const char* p = DEVFS_CONFIG_PATH; *p != '\0' && length < sizeof(config) - 1; p++)
-    {
-        config[length++] = *p;
-    }
-    config[length++] = ',';
-    for(const char* p = dmboot_device_secret; *p != '\0' && length < sizeof(config) - 1; p++)
-    {
-        config[length++] = *p;
-    }
-    config[length] = '\0';
-
-    bool mounted = dmvfs_mount_fs("dmdevfs", "/dev", config);
-
-    for(volatile char* p = config; p < config + sizeof(config); p++)
-    {
-        *p = 0;
-    }
-
-    if(!mounted)
+     * and serves it as /dev/devkey; dmvfs passes the string on and keeps no copy */
+    if(!dmvfs_mount_fs("dmdevfs", "/dev", DEVFS_CONFIG_PATH "," DMBOOT_DEVICE_SECRET_STRING))
     {
         /* A dmdevfs that does not know the ",<secret>" form takes the whole string as the path
          * and fails: mount it as it was before, without /dev/devkey */

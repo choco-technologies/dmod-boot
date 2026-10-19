@@ -211,25 +211,25 @@ if(NOT "${DMBOOT_DEVICE_SECRET_VALUE}" STREQUAL "")
     # as the body of a C string literal
     string(REPLACE "\\" "\\\\" DMBOOT_DEVICE_SECRET_C "${DMBOOT_DEVICE_SECRET_VALUE}")
     string(REPLACE "\"" "\\\"" DMBOOT_DEVICE_SECRET_C "${DMBOOT_DEVICE_SECRET_C}")
-    set(DMBOOT_DEVICE_SECRET_SOURCE "${CMAKE_BINARY_DIR}/device_secret.c")
-    file(WRITE "${DMBOOT_DEVICE_SECRET_SOURCE}.tmp"
+    set(DMBOOT_DEVICE_SECRET_HEADER "${CMAKE_BINARY_DIR}/device_secret.h")
+    file(WRITE "${DMBOOT_DEVICE_SECRET_HEADER}.tmp"
         "/* Made by CMake from DMBOOT_DEVICE_SECRET / DMBOOT_DEVICE_SECRET_FILE - not for the repository. */\n"
-        "const char dmboot_device_secret[] = \"${DMBOOT_DEVICE_SECRET_C}\";\n")
-    # touched only when it changes: a rebuild does not relink for nothing
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DMBOOT_DEVICE_SECRET_SOURCE}.tmp" "${DMBOOT_DEVICE_SECRET_SOURCE}")
-    file(REMOVE "${DMBOOT_DEVICE_SECRET_SOURCE}.tmp")
+        "#define DMBOOT_DEVICE_SECRET_STRING \"${DMBOOT_DEVICE_SECRET_C}\"\n")
+    # touched only when it changes: a rebuild does not recompile for nothing
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DMBOOT_DEVICE_SECRET_HEADER}.tmp" "${DMBOOT_DEVICE_SECRET_HEADER}")
+    file(REMOVE "${DMBOOT_DEVICE_SECRET_HEADER}.tmp")
 else()
-    set(DMBOOT_DEVICE_SECRET_SOURCE "")
+    set(DMBOOT_DEVICE_SECRET_HEADER "")
 endif()
 
 add_executable(${MODULE_NAME}.elf
     src/main.c
-    ${DMBOOT_DEVICE_SECRET_SOURCE}
     ${EMBEDDED_OBJECTS}
 )
 
-if(NOT "${DMBOOT_DEVICE_SECRET_SOURCE}" STREQUAL "")
+if(NOT "${DMBOOT_DEVICE_SECRET_HEADER}" STREQUAL "")
     target_compile_definitions(${MODULE_NAME}.elf PRIVATE DMBOOT_HAS_DEVICE_SECRET=1)
+    target_include_directories(${MODULE_NAME}.elf PRIVATE ${CMAKE_BINARY_DIR})
 endif()
 
 dmod_set_current_allocator(${MODULE_NAME}.elf)
