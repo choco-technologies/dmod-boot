@@ -339,6 +339,15 @@ for both `.dmf` and `.dmfc` formats. With the default upload settings they
 arrive at `/mnt/<label>/bin/`. Views remain in `build/sdcard/views/<module>/`
 and arrive at `/mnt/<label>/views/<module>/`.
 
+The default `DMOD_REPO_PATHS` includes `/mnt/*/bin`. The loader caches the
+expanded directories and automount invalidates that cache after successful
+mounts and unmounts. Flash modules take precedence over card modules; cards
+are searched in alphabetical path order. New files uploaded into `bin`
+are visible without refreshing the cache. Existing CMake caches retain
+their `DMOD_REPO_PATHS` value; update it to
+`/mnt/*/bin:/flash/dmf:/flash/dmfc` to enable card lookup. This requires
+the dmod cache API and the matching libautomount update.
+
 When upgrading an existing build, remove the old downloaded files from the
 root of `build/sdcard` after checking the new `bin` directory; otherwise
 `upload-files` will also send those old copies. Files already on the card
