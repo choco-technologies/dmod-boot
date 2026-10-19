@@ -63,3 +63,16 @@ grep -A 5 "\.embedded\.user_data" build/dmboot.map
 ```
 
 You should see the sections with their addresses and sizes.
+
+## Module installation layout
+
+Run the CMake download targets against local fixture packages with the current host tool:
+
+```sh
+python3 tests/test_module_layout.py --dmf-get /path/to/dmf-get
+```
+
+Checks binary-only flash/SD directories, per-module licenses, views, tagged
+configuration copying, metadata placement, default/explicit manifests, and
+preservation of legacy resources without overwriting backups. No board or
+network access is required.

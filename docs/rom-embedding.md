@@ -30,6 +30,12 @@ DMOD Boot supports embedding binary files into ROM at build time. This allows yo
    - Views of the sdcard modules are not embedded - they stay in `build/sdcard/views/<module>/`
    - Also holds the splash logo picked by `DMBOOT_SPLASH_LOGO`, unpacked into a `.dmvir` at `DMBOOT_SPLASH_LOGO_PATH` (default `/eviews/splash_logo.dmvir`, passed to the display driver in `$SPLASH_LOGO`)
 
+6. **`license_fs.dmffs`** (optional, `DMBOOT_EMBED_LICENSES=ON`) - dmffs image of `DMBOOT_LICENSE_DIR` (default `build/lic`), mounted at `/lic/`
+   - Disabled by default to save flash; licenses are still collected on the host under `build/lic/<module>/`
+   - When enabled, licenses declared by each flash module's package are installed in `/lic/<module>/`, preserving their filenames
+   - The image is embedded in `.embedded.license_fs` and rebuilt after module downloads
+   - SD module licenses remain on the card in `build/sdcard/lic/<module>/`; they are not embedded
+
 ## How It Works
 
 When DMOD Boot starts:

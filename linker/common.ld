@@ -137,6 +137,18 @@ SECTIONS
        PROVIDE(__eviews_fs_size = __eviews_fs_end - __eviews_fs_start);
    } > rom AT > rom
 
+   . = ALIGN(16);
+   .embedded.license_fs :
+   {
+       __license_fs_start = .;
+       PROVIDE(__license_fs_start = .);
+       KEEP(*(.embedded.license_fs))
+       __license_fs_end = .;
+       PROVIDE(__license_fs_end = .);
+       __license_fs_size = __license_fs_end - __license_fs_start;
+       PROVIDE(__license_fs_size = __license_fs_end - __license_fs_start);
+   } > rom AT > rom
+
    . = ALIGN(4);
    __exidx_start__ = .;
    PROVIDE(__exidx_start__ = __exidx_start__);
