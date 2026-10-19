@@ -8,7 +8,7 @@ chip (see the dmlittlefs documentation).
 dmspiflash   the chip: /dev/dmspiflashx/flash (block device: read, write, erase)   - pins, bus and chip in one .ini
 dmqspi       the QUADSPI bus (+ dmqspi_port: the controller, DMA2 stream 7)
 dmlittlefs   the file system, mklittlefs creates it
-ext service  configs/board/stm32f746g-disco/services/ext.ini: mount -t dmlittlefs ... /ext
+ext service  configs/board/stm32f746g-disco/ext/services/ext.ini: mount -t dmlittlefs ... /ext
 ```
 
 ## What lives there
@@ -75,8 +75,13 @@ For this board:
 
 ## Notes
 
-- The board's own units and rules (`configs/board/<BOARD>/services`, `.../rules`) are copied into the config
-  filesystem next to the ones of the modules (`services/board/`, `rules/board/`).
+- The board's own units and rules (`configs/board/<BOARD>/services|rules`, and `ext/services|rules` for a board with an
+  external flash) are copied into the config filesystem next to the ones of the modules (`services/board/`, `rules/board/`).
+  The board's external flash modules are in `configs/board/<BOARD>/ext/flash.dmd`, read only when the board has the flash
+  (`DMBOOT_EXT_DEVICE`).
+- **The Renode emulation has none of it**: its platform has no QUADSPI controller, so `board.cmake` leaves
+  `DMBOOT_EXT_DEVICE` empty there - no `ext/flash.dmd`, no unit, no `format-ext` / `upload-ext`, and the shell tools stay in the
+  firmware (`DMBOOT_EXT_TOOLS` is `OFF`), which the emulation tests use.
 - `dmqspi` and `dmqspi_port` are listed in `flash.dmd` because `dmspiflash` talks to the bus only through the file
   system, so `dmf-get` does not pull them in as dependencies of it.
 - The module search path is a CMake cache entry: an existing build directory keeps its old `DMOD_REPO_PATHS` (and

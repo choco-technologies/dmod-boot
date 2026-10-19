@@ -34,6 +34,14 @@ if(EXISTS "${_COMMON_TOOLS_DMD}" AND NOT DMBOOT_EXT_TOOLS)
     list(APPEND DMBOOT_FLASH_DMD_FILES "${_COMMON_TOOLS_DMD}")
 endif()
 
+# Board modules of the external flash (configs/board/<BOARD>/ext/flash.dmd): when the board has one (DMBOOT_EXT_DEVICE)
+if(BOARD AND DMBOOT_EXT_DEVICE)
+    set(_BOARD_EXT_FLASH_DMD "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/ext/flash.dmd")
+    if(EXISTS "${_BOARD_EXT_FLASH_DMD}")
+        list(APPEND DMBOOT_FLASH_DMD_FILES "${_BOARD_EXT_FLASH_DMD}")
+    endif()
+endif()
+
 # Extra flash modules from cmake parameter
 foreach(_EXTRA_FLASH_DMD IN LISTS DMBOOT_EXTRA_FLASH_DMD_FILES)
     if(EXISTS "${_EXTRA_FLASH_DMD}")
@@ -83,6 +91,7 @@ endforeach()
 # The modules of ext.dmd are not in the firmware: they go to the external flash (/ext/bin, see
 # docs/external-flash.md), like the ones of sdcard.dmd go to a card. upload-ext sends them.
 set(DMBOOT_EXT_DMD_FILES "")
+if(DMBOOT_EXT_DEVICE)
 
 # Common ext modules
 set(_COMMON_EXT_DMD "${CMAKE_SOURCE_DIR}/configs/common/ext.dmd")
@@ -117,6 +126,7 @@ foreach(_EXTRA_EXT_DMD IN LISTS DMBOOT_EXTRA_EXT_DMD_FILES)
         message(WARNING "Extra ext.dmd file not found: ${_EXTRA_EXT_DMD}")
     endif()
 endforeach()
+endif()
 
 # ======================================================================
 #               Downloading modules from DMD
@@ -151,19 +161,25 @@ set(DMBOOT_FLASH_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/flash")
 set(DMBOOT_SDCARD_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/sdcard")
 set(DMBOOT_MODULE_OUTPUT_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/module_output.cmake")
 
-# Units and rules of the board itself (configs/board/<BOARD>/services, configs/board/<BOARD>/rules) - e.g. what is
-# mounted where. The ones of the modules come with their packages (service= / rules= above). They land next to those
+# Units and rules of the board itself (configs/board/<BOARD>/services|rules, and ext/services|rules when the board has an
+# external flash) - e.g. what is mounted where. The ones of the modules come with their packages (service= / rules= above). They land next to those
 # (services/board/, rules/board/); configure_file() copies them again whenever one changes and the list is a
 # dependency of the config filesystem image (see scripts/romfs.cmake).
 set(DMBOOT_BOARD_CONFIG_FILES "")
 if(BOARD)
+    set(_board_config_dirs "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}")
+    if(DMBOOT_EXT_DEVICE)
+        list(APPEND _board_config_dirs "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/ext")
+    endif()
     foreach(_kind IN ITEMS services rules)
-        file(GLOB _board_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/${_kind}/*")
+      foreach(_board_dir IN LISTS _board_config_dirs)
+        file(GLOB _board_files CONFIGURE_DEPENDS "${_board_dir}/${_kind}/*")
         foreach(_board_file IN LISTS _board_files)
             get_filename_component(_board_name "${_board_file}" NAME)
             configure_file("${_board_file}" "${DMBOOT_CONFIG_DIR}/${_kind}/board/${_board_name}" COPYONLY)
             list(APPEND DMBOOT_BOARD_CONFIG_FILES "${_board_file}")
         endforeach()
+      endforeach()
     endforeach()
 endif()
 set(DMBOOT_BOARD_CONFIG_FILES "${DMBOOT_BOARD_CONFIG_FILES}" PARENT_SCOPE)
