@@ -70,6 +70,11 @@ set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of th
 set(DMBOOT_DEVICE_SECRET "" CACHE STRING "Device secret (1..64 bytes of text; no control characters). Empty: read from / generated into DMBOOT_DEVICE_SECRET_FILE")
 set(DMBOOT_DEVICE_SECRET_FILE "${CMAKE_CURRENT_SOURCE_DIR}/device.secret" CACHE FILEPATH "File holding the device secret (made with a random one when missing); empty (with an empty DMBOOT_DEVICE_SECRET): no device secret")
 
+# Where the vaults of dmsecrets are (the DMSECRETS_PATH environment variable, set at boot): a file on a
+# filesystem that is there when the service that needs it runs, e.g. on the SD card (/mnt/<label or node>/
+# secrets.vault). Empty: not set - every library then needs a path of its own (DMSECRETS_<DOMAIN>_PATH).
+set(DMBOOT_DMSECRETS_PATH "" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
+
 # Include toolchain configuration before project() to set compilers
 # Check for a local override first, then fall back to the dmod library
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/tools-cfg.cmake")
@@ -248,6 +253,7 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_SHELL_STRING="${DMBOOT_SHELL}"
         DMBOOT_MAIN_MODULE_ARGS_STRING="${DMBOOT_MAIN_MODULE_ARGS}"
         DMBOOT_SPLASH_LOGO_PATH_STRING="${DMBOOT_SPLASH_LOGO_PATH}"
+        DMBOOT_DMSECRETS_PATH_STRING="${DMBOOT_DMSECRETS_PATH}"
         DMBOOT_DMA_HEAP_TAGS_STRING="${DMBOOT_DMA_HEAP_TAGS}"
         DMBOOT_MAIN_HEAP_TAGS_STRING="${DMBOOT_MAIN_HEAP_TAGS}"
 )

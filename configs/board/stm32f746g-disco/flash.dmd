@@ -44,13 +44,28 @@ dhcpc rules=dhcp.rules
 # and dmheap must be up) and the device. dmnetif lists wlan0 only when the
 # ESP answered - without one there is no wlan0 and networkd.rules / dhcp.rules
 # start nothing for it; with one they start networkd@wlan0 and dhcp@wlan0 like
-# for eth0. No network is kept: connect from the shell, "wifi connect SSID"
-# (dmnet's wifi tool; it asks for the password).
+# for eth0. "wifi" is dmnet's tool (scan, connect, save a network).
+#
+# The networks to connect to by themselves are saved in the "wifi" vault of
+# dmsecrets (wifi save SSID / wifi connect SSID -s): dmcrypto does the
+# cryptography and, through its /dev/crypto node (crypto.ini), takes its random
+# bytes from /dev/rng; the vault is opened with the key of the device secret
+# (/dev/devkey, DMBOOT_DEVICE_SECRET), so nobody types a passphrase. wifid, a
+# service libsystemd starts for every network interface (wifid.rules; it ends at
+# once on one that is not Wi-Fi), connects wlan0 to the saved network in range
+# with the strongest signal. The vault is a file: DMBOOT_DMSECRETS_PATH (e.g.
+# /mnt/<card>/secrets.vault) sets DMSECRETS_PATH - wifid waits for it to appear.
 #
 dmspi
 dmspi_port
 dmesphosted driver=board/stm32f746g-disco/wifi.ini
 wifi
+dmcrypto driver=board/stm32f746g-disco/crypto.ini
+crypto
+dmsecrets
+secrets
+wifid service=wifid@.ini
+wifid rules=wifid.rules
 #
 # DNS: the dmdns resolver, brought up once for the whole system by the dns
 # unit (type=library) - no per-interface rule. Name servers come from the
