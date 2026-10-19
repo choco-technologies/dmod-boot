@@ -9,11 +9,9 @@ dmfmc driver=board/stm32f746g-disco/sdram.ini
 dmdma driver=board/stm32f746g-disco/dma.ini
 # Hardware entropy source (/dev/rng); CLK48 comes from dmclk.
 dmrng driver=board/stm32f746g-disco/rng.ini
-test_dmrng
 # Civil RTC calendar; dmutc will supply UTC synchronization policy.
 dmrtc driver=board/stm32f746g-disco/rtc.ini
 rtc
-test_dmrtc
 #
 # Network: eth0 on the on-board RMII PHY. dmnetif reports the interface as a
 # "netif" device, networkd.rules and dhcp.rules then start networkd@eth0 (RX
@@ -139,9 +137,9 @@ dmaudio rules=dmaudio.rules
 # (/dev/dmlcdtft0), which shows what the applications claim for it - with
 # the channel between an application and its view (0.10), which carhmi needs.
 #
-dmview@>=0.10
-dmview@>=0.10 service=dmview@.ini
-dmview@>=0.10 rules=dmview.rules
+dmview
+dmview service=dmview@.ini
+dmview rules=dmview.rules
 #
 # The car HMI demo (choco-technologies/carhmi-demo): a service that claims the
 # display for its view - on the SD card, see sdcard.dmd - and plays the MP3
