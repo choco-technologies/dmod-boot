@@ -61,6 +61,7 @@ dmspi_port
 dmesphosted driver=board/stm32f746g-disco/wifi.ini
 wifi
 dmcrypto driver=board/stm32f746g-disco/crypto.ini
+crypto
 dmsecrets
 secrets
 wifid service=wifid@.ini
