@@ -7,3 +7,11 @@
 # <card>/views/carhmi_view/ (upload-files), where carhmi.ini looks for it.
 #
 carhmi_view
+rm
+tree
+mount
+printf
+touch
+which
+mv
+find
