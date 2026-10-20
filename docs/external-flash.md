@@ -77,9 +77,10 @@ For this board:
 
 - The board's own units and rules (`configs/board/<BOARD>/services`, `.../rules`) are copied into the config
   filesystem next to the ones of the modules (`services/board/`, `rules/board/`).
-- **In the Renode emulation** there is no `/ext`: its platform has no QUADSPI controller. `board.cmake` therefore keeps the
-  shell tools in the firmware there (`DMBOOT_EXT_TOOLS` is `OFF`, the emulation tests use them) and does not point the dmsecrets
-  vault at `/ext`; the external flash modules are built in as on the hardware and just find no chip.
+- **In Renode**, the board loads `configs/renode/STM32F7_QUADSPI.cs`: QUADSPI at `0xA0001000`,
+  IRQ 92, DMA2 stream 7, and the read-only mapped window at `0x90000000`. The model contains a
+  16 MiB N25Q128A (`20 BA 18`). The shell tools stay in the firmware for provisioning a fresh chip.
+  See [Renode QUADSPI](renode-qspi.md) for image persistence and tests.
 - `dmqspi` and `dmqspi_port` are listed in `flash.dmd` because `dmspiflash` talks to the bus only through the file
   system, so `dmf-get` does not pull them in as dependencies of it.
 - The module search path is a CMake cache entry: an existing build directory keeps its old `DMOD_REPO_PATHS` (and

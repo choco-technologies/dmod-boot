@@ -175,6 +175,9 @@ jobs:
         git submodule init
         git submodule update --recursive
     
+    - name: Test QUADSPI model registers and persistence
+      run: python3 tests/test_renode_qspi.py
+
     - name: Run Renode emulation tests
       env:
         # Fail instead of skipping the network test if the TAP can't be opened
