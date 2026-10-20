@@ -59,12 +59,30 @@ endif()
 # little-endian samples. The SD card setup below connects to DMA2 by name, so
 # DMA2 has to be replaced first.
 set(DMBOOT_RENODE_AUDIO_CAPTURE "" CACHE FILEPATH "File the board's audio codec writes what it plays to in emulation mode (raw stereo s16le); empty: the audio models are not loaded")
-if(DMBOOT_RENODE_AUDIO_MODEL AND DMBOOT_RENODE_AUDIO_CAPTURE)
-    string(REPLACE "<capture>" "${DMBOOT_RENODE_AUDIO_CAPTURE}" _AUDIO_CODEC "${DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION}")
+# QUADSPI also needs this DMA model: it implements NDTR and byte transfers,
+# which dmqspi_port uses to verify completion. Install it before wiring clients.
+set(DMBOOT_RENODE_AUDIO_SETUP "")
+if(DMBOOT_RENODE_AUDIO_MODEL AND (DMBOOT_RENODE_AUDIO_CAPTURE OR DMBOOT_RENODE_QSPI_MODEL))
     set(DMBOOT_RENODE_AUDIO_SETUP
-        "include @${DMBOOT_RENODE_AUDIO_MODEL}\nsysbus Unregister ${DMBOOT_RENODE_AUDIO_DMA}\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION}\"\nmachine LoadPlatformDescriptionFromString \"${_AUDIO_CODEC}\"\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION}\"")
-else()
-    set(DMBOOT_RENODE_AUDIO_SETUP "")
+        "include @${DMBOOT_RENODE_AUDIO_MODEL}\nsysbus Unregister ${DMBOOT_RENODE_AUDIO_DMA}\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION}\"")
+    if(DMBOOT_RENODE_AUDIO_CAPTURE)
+        string(REPLACE "<capture>" "${DMBOOT_RENODE_AUDIO_CAPTURE}" _AUDIO_CODEC "${DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION}")
+        string(APPEND DMBOOT_RENODE_AUDIO_SETUP
+            "\nmachine LoadPlatformDescriptionFromString \"${_AUDIO_CODEC}\"\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION}\"")
+    endif()
+endif()
+
+# The optional image persists program/erase operations across emulator processes.
+# An empty option gives a fresh erased chip for each process; reset keeps its data.
+set(DMBOOT_RENODE_QSPI_IMAGE "" CACHE FILEPATH "Persistent 16 MiB N25Q128A image; empty: volatile emulator storage")
+set(DMBOOT_RENODE_QSPI_SETUP "")
+if(DMBOOT_RENODE_QSPI_MODEL)
+    set(_QSPI_IMAGE_ARG "")
+    if(DMBOOT_RENODE_QSPI_IMAGE)
+        set(_QSPI_IMAGE_ARG "imageFile: \\\"${DMBOOT_RENODE_QSPI_IMAGE}\\\";")
+    endif()
+    set(DMBOOT_RENODE_QSPI_SETUP
+        "include @${DMBOOT_RENODE_QSPI_MODEL}\nmachine LoadPlatformDescriptionFromString \"qspi: SPI.STM32F7_QUADSPI @ sysbus 0xA0001000 { ${_QSPI_IMAGE_ARG} IRQ -> nvic@92; DMARequest -> dma2@7 }\"\nmachine LoadPlatformDescriptionFromString \"qspiWindow: SPI.STM32F7_QSPIWindow @ sysbus 0x90000000 { controller: qspi }\"")
 endif()
 # Insert an SD card image in the board's card slot (if it names one): the
 # board's SD host is replaced with its model (DMBOOT_RENODE_SDMMC_MODEL, C#

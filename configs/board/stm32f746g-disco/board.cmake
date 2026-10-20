@@ -50,8 +50,8 @@ set(DMBOOT_EXT_DEVICE "/dev/dmspiflashx/flash" CACHE STRING "Block device of the
 set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
 set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
 set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
-# The Renode platform has no QUADSPI controller: there is no /ext in the emulation, so the shell tools (which its tests use) stay
-# in the firmware and the dmsecrets vault is not on /ext. On the hardware the tools of configs/common/tools.dmd are on /ext
+# Renode loads the QUADSPI/N25Q128A model below. Its flash starts erased, so keep the shell tools
+# in the firmware for provisioning and tests. On hardware the tools of configs/common/tools.dmd are on /ext
 # (upload-ext sends them): the ROM is small. ls, mount, umount, ymodem and mklittlefs stay in flash.dmd - format-ext and
 # upload-ext need them - and the default vault is /ext/secrets.vault (wifid waits for the file to appear).
 if(DMBOOT_EMULATION)
@@ -61,3 +61,6 @@ else()
     # (a cache entry that already exists is not changed - pass -DDMBOOT_DMSECRETS_PATH=...)
     set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
 endif()
+
+# QUADSPI bank 1 + N25Q128A, DMA2 stream 7/channel 3, IRQ 92 (RM0385).
+set(DMBOOT_RENODE_QSPI_MODEL "${CMAKE_SOURCE_DIR}/configs/renode/STM32F7_QUADSPI.cs")
