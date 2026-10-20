@@ -83,8 +83,9 @@ set(DMOD_DMF_DIR                "/flash/dmf"   CACHE STRING "Directory for DMF f
 set(DMOD_REPO_DIR               "${DMOD_DMF_DIR}" 			CACHE STRING "Directory for DMF files inside the system")
 
 # Paths to the repositories inside the system in an array
-# Search lists are traversed from last to first: flash takes precedence over cards.
-set(DMOD_REPO_PATHS             "/mnt/*/bin:${DMOD_DMF_DIR}:${DMOD_DMFC_DIR}"  CACHE STRING "Paths to the repositories inside the system in an array")
+# Search lists are traversed from last to first: flash takes precedence over the external flash (/ext/bin),
+# which takes precedence over cards (/mnt/<label>/bin).
+set(DMOD_REPO_PATHS             "/mnt/*/bin:/ext/bin:${DMOD_DMF_DIR}:${DMOD_DMFC_DIR}"  CACHE STRING "Paths to the repositories inside the system in an array")
 
 # Enable external registration of modules due to the dmvfs and dmlist libraries
 set(DMOD_EXTERNAL_REGISTRATION ON CACHE BOOL "Enable to use external registration of modules")

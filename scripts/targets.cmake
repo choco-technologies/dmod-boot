@@ -59,12 +59,30 @@ endif()
 # little-endian samples. The SD card setup below connects to DMA2 by name, so
 # DMA2 has to be replaced first.
 set(DMBOOT_RENODE_AUDIO_CAPTURE "" CACHE FILEPATH "File the board's audio codec writes what it plays to in emulation mode (raw stereo s16le); empty: the audio models are not loaded")
-if(DMBOOT_RENODE_AUDIO_MODEL AND DMBOOT_RENODE_AUDIO_CAPTURE)
-    string(REPLACE "<capture>" "${DMBOOT_RENODE_AUDIO_CAPTURE}" _AUDIO_CODEC "${DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION}")
+# QUADSPI also needs this DMA model: it implements NDTR and byte transfers,
+# which dmqspi_port uses to verify completion. Install it before wiring clients.
+set(DMBOOT_RENODE_AUDIO_SETUP "")
+if(DMBOOT_RENODE_AUDIO_MODEL AND (DMBOOT_RENODE_AUDIO_CAPTURE OR DMBOOT_RENODE_QSPI_MODEL))
     set(DMBOOT_RENODE_AUDIO_SETUP
-        "include @${DMBOOT_RENODE_AUDIO_MODEL}\nsysbus Unregister ${DMBOOT_RENODE_AUDIO_DMA}\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION}\"\nmachine LoadPlatformDescriptionFromString \"${_AUDIO_CODEC}\"\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION}\"")
-else()
-    set(DMBOOT_RENODE_AUDIO_SETUP "")
+        "include @${DMBOOT_RENODE_AUDIO_MODEL}\nsysbus Unregister ${DMBOOT_RENODE_AUDIO_DMA}\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION}\"")
+    if(DMBOOT_RENODE_AUDIO_CAPTURE)
+        string(REPLACE "<capture>" "${DMBOOT_RENODE_AUDIO_CAPTURE}" _AUDIO_CODEC "${DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION}")
+        string(APPEND DMBOOT_RENODE_AUDIO_SETUP
+            "\nmachine LoadPlatformDescriptionFromString \"${_AUDIO_CODEC}\"\nmachine LoadPlatformDescriptionFromString \"${DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION}\"")
+    endif()
+endif()
+
+# The optional image persists program/erase operations across emulator processes.
+# An empty option gives a fresh erased chip for each process; reset keeps its data.
+set(DMBOOT_RENODE_QSPI_IMAGE "" CACHE FILEPATH "Persistent 16 MiB N25Q128A image; empty: volatile emulator storage")
+set(DMBOOT_RENODE_QSPI_SETUP "")
+if(DMBOOT_RENODE_QSPI_MODEL)
+    set(_QSPI_IMAGE_ARG "")
+    if(DMBOOT_RENODE_QSPI_IMAGE)
+        set(_QSPI_IMAGE_ARG "imageFile: \\\"${DMBOOT_RENODE_QSPI_IMAGE}\\\";")
+    endif()
+    set(DMBOOT_RENODE_QSPI_SETUP
+        "include @${DMBOOT_RENODE_QSPI_MODEL}\nmachine LoadPlatformDescriptionFromString \"qspi: SPI.STM32F7_QUADSPI @ sysbus 0xA0001000 { ${_QSPI_IMAGE_ARG} IRQ -> nvic@92; DMARequest -> dma2@7 }\"\nmachine LoadPlatformDescriptionFromString \"qspiWindow: SPI.STM32F7_QSPIWindow @ sysbus 0x90000000 { controller: qspi }\"")
 endif()
 # Insert an SD card image in the board's card slot (if it names one): the
 # board's SD host is replaced with its model (DMBOOT_RENODE_SDMMC_MODEL, C#
@@ -197,6 +215,31 @@ if(Python3_Interpreter_FOUND)
         USES_TERMINAL
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
+
+    # The external flash (DMBOOT_EXT_DEVICE, set by the board): the console runs the commands, YMODEM sends build/ext.
+    #   format-ext   create the file system on the device and mount it (ALL DATA IN THE FLASH IS LOST) - once, on a new
+    #                chip; it is never part of another target. A mounted /ext is unmounted first.
+    #   upload-ext   the modules of ext.dmd (build/ext: bin/, views/) to the mounted file system
+    if(DMBOOT_EXT_DEVICE)
+        set(DMBOOT_EXT_CONSOLE_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py
+            --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --block ${DMBOOT_UPLOAD_BLOCK})
+        add_custom_target(format-ext
+            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5
+                --run "-umount ${DMBOOT_EXT_MOUNT}"
+                --run "${DMBOOT_EXT_MKFS} ${DMBOOT_EXT_DEVICE}"
+                --run "mount -t ${DMBOOT_EXT_FS} -o device=${DMBOOT_EXT_DEVICE} ${DMBOOT_EXT_MOUNT}"
+                --ensure-dir ${DMBOOT_EXT_MOUNT}
+            USES_TERMINAL
+            COMMENT "Creating ${DMBOOT_EXT_FS} on ${DMBOOT_EXT_DEVICE} over ${DMBOOT_UPLOAD_PORT} - ALL DATA IN IT IS LOST..."
+        )
+        add_custom_target(upload-ext
+            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 --ensure-dir ${DMBOOT_EXT_MOUNT}
+                --dest ${DMBOOT_EXT_MOUNT} --card none ${CMAKE_BINARY_DIR}/ext
+            DEPENDS download_ext_modules
+            USES_TERMINAL
+            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM); run format-ext first on a new chip..."
+        )
+    endif()
 else()
-    message(STATUS "Python 3 not found - the upload-files and install-all targets are not available")
+    message(STATUS "Python 3 not found - the upload-files, install-all, format-ext and upload-ext targets are not available")
 endif()

@@ -27,6 +27,13 @@ if(BOARD)
     endif()
 endif()
 
+# The shell tools that are not needed to bring /ext up (configs/common/tools.dmd): in the firmware, or - on a board
+# with an external flash (DMBOOT_EXT_TOOLS) - on /ext, in the ext modules below
+set(_COMMON_TOOLS_DMD "${CMAKE_SOURCE_DIR}/configs/common/tools.dmd")
+if(EXISTS "${_COMMON_TOOLS_DMD}" AND NOT DMBOOT_EXT_TOOLS)
+    list(APPEND DMBOOT_FLASH_DMD_FILES "${_COMMON_TOOLS_DMD}")
+endif()
+
 # Extra flash modules from cmake parameter
 foreach(_EXTRA_FLASH_DMD IN LISTS DMBOOT_EXTRA_FLASH_DMD_FILES)
     if(EXISTS "${_EXTRA_FLASH_DMD}")
@@ -71,6 +78,47 @@ foreach(_EXTRA_SDCARD_DMD IN LISTS DMBOOT_EXTRA_SDCARD_DMD_FILES)
 endforeach()
 
 # ======================================================================
+#               Collecting ext.dmd files (common + MCU + board)
+# ======================================================================
+# The modules of ext.dmd are not in the firmware: they go to the external flash (/ext/bin, see
+# docs/external-flash.md), like the ones of sdcard.dmd go to a card. upload-ext sends them.
+set(DMBOOT_EXT_DMD_FILES "")
+
+# Common ext modules
+set(_COMMON_EXT_DMD "${CMAKE_SOURCE_DIR}/configs/common/ext.dmd")
+if(EXISTS "${_COMMON_EXT_DMD}")
+    list(APPEND DMBOOT_EXT_DMD_FILES "${_COMMON_EXT_DMD}")
+endif()
+
+# MCU-specific ext modules
+set(_MCU_EXT_DMD "${CMAKE_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/ext.dmd")
+if(EXISTS "${_MCU_EXT_DMD}")
+    list(APPEND DMBOOT_EXT_DMD_FILES "${_MCU_EXT_DMD}")
+endif()
+
+# The common tools, when they are on /ext
+if(EXISTS "${_COMMON_TOOLS_DMD}" AND DMBOOT_EXT_TOOLS)
+    list(APPEND DMBOOT_EXT_DMD_FILES "${_COMMON_TOOLS_DMD}")
+endif()
+
+# Board-specific ext modules (only if BOARD is set)
+if(BOARD)
+    set(_BOARD_EXT_DMD "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/ext.dmd")
+    if(EXISTS "${_BOARD_EXT_DMD}")
+        list(APPEND DMBOOT_EXT_DMD_FILES "${_BOARD_EXT_DMD}")
+    endif()
+endif()
+
+# Extra ext modules from cmake parameter
+foreach(_EXTRA_EXT_DMD IN LISTS DMBOOT_EXTRA_EXT_DMD_FILES)
+    if(EXISTS "${_EXTRA_EXT_DMD}")
+        list(APPEND DMBOOT_EXT_DMD_FILES "${_EXTRA_EXT_DMD}")
+    else()
+        message(WARNING "Extra ext.dmd file not found: ${_EXTRA_EXT_DMD}")
+    endif()
+endforeach()
+
+# ======================================================================
 #               Downloading modules from DMD
 # ======================================================================
 find_program(DMF_GET dmf-get HINTS ${DMBOOT_TOOLS_DIR})
@@ -102,6 +150,23 @@ file(MAKE_DIRECTORY "${DMBOOT_EVIEWS_DIR}" "${DMBOOT_LICENSE_DIR}")
 set(DMBOOT_FLASH_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/flash")
 set(DMBOOT_SDCARD_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/sdcard")
 set(DMBOOT_MODULE_OUTPUT_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/module_output.cmake")
+
+# Units and rules of the board itself (configs/board/<BOARD>/services, configs/board/<BOARD>/rules) - e.g. what is
+# mounted where. The ones of the modules come with their packages (service= / rules= above). They land next to those
+# (services/board/, rules/board/); configure_file() copies them again whenever one changes and the list is a
+# dependency of the config filesystem image (see scripts/romfs.cmake).
+set(DMBOOT_BOARD_CONFIG_FILES "")
+if(BOARD)
+    foreach(_kind IN ITEMS services rules)
+        file(GLOB _board_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/${_kind}/*")
+        foreach(_board_file IN LISTS _board_files)
+            get_filename_component(_board_name "${_board_file}" NAME)
+            configure_file("${_board_file}" "${DMBOOT_CONFIG_DIR}/${_kind}/board/${_board_name}" COPYONLY)
+            list(APPEND DMBOOT_BOARD_CONFIG_FILES "${_board_file}")
+        endforeach()
+    endforeach()
+endif()
+set(DMBOOT_BOARD_CONFIG_FILES "${DMBOOT_BOARD_CONFIG_FILES}" PARENT_SCOPE)
 
 set(DMBOOT_MODULES_OUT_DIR "${CMAKE_BINARY_DIR}/dmf")
 set(DMBOOT_MODULES_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/flash.download_complete")
@@ -235,6 +300,59 @@ if(DMBOOT_SDCARD_DMD_FILES)
 else()
     message(STATUS "No sdcard.dmd files found. Skipping sdcard module download.")
     add_custom_target(download_sdcard_modules ALL)
+endif()
+
+# ======================================================================
+#               Downloading ext modules
+# ======================================================================
+# Like the sdcard modules: the modules (.dmf/.dmfc) go to bin, the views and licenses beside it, the rest of the packages
+# stays on the host (build/packages/ext). The directory is what the external flash holds below /ext: upload-ext sends
+# build/ext as it is.
+set(DMBOOT_EXT_OUT_DIR "${CMAKE_BINARY_DIR}/ext")
+set(DMBOOT_EXT_BIN_DIR "${DMBOOT_EXT_OUT_DIR}/bin")
+set(DMBOOT_EXT_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/ext")
+set(DMBOOT_EXT_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/ext.download_complete")
+set(DMBOOT_EXT_VIEWS_DIR "${DMBOOT_EXT_OUT_DIR}/views")
+set(DMBOOT_EXT_LICENSE_DIR "${DMBOOT_EXT_OUT_DIR}/lic")
+
+if(DMBOOT_EXT_DMD_FILES)
+    set(_EXT_DOWNLOAD_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -DMODULE_DIR=${DMBOOT_EXT_BIN_DIR} -DPACKAGE_DIR=${DMBOOT_EXT_PACKAGE_DIR} -P "${DMBOOT_MODULE_OUTPUT_SCRIPT}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_EXT_LICENSE_DIR}"
+    )
+    foreach(_DMD_FILE IN LISTS DMBOOT_EXT_DMD_FILES)
+        set(_EFFECTIVE_MANIFEST "${DMBOOT_MANIFEST_URL}")
+        if(_EFFECTIVE_MANIFEST)
+            list(APPEND _EXT_DOWNLOAD_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E echo "Downloading ext modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
+            )
+        else()
+            list(APPEND _EXT_DOWNLOAD_COMMANDS
+                COMMAND ${CMAKE_COMMAND} -E echo "Downloading ext modules from ${_DMD_FILE}..."
+                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
+            )
+        endif()
+    endforeach()
+    list(APPEND _EXT_DOWNLOAD_COMMANDS
+        COMMAND ${CMAKE_COMMAND} -DMODULE_DIR=${DMBOOT_EXT_BIN_DIR} -DCHECK_ONLY=ON -P "${DMBOOT_MODULE_OUTPUT_SCRIPT}"
+        COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_EXT_MARKER_FILE}"
+    )
+
+    add_custom_command(
+        OUTPUT "${DMBOOT_EXT_MARKER_FILE}"
+        ${_EXT_DOWNLOAD_COMMANDS}
+        DEPENDS ${DMBOOT_EXT_DMD_FILES} "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
+        COMMENT "Downloading ext modules from: ${DMBOOT_EXT_DMD_FILES}"
+        VERBATIM
+    )
+    add_custom_target(download_ext_modules ALL
+        DEPENDS "${DMBOOT_EXT_MARKER_FILE}"
+    )
+    message(STATUS "Ext DMD files: ${DMBOOT_EXT_DMD_FILES}")
+else()
+    message(STATUS "No ext.dmd files found. Skipping ext module download.")
+    add_custom_target(download_ext_modules ALL)
 endif()
 
 # ======================================================================

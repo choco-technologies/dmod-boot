@@ -2,8 +2,21 @@
 # STM32F746G Discovery board sdcard modules - board-specific modules for sdcard
 #
 #
-# The car HMI's view (carhmi.dmv with its fonts and images, ~320 kB - too big
-# for the flash): installed to build/sdcard/views/carhmi_view/, it goes to
-# <card>/views/carhmi_view/ (upload-files), where carhmi.ini looks for it.
+# The car HMI demo (choco-technologies/carhmi-demo): a service that claims the display for its view and plays the MP3
+# files of the card's music/ directory through dmaudio. The module is loaded by name from /mnt/<label>/bin, once
+# automount has mounted the card, so the unit (carhmi.ini, which goes to the firmware's /configs - dmf-get puts the
+# service= files there for the sdcard modules too) can only start after that. Its dependencies (dmmp3, dmimg, ...) come
+# with it into the same bin.
+#
+carhmi service=carhmi.ini
+#
+# The car HMI's view (carhmi.dmv with its fonts and images, ~320 kB - too big for the flash): installed to
+# build/sdcard/views/carhmi_view/, it goes to <card>/views/carhmi_view/ (upload-files), where carhmi.ini looks for it.
 #
 carhmi_view
+#
+# The decoders of the album covers carhmi makes of the MP3 files' pictures: dmimg finds them by name, so they are not
+# in carhmi's dependencies.
+#
+dmimg_jpeg
+dmimg_png

@@ -1,0 +1,13 @@
+#
+# Common tools - the shell commands that are not needed to bring /ext up (flash.dmd keeps those)
+#
+# Where they go depends on the board: into the firmware (flash.dmd), or - DMBOOT_EXT_TOOLS, set by a board that has an
+# external flash - to /ext/bin (ext.dmd, sent by upload-ext), which takes them out of the ROM.
+#
+ps
+reboot
+mkdir
+cat
+catini
+memory
+service

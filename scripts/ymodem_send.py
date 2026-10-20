@@ -14,12 +14,18 @@ device - `ls /mnt`, where automount mounts every card (/mnt/<label>, or
 /mnt/<node name>) - when it has one; --card NAME picks one of several,
 --card none sends under the shell's current directory instead.
 
+Shell commands can be run first (--run, "-" before one lets it fail) - e.g. to create and mount
+a file system the files then go to - and --ensure-dir DIR fails unless DIR is there on the device:
+
+    ymodem_send.py --run "-umount /ext" --run "mklittlefs /dev/dmspiflashx/flash" --run "mount ... /ext"
+
 A FILE is sent by its name, a DIR with everything in it (names relative
 to it), SRC=NAME as NAME (a directory: under NAME). Only the standard
 library (termios): no pyserial needed.
 """
 
 import argparse
+import fcntl
 import os
 import re
 import select
@@ -40,6 +46,28 @@ class Failure(Exception):
     pass
 
 
+def other_users(port):
+    """(pid, program) of the other processes that have `port` open - a terminal program on it would take the
+    answers and type into the shell with the script"""
+    users = []
+    try:
+        target = os.path.realpath(port)
+        for pid in os.listdir('/proc'):
+            if not pid.isdigit() or int(pid) == os.getpid():
+                continue
+            try:
+                for fd in os.listdir(f'/proc/{pid}/fd'):
+                    if os.path.realpath(f'/proc/{pid}/fd/{fd}') == target:
+                        with open(f'/proc/{pid}/comm') as f:
+                            users.append((int(pid), f.read().strip()))
+                        break
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return users
+
+
 class Link:
     """Bytes in and out: a serial port, or stdin / stdout (--stdio, tests)"""
 
@@ -49,7 +77,15 @@ class Link:
         if port is None:
             self.rfd, self.wfd, self.saved = sys.stdin.fileno(), sys.stdout.fileno(), None
             return
+        users = other_users(port)
+        if users:
+            raise Failure(f'{port} is open in {", ".join(f"{name} (pid {pid})" for pid, name in users)}: close it '
+                          '(two programs on one console take each other\'s answers)')
         fd = os.open(port, os.O_RDWR | os.O_NOCTTY)
+        try:
+            fcntl.ioctl(fd, termios.TIOCEXCL)          # (no other program can open it meanwhile)
+        except OSError:
+            pass
         self.saved = termios.tcgetattr(fd)
         tty.setraw(fd)
         attrs = termios.tcgetattr(fd)
@@ -83,11 +119,12 @@ class Link:
             raise Failure('the device closed the connection')
         return b[0]
 
-    def drain(self, quiet=0.2):
-        """What the device says until it is quiet"""
+    def drain(self, quiet=0.2, limit=3.0):
+        """What the device says until it is quiet (at most `limit` seconds: a log that never stops)"""
         out = bytearray()
+        until = time.monotonic() + limit
         try:
-            while (b := self.read(quiet)) is not None:
+            while time.monotonic() < until and (b := self.read(quiet)) is not None:
                 out.append(b)
         except Failure:
             pass                        # (closed: what it said is all)
@@ -185,6 +222,70 @@ def receiver_ready(link, command, timeout):
     return False
 
 
+PROMPT = re.compile(r'@\S*>')
+
+
+def clean(data):
+    return re.sub(r'\x1b\[[0-9;]*[A-Za-z]', '', data.decode(errors='replace')).replace('\r', '')
+
+
+def run_command(link, command, timeout):
+    """Type a shell command, return what the console said until the shell was back at its prompt.
+
+    The console is shared with the log: other threads' lines run into the echo and into the output, so the
+    command's echo is not looked for - the shell prints one prompt when it is done (the prompts the Enter
+    before it printed are drained first)."""
+    link.write(b'\r')
+    link.drain(0.5)
+    link.write(command.encode() + b'\r')
+    end = time.monotonic() + timeout
+    seen = bytearray()
+    while time.monotonic() < end:
+        b = link.read(0.6)
+        if b is not None:
+            seen.append(b)
+        if PROMPT.search(clean(seen)):
+            seen += link.drain(0.3)     # (the prompt is back: the rest of the output; a log that never stops is no reason to wait)
+            return clean(seen)
+    raise Failure(f'"{command}" did not finish in {timeout:.0f} s')
+
+
+def wait_shell(link, wait):
+    """The shell answers: a prompt comes back to Enter - looked for again for `wait` seconds (the device is starting)"""
+    until = time.monotonic() + wait
+    while True:
+        link.write(b'\r')
+        if PROMPT.search(clean(link.drain(0.8))):
+            return
+        if time.monotonic() >= until:
+            raise Failure('the shell does not answer (is the console on this port?)')
+
+
+def failed(command, said):
+    """The command's own error message: 'mount: [ERROR] ...' / 'DEVICE: cannot ...' (log lines of others are not it)"""
+    name = command.split()[0]
+    return re.search(rf'{re.escape(name)}: \[ERROR\]|: cannot ', said) is not None
+
+
+def run_commands(link, commands, timeout, log):
+    for command in commands:
+        tolerant = command.startswith('-')
+        command = command.lstrip('-').strip()
+        log(f'  $ {command}')
+        said = run_command(link, command, timeout)
+        errors = [line.strip() for line in said.splitlines() if failed(command, line)]
+        for line in errors:
+            log(f'    {line}')
+        if errors and not tolerant:
+            raise Failure(f'"{command}" failed')
+
+
+def ensure_dir(link, path, timeout):
+    said = run_command(link, f'ls {path}', timeout)
+    if re.search(r"Cannot access '" + re.escape(path), said) or 'No such file' in said:
+        raise Failure(f'{path} is not there on the device (not mounted? run format-ext on a new chip)')
+
+
 def mounted_cards(link):
     """What /mnt holds on the device - the cards automount mounted"""
     link.write(b'\r')
@@ -254,7 +355,11 @@ def files_of(sources):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
-    ap.add_argument('sources', nargs='+', help='FILE, DIR or SRC=NAME')
+    ap.add_argument('sources', nargs='*', help='FILE, DIR or SRC=NAME')
+    ap.add_argument('--run', action='append', default=[], metavar='COMMAND',
+                    help='a shell command to run first (repeatable); a leading "-" lets it fail')
+    ap.add_argument('--ensure-dir', metavar='DIR', help='fail unless DIR exists on the device (it is listed)')
+    ap.add_argument('--timeout', type=float, default=60.0, metavar='SECONDS', help='a --run command may take this long')
     ap.add_argument('--port', default='/dev/ttyACM0', help='the device console (default /dev/ttyACM0)')
     ap.add_argument('--baud', type=int, default=921600)
     ap.add_argument('--dest', default='', help='the directory on the device the names are under: absolute, '
@@ -278,8 +383,20 @@ def main():
         if not args.quiet:
             print(f'\r  {name}: {sent * 100 // max(size, 1)}%', end='', file=sys.stderr, flush=True)
 
-    link = Link(None if args.stdio else args.port, args.baud)
     try:
+        link = Link(None if args.stdio else args.port, args.baud)
+    except Failure as e:
+        print(f'ymodem_send: {e}', file=sys.stderr)
+        return 1
+    transferring = False
+    try:
+        if args.run or args.ensure_dir:
+            wait_shell(link, args.wait)
+            run_commands(link, args.run, args.timeout, log)
+            if args.ensure_dir:
+                ensure_dir(link, args.ensure_dir, args.timeout)
+        if not files:
+            return 0
         if args.no_command:
             wait_for(link, (CRC,), 15.0, 'the receiver')
         else:
@@ -295,6 +412,7 @@ def main():
                 if time.monotonic() >= until:
                     raise Failure('no ymodem receiver answered (is the console on this port, ymodem installed?)')
                 log('  waiting for the device ...')
+        transferring = True
         start, total = time.monotonic(), 0
         for path, name in files:
             total += send_file(link, path, name, args.block, progress)
@@ -309,7 +427,8 @@ def main():
         return 0
     except Failure as e:
         try:
-            link.write(bytes([CAN] * 4))
+            if transferring:
+                link.write(bytes([CAN] * 4))     # (not into the shell: it would take them for commands)
         except OSError:
             pass
         print(f'ymodem_send: {e}', file=sys.stderr)

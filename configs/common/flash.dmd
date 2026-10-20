@@ -5,19 +5,16 @@ dmell
 dmffs
 dmramfs
 dmdevfs
+#
+# The tools the system needs when /ext (the external flash) is not there - to see what is mounted, to mount, unmount
+# and create a file system on it, to send files to it. The other tools: tools.dmd (the firmware or /ext).
+#
 ls
-ps
-reboot
-mkdir
 mount
 umount
-cat
-catini
 ymodem
 tty
-memory
 systemd
-service
 dmtty driver=dmtty.ini
 console rules=console.rules
 console service=console@.ini

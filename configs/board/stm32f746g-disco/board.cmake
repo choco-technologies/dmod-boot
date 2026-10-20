@@ -43,3 +43,24 @@ set(DMBOOT_RENODE_AUDIO_DMA "sysbus.dma2")
 set(DMBOOT_RENODE_AUDIO_DMA_DESCRIPTION "dma2: DMA.STM32F7_AudioDMA @ sysbus 0x40026400 { [0-7] -> nvic@[56-60,68-70] }")
 set(DMBOOT_RENODE_AUDIO_CODEC_DESCRIPTION "wm8994: Sound.WM8994 @ i2c3 0x1A { outputFile: \\\"<capture>\\\" }")
 set(DMBOOT_RENODE_AUDIO_SAI_DESCRIPTION "sai2: Sound.STM32F7_SAI @ sysbus 0x40015C00 { codec: wm8994; DmaRequestA -> dma2@4; DmaRequestB -> dma2@6 }")
+
+# The external flash (see docs/external-flash.md): the block node of the chip, the file system on it and where it is
+# mounted (the "ext" service, services/ext.ini). format-ext / upload-ext use them.
+set(DMBOOT_EXT_DEVICE "/dev/dmspiflashx/flash" CACHE STRING "Block device of the external flash; empty: the board has none (format-ext, upload-ext are not defined)")
+set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
+set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
+set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
+# Renode loads the QUADSPI/N25Q128A model below. Its flash starts erased, so keep the shell tools
+# in the firmware for provisioning and tests. On hardware the tools of configs/common/tools.dmd are on /ext
+# (upload-ext sends them): the ROM is small. ls, mount, umount, ymodem and mklittlefs stay in flash.dmd - format-ext and
+# upload-ext need them - and the default vault is /ext/secrets.vault (wifid waits for the file to appear).
+if(DMBOOT_EMULATION)
+    set(DMBOOT_EXT_TOOLS OFF)
+else()
+    set(DMBOOT_EXT_TOOLS ON CACHE BOOL "Put the shell tools of tools.dmd on the external flash instead of in the firmware")
+    # (a cache entry that already exists is not changed - pass -DDMBOOT_DMSECRETS_PATH=...)
+    set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
+endif()
+
+# QUADSPI bank 1 + N25Q128A, DMA2 stream 7/channel 3, IRQ 92 (RM0385).
+set(DMBOOT_RENODE_QSPI_MODEL "${CMAKE_SOURCE_DIR}/configs/renode/STM32F7_QUADSPI.cs")
