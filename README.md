@@ -116,7 +116,7 @@ out of the box: its `flash.dmd` starts the display (`dmview`), audio
 ```bash
 cmake -DBOARD=stm32f746g-disco -S . -B build
 cmake --build build
-cmake --build build --target install-all     # the firmware, then build/sdcard over the console
+cmake --build build --target install-all     # the firmware, then build/sdcard and build/ext over the console
 ```
 
 The player plays the MP3 files of `music/` on the card. Copy them there on a
@@ -376,7 +376,12 @@ root of `build/sdcard` after checking the new `bin` directory; otherwise
 are not removed by an upload.
 
 - `upload-files` - to a device that is running
-- `install-all` - `install-firmware`, then the files once the device has started
+- `install-all` - `install-firmware`, then the SD card files once the device has started,
+  followed by `build/ext` on boards with `DMBOOT_EXT_DEVICE`. Modules downloaded from
+  `ext.dmd` go to `${DMBOOT_EXT_MOUNT}/bin` (normally `/ext/bin`), using the same YMODEM
+  transfer as `upload-ext`. The transfers run sequentially, including in parallel builds.
+  The external flash must already be formatted and mounted; run `format-ext` separately
+  on a new chip (see [external-flash.md](docs/external-flash.md)).
 
 ```bash
 cmake --build . --target upload-files
