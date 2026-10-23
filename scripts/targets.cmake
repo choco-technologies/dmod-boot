@@ -178,7 +178,7 @@ add_custom_target(debug
 # for the SD card - sent to the device over its UART console: dmell's
 # `ymodem` command receives them (scripts/ymodem_send.py types it).
 #   upload-files   the files, to the device running (its console on DMBOOT_UPLOAD_PORT)
-#   install-all    the firmware, then the files (waiting for the device to start)
+#   install-all    the firmware, then SD card and external flash files (waiting for the device to start)
 # They go to the SD card the script finds on the device (in /mnt, where
 # automount mounts it by its label or node name) - or to an absolute
 # DMBOOT_UPLOAD_DEST.
@@ -232,12 +232,19 @@ if(Python3_Interpreter_FOUND)
             USES_TERMINAL
             COMMENT "Creating ${DMBOOT_EXT_FS} on ${DMBOOT_EXT_DEVICE} over ${DMBOOT_UPLOAD_PORT} - ALL DATA IN IT IS LOST..."
         )
+        set(DMBOOT_EXT_UPLOAD_COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND}
+            --ensure-dir ${DMBOOT_EXT_MOUNT} --dest ${DMBOOT_EXT_MOUNT} --card none ${CMAKE_BINARY_DIR}/ext)
         add_custom_target(upload-ext
-            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 --ensure-dir ${DMBOOT_EXT_MOUNT}
-                --dest ${DMBOOT_EXT_MOUNT} --card none ${CMAKE_BINARY_DIR}/ext
+            COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --wait 5
             DEPENDS download_ext_modules
             USES_TERMINAL
             COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM); run format-ext first on a new chip..."
+        )
+        # Keep both transfers in one target: parallel builds must not share the UART.
+        add_dependencies(install-all download_ext_modules)
+        add_custom_command(TARGET install-all POST_BUILD
+            COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT}
+            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
         )
     endif()
 else()

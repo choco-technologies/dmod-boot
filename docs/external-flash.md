@@ -57,6 +57,10 @@ cmake --build build --target upload-ext
 ```
 
 sends `build/ext` over the console (YMODEM) to `/ext`, so the modules land in **`/ext/bin`**, on the module search path.
+`install-all` also downloads and sends these files, after installing the firmware and uploading the SD card files.
+It uses `DMBOOT_UPLOAD_WAIT` while waiting for the console and requires the external flash to be formatted and mounted;
+it never runs `format-ext` automatically.
+
 Moving a module from `flash.dmd` to `ext.dmd` takes it out of the ROM. What stays in `flash.dmd`: everything that is
 needed before `/ext` is mounted - the drivers and services, the file system (`dmlittlefs`) and the chain to the chip
 (`dmspiflash`, `dmqspi`, `dmqspi_port`, `dmdma`, `dmclk`, `dmgpio`), the shell, and `ls`, `mount`, `umount`, `ymodem`
@@ -67,7 +71,7 @@ For this board:
 
 - **The shell tools** (`configs/common/tools.dmd`: `ps`, `cat`, `catini`, `mkdir`, `reboot`, `memory`, `service`, and the
   board's `ext.dmd`: `rm`, `tree`, `printf`, `touch`, `which`, `mv`, `find`) are on `/ext` (`DMBOOT_EXT_TOOLS=ON`), so
-  they are missing until `upload-ext` has been run. A board without an external flash keeps them in the firmware.
+  they are missing until `upload-ext` or `install-all` has been run. A board without an external flash keeps them in the firmware.
 - **The car HMI demo** (`carhmi`), the image decoders (`dmimg_png`, `dmimg_jpeg`) and the MP3 decoder (`dmmp3`) are on
   the SD card (`sdcard.dmd`, sent by `upload-files`), loaded from `/mnt/<label>/bin` once the card is mounted. Its unit
   (`carhmi.ini`) is read at boot from the firmware, so a card that has not been mounted by then means a carhmi that
