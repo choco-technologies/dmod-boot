@@ -422,8 +422,14 @@ def main():
         said = link.drain(0.5).decode(errors='replace').strip()
         log(f'{len(files)} file(s), {total} bytes in {seconds:.1f} s ({total / seconds / 1024:.1f} KiB/s)'
             + (f', {link.retries} block(s) sent again' if link.retries else ''))
-        if said:
-            log(f'device: {said.splitlines()[0] if said.startswith("ymodem") else said}')
+        answer = next((l.strip() for l in said.splitlines() if l.strip().startswith('ymodem:')), said)
+        if answer:
+            log(f'device: {answer}')
+        if 'not written' in answer:
+            # (files the device had open - played, shown: received, left as they were)
+            print(f'ymodem_send: some files were not written - in use on the device? Stop what uses them '
+                  f'(e.g. `service stop carhmi`) and send them again: {answer.split(": ", 2)[-1]}', file=sys.stderr)
+            return 1
         return 0
     except Failure as e:
         try:
