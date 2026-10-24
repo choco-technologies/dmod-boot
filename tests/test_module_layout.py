@@ -53,7 +53,7 @@ def check_layout(dmf_get, explicit_manifest):
         manifest.write_text("".join(entries))
         (source / "CMakeLists.txt").write_text('''cmake_minimum_required(VERSION 3.10)
 project(layout NONE)
-set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs")
+set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/cfg")
 set(DMBOOT_EVIEWS_DIR "${CMAKE_BINARY_DIR}/eviews")
 set(DMBOOT_LICENSE_DIR "${CMAKE_BINARY_DIR}/lic")
 set(DMBOOT_MAIN_MODULE "flashmod")
@@ -83,22 +83,24 @@ add_subdirectory(modules)
             (path / ".download_complete").touch()
         run("cmake", "--build", str(build), "--target", "download_modules",
             "download_sdcard_modules", env=env)
-        for kind, binary_dir, license_dir, views_dir in (
-            ("flash", build / "dmf", build / "lic", build / "eviews"),
-            ("sdcard", build / "sdcard/bin", build / "sdcard/lic", build / "sdcard/views"),
+        # The configuration goes where the module goes: the firmware's /cfg, the card's cfg/
+        for kind, binary_dir, license_dir, views_dir, config_dir in (
+            ("flash", build / "dmf", build / "lic", build / "eviews", build / "cfg"),
+            ("sdcard", build / "sdcard/bin", build / "sdcard/lic", build / "sdcard/views", build / "sdcard/cfg"),
         ):
             module = kind + "mod"
             assert {p.name for p in binary_dir.iterdir()} == {module + ".dmfc"}
             assert (license_dir / module / "LICENSE").read_text() == module + " license\n"
             assert (views_dir / module / "main.dmv").is_file()
-            assert (build / f"configs/drivers/{module}/fixture.ini").is_file()
+            assert (config_dir / f"drivers/{module}/fixture.ini").is_file()
             packages = build / "packages" / kind
             assert (packages / f"{module}.dmd").is_file()
             assert (packages / f"{module}.dmr").is_file()
             assert (packages / "legacy-output/old-package/README").read_text() == "preserve me"
             assert (packages / "legacy-output/.download_complete").is_file()
             assert (build / f"modules/{kind}.download_complete").is_file()
-        assert {p.name for p in (build / "sdcard").iterdir()} == {"bin", "lic", "views"}
+        assert {p.name for p in (build / "sdcard").iterdir()} == {"bin", "cfg", "lic", "views"}
+        assert not (build / "cfg/drivers/sdcardmod").exists()
         # Validation rejects stray resources, and migration never overwrites a backup.
         (build / "dmf/unexpected.txt").write_text("stray file")
         script = str(source / "scripts/module_output.cmake")

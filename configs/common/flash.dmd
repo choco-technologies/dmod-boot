@@ -15,6 +15,9 @@ umount
 ymodem
 tty
 systemd
+# The configuration directory (cfg/) of every mount point - an SD card, /ext - into dmdevfs and libsystemd: the
+# configuration of the sdcard and ext modules comes with them (see modules/CMakeLists.txt)
+mountcfg service=mountcfg.ini
 dmtty driver=dmtty.ini
 console rules=console.rules
 console service=console@.ini
