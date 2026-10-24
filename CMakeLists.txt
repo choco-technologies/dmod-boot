@@ -10,13 +10,21 @@ set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller")
 set(BOARD "" CACHE STRING "Board name (optional). If set, TARGET is derived from configs/board/<BOARD>/board.cmake")
 set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in ROM")
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
-set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/configs" CACHE PATH "Config directory to mount as /configs/ using dmffs (defaults to build/configs)")
+set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/cfg" CACHE PATH "Config directory to mount as /cfg/ using dmffs (defaults to build/cfg)")
 set(DMBOOT_EVIEWS_DIR "${CMAKE_BINARY_DIR}/eviews" CACHE PATH "Directory with views (.dmv) of the flash modules, one subdirectory per module; embedded as a dmffs image and mounted as /eviews/ (defaults to build/eviews)")
 set(DMBOOT_LICENSE_DIR "${CMAKE_BINARY_DIR}/lic" CACHE PATH "Flash module licenses on the host, one subdirectory per module")
 option(DMBOOT_EMBED_LICENSES "Embed flash module licenses and mount them at /lic/ (uses flash space)" OFF)
 set(DMBOOT_MAIN_MODULE "systemd" CACHE STRING "Name of the main module to start after boot")
 set(DMBOOT_MAIN_MODULE_CONFIG "" CACHE STRING "Configuration file for the main module (e.g. board/stm32f746g-disco.ini)")
-set(DMBOOT_MAIN_MODULE_ARGS "/configs/services /configs/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)")
+set(DMBOOT_MAIN_MODULE_ARGS "/cfg/services /cfg/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)")
+# /configs is /cfg now: a build directory configured before keeps the old defaults in its cache - with them, the
+# firmware would mount /cfg and start systemd on /configs.
+if(DMBOOT_CONFIG_DIR STREQUAL "${CMAKE_BINARY_DIR}/configs")
+    set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/cfg" CACHE PATH "Config directory to mount as /cfg/ using dmffs (defaults to build/cfg)" FORCE)
+endif()
+if(DMBOOT_MAIN_MODULE_ARGS STREQUAL "/configs/services /configs/rules")
+    set(DMBOOT_MAIN_MODULE_ARGS "/cfg/services /cfg/rules" CACHE STRING "Space-separated arguments passed to the main module on startup (argv[0] is always the module name)" FORCE)
+endif()
 set(DMBOOT_EXTRA_FLASH_DMD_FILES "" CACHE STRING "Additional flash.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_EXTRA_SDCARD_DMD_FILES "" CACHE STRING "Additional sdcard.dmd files to include (semicolon-separated list of absolute paths)")
 set(DMBOOT_EXTRA_EXT_DMD_FILES "" CACHE STRING "Additional ext.dmd files to include (semicolon-separated list of absolute paths)")
@@ -64,7 +72,7 @@ set(DMBOOT_SPLASH_LOGO "" CACHE STRING "Splash logo the display driver shows at 
 set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target, passed to the display driver in the SPLASH_LOGO environment variable; empty: not set")
 
 # The device secret: the root of what the system keeps encrypted at rest (dmsecrets). dmod-boot hands
-# it to dmdevfs in the mount string ("/configs/drivers,<secret>"); dmdevfs serves it as the read-only
+# it to dmdevfs in the mount string ("/cfg/drivers,<secret>"); dmdevfs serves it as the read-only
 # node /dev/devkey. It is whatever is given here (1..64 bytes of text), else the content of the
 # DMBOOT_DEVICE_SECRET_FILE, which is made with a random secret when it is missing (and keeps the
 # secret the same across rebuilds and fresh build directories: a firmware update does not change it).
