@@ -62,7 +62,7 @@ It uses `DMBOOT_UPLOAD_WAIT` while waiting for the console and requires the exte
 it never runs `format-ext` automatically.
 
 Moving a module from `flash.dmd` to `ext.dmd` takes it out of the ROM - with its configuration: the `driver=`,
-`service=` and `rules=` files of the ext modules go to `build/ext/cfg` and from there to `/ext/cfg`, which `mountcfg`
+`service=` and `rules=` files of the ext modules go to `build/ext/cfg` and from there to `/ext/cfg`, which dmdevfs
 loads once `/ext` is mounted (and unloads before it is unmounted). What stays in `flash.dmd`: everything that is
 needed before `/ext` is mounted - the drivers and services, the file system (`dmlittlefs`) and the chain to the chip
 (`dmspiflash`, `dmqspi`, `dmqspi_port`, `dmdma`, `dmclk`, `dmgpio`), the shell, and `ls`, `mount`, `umount`, `ymodem`
@@ -76,7 +76,7 @@ For this board:
   they are missing until `upload-ext` or `install-all` has been run. A board without an external flash keeps them in the firmware.
 - **The car HMI demo** (`carhmi`), the image decoders (`dmimg_png`, `dmimg_jpeg`) and the MP3 decoder (`dmmp3`) are on
   the SD card (`sdcard.dmd`, sent by `upload-files`), loaded from `/mnt/<label>/bin` once the card is mounted. Its unit
-  (`carhmi.ini`) is on the card too (`/mnt/<label>/cfg/services`): `mountcfg` starts it when the card is mounted and
+  (`carhmi.ini`) is on the card too (`/mnt/<label>/cfg/services`): dmdevfs starts it when the card is mounted and
   stops it before the card is unmounted.
 
 ## Notes

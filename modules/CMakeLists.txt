@@ -143,7 +143,7 @@ endfunction()
 
 # Every module's configuration goes where the module is: the flash modules' to DMBOOT_CONFIG_DIR (embedded, /cfg),
 # the sdcard and ext modules' to cfg/ beside their bin/ (DMBOOT_SDCARD_CONFIG_DIR, DMBOOT_EXT_CONFIG_DIR below), which
-# goes to the card and to /ext with them. mountcfg loads the cfg/ of every mount point - its drivers into dmdevfs,
+# goes to the card and to /ext with them. dmdevfs loads the cfg/ of every mount point - its drivers itself,
 # its units and rules into libsystemd - once it is mounted, and unloads it before it is unmounted.
 dmboot_config_map("${DMBOOT_CONFIG_DIR}" DMBOOT_CONFIG_MAP)
 
