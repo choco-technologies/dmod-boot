@@ -4,7 +4,7 @@
 #
 # The car HMI demo (choco-technologies/carhmi-demo): a service that claims the display for its view and plays the MP3
 # files of the card's music/ directory through dmaudio. The module is loaded by name from /mnt/<label>/bin, once
-# automount has mounted the card. Its unit (carhmi.ini) is on the card too, in cfg/services (build/sdcard/cfg): dmdevfs
+# automount has mounted the card. Its unit (carhmi.ini) is on the card too, in cfg/services (build/sdcard/cfg): mountcfg
 # starts it when the card is mounted and stops it before the card goes away. Its dependencies (dmmp3, dmimg, ...) come
 # with it into the same bin.
 #

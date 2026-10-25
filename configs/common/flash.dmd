@@ -15,6 +15,12 @@ umount
 ymodem
 tty
 systemd
+# The cfg/ of every mount point - an SD card, /ext - into dmdevfs and libsystemd: libsystemd reports mounts as devices
+# of class "mount" and mountcfg.rules starts a one-shot mountcfg for each, when it is mounted and before it is
+# unmounted. The configuration of the sdcard and ext modules comes with them (see modules/CMakeLists.txt)
+mountcfg service=mountcfg@.ini
+mountcfg service=mountcfg-unload@.ini
+mountcfg rules=mountcfg.rules
 dmtty driver=dmtty.ini
 console rules=console.rules
 console service=console@.ini

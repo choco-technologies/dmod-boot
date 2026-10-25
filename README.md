@@ -201,7 +201,7 @@ cmake --build build
 - `BOARD` (optional) - Board name. When set, `TARGET` and other board-specific settings are automatically derived from `configs/board/<BOARD>/board.cmake`, so you don't need to set `TARGET` manually. Examples: `-DBOARD=stm32f746g-disco`, `-DBOARD=t-deck-pro`.
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
-- `DMBOOT_CONFIG_DIR` (optional, defaults to `build/cfg`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/cfg/` at boot time. Configuration entries in the flash `*.dmd` files are routed via `dmf-get --config-map` based on their tag (`driver=`, `rule=`, `service=`) into `drivers/`, `rules/` and `services/` subdirectories under this path; untagged entries fall back to the directory root. The sdcard and ext modules bring their configuration with them, in the same layout: `build/sdcard/cfg/` and `build/ext/cfg/` go to `<card>/cfg/` and `/ext/cfg/`, where dmdevfs loads it once the file system is mounted (see [Configuration of a mount point](#configuration-of-a-mount-point)). A build directory configured before `/configs` became `/cfg` is switched over automatically when it still has the old defaults.
+- `DMBOOT_CONFIG_DIR` (optional, defaults to `build/cfg`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/cfg/` at boot time. Configuration entries in the flash `*.dmd` files are routed via `dmf-get --config-map` based on their tag (`driver=`, `rule=`, `service=`) into `drivers/`, `rules/` and `services/` subdirectories under this path; untagged entries fall back to the directory root. The sdcard and ext modules bring their configuration with them, in the same layout: `build/sdcard/cfg/` and `build/ext/cfg/` go to `<card>/cfg/` and `/ext/cfg/`, where `mountcfg` loads it once the file system is mounted (see [Configuration of a mount point](#configuration-of-a-mount-point)). A build directory configured before `/configs` became `/cfg` is switched over automatically when it still has the old defaults.
 - `DMBOOT_MAIN_MODULE` (optional, defaults to `dmell`) - Name of the main module to start after boot. Set to empty string to disable.
 - `DMBOOT_LICENSE_DIR` (defaults to `build/lic`) - Flash module licenses collected on the host in `<dir>/<module>/`. SD card module licenses are installed separately to `build/sdcard/lic/<module>/`.
 - `DMBOOT_EMBED_LICENSES` (defaults to `OFF`) - Embed flash module licenses as `license_fs.dmffs` and mount them at `/lic/<module>/`. Enable only when there is enough flash space; this option does not affect licenses on the SD card.
@@ -234,9 +234,10 @@ are in the firmware (`/cfg`); an SD card or the external flash carries the confi
 /ext/cfg/{services,rules,drivers}/      ext modules (build/ext/cfg, upload-ext)
 ```
 
-dmdevfs follows the mounts (it implements dmfsi's `_mount_changed` dif, which dmvfs calls): once a file system is
-mounted, its `cfg/drivers` is configured in `/dev` and its `cfg/services` and `cfg/rules` are added to libsystemd and
-started; before it is unmounted, they stop and go away again. So a service of a module on
+libsystemd reports every mount as a device of class `mount` (it implements dmfsi's `_mount_changed` dif, which dmvfs
+calls) and `mountcfg.rules` starts the one-shot `mountcfg` service (from dmdevfs) for it: once a file system is mounted,
+its `cfg/drivers` is configured in `/dev` and its `cfg/services` and `cfg/rules` are added to libsystemd and started;
+before it is unmounted - the unmount waits for it - they stop and go away again, and nothing stays running. So a service of a module on
 the card starts when the card is there - not at boot, before automount has mounted it - and stops when the card goes.
 In such a unit `%m` is the mount point, e.g. `exec=%m/bin/app.dmfc` for the module of that very card.
 
