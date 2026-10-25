@@ -137,15 +137,15 @@ endif()
 # The ';' separators must be escaped: an unescaped ';' makes CMake treat this
 # as a 3-element list, which add_custom_command() then expands into 3 separate
 # command-line arguments instead of a single "--config-map <value>" pair.
-#
-# The drivers of a module go to <drivers_root>/drivers - where the module is: the flash modules' to DMBOOT_CONFIG_DIR
-# (embedded, /cfg), the sdcard and ext modules' to cfg/ beside their bin/ (DMBOOT_SDCARD_CONFIG_DIR,
-# DMBOOT_EXT_CONFIG_DIR below), which goes to the card and to /ext with them: the devscan service asks dmdevfs for
-# the <mount point>/cfg/drivers of every mount point once it is mounted, and to drop them before it is unmounted.
-# Units and rules always go to DMBOOT_CONFIG_DIR: libsystemd loads them from the firmware's /cfg only.
-function(dmboot_config_map drivers_root out_var)
-    set(${out_var} "driver:${drivers_root}/drivers\;rules:${DMBOOT_CONFIG_DIR}/rules\;service:${DMBOOT_CONFIG_DIR}/services" PARENT_SCOPE)
+function(dmboot_config_map config_dir out_var)
+    set(${out_var} "driver:${config_dir}/drivers\;rules:${config_dir}/rules\;service:${config_dir}/services" PARENT_SCOPE)
 endfunction()
+
+# Every module's configuration goes where the module is: the flash modules' to DMBOOT_CONFIG_DIR (embedded, /cfg),
+# the sdcard and ext modules' to cfg/ beside their bin/ (DMBOOT_SDCARD_CONFIG_DIR, DMBOOT_EXT_CONFIG_DIR below), which
+# goes to the card and to /ext with them. Once a file system is mounted, libsystemd loads its cfg/services and
+# cfg/rules by itself and the devscan service has dmdevfs configure its cfg/drivers; both drop them again before it is
+# unmounted.
 dmboot_config_map("${DMBOOT_CONFIG_DIR}" DMBOOT_CONFIG_MAP)
 
 # Applications may ship views (.dmv - the "views" resource of the module's .dmr).
@@ -184,9 +184,6 @@ set(DMBOOT_MODULES_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/flash.download_compl
 # subdirectories, which leaves that directory's own mtime untouched, so a
 # directory-only dependency silently ships a stale config_fs.dmffs.
 set(DMBOOT_MODULES_MARKER_FILE "${DMBOOT_MODULES_MARKER_FILE}" PARENT_SCOPE)
-# The units and rules of the sdcard and ext modules go to the same DMBOOT_CONFIG_DIR (see dmboot_config_map()), so the
-# image waits for their downloads, too (filled in below)
-set(DMBOOT_CONFIG_EXTRA_DEPENDS "")
 
 # The .dmd format (comments, $include, $from, versions, config files, variable
 # substitution, ...) is understood by dmf-get itself - we don't re-implement
@@ -268,8 +265,8 @@ endif()
 # ======================================================================
 set(DMBOOT_SDCARD_OUT_DIR "${CMAKE_BINARY_DIR}/sdcard")
 # Both module formats (.dmf and .dmfc) go to bin on the card. Keep views
-# beside bin, so upload-files preserves their existing paths; the driver
-# configuration of the modules (driver=) goes to cfg, beside them too.
+# beside bin, so upload-files preserves their existing paths; the configuration
+# of the modules (service=, rules=, driver=) goes to cfg, beside them too.
 set(DMBOOT_SDCARD_BIN_DIR "${DMBOOT_SDCARD_OUT_DIR}/bin")
 set(DMBOOT_SDCARD_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/sdcard.download_complete")
 set(DMBOOT_SDCARD_VIEWS_DIR "${DMBOOT_SDCARD_OUT_DIR}/views")
@@ -311,7 +308,6 @@ if(DMBOOT_SDCARD_DMD_FILES)
     add_custom_target(download_sdcard_modules ALL
         DEPENDS "${DMBOOT_SDCARD_MARKER_FILE}"
     )
-    list(APPEND DMBOOT_CONFIG_EXTRA_DEPENDS "${DMBOOT_SDCARD_MARKER_FILE}" download_sdcard_modules)
     message(STATUS "Sdcard DMD files: ${DMBOOT_SDCARD_DMD_FILES}")
 else()
     message(STATUS "No sdcard.dmd files found. Skipping sdcard module download.")
@@ -321,8 +317,8 @@ endif()
 # ======================================================================
 #               Downloading ext modules
 # ======================================================================
-# Like the sdcard modules: the modules (.dmf/.dmfc) go to bin, the views, licenses and driver configuration (cfg) beside
-# it, the rest of the packages stays on the host (build/packages/ext). The directory is what the external flash holds below /ext: upload-ext sends
+# Like the sdcard modules: the modules (.dmf/.dmfc) go to bin, the views, licenses and configuration (cfg) beside it,
+# the rest of the packages stays on the host (build/packages/ext). The directory is what the external flash holds below /ext: upload-ext sends
 # build/ext as it is.
 set(DMBOOT_EXT_OUT_DIR "${CMAKE_BINARY_DIR}/ext")
 set(DMBOOT_EXT_BIN_DIR "${DMBOOT_EXT_OUT_DIR}/bin")
@@ -367,13 +363,11 @@ if(DMBOOT_EXT_DMD_FILES)
     add_custom_target(download_ext_modules ALL
         DEPENDS "${DMBOOT_EXT_MARKER_FILE}"
     )
-    list(APPEND DMBOOT_CONFIG_EXTRA_DEPENDS "${DMBOOT_EXT_MARKER_FILE}" download_ext_modules)
     message(STATUS "Ext DMD files: ${DMBOOT_EXT_DMD_FILES}")
 else()
     message(STATUS "No ext.dmd files found. Skipping ext module download.")
     add_custom_target(download_ext_modules ALL)
 endif()
-set(DMBOOT_CONFIG_EXTRA_DEPENDS "${DMBOOT_CONFIG_EXTRA_DEPENDS}" PARENT_SCOPE)
 
 # ======================================================================
 #               Preparing dmp file from flash modules

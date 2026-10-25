@@ -201,7 +201,7 @@ cmake --build build
 - `BOARD` (optional) - Board name. When set, `TARGET` and other board-specific settings are automatically derived from `configs/board/<BOARD>/board.cmake`, so you don't need to set `TARGET` manually. Examples: `-DBOARD=stm32f746g-disco`, `-DBOARD=t-deck-pro`.
 - `STARTUP_DMP_FILE` (optional) - Path to a startup package file (`.dmp`) that will be automatically loaded using `Dmod_AddPackageBuffer` at boot
 - `USER_DATA_FILE` (optional) - Path to a user data file that will be embedded in ROM, with its address and size available via environment variables `USER_DATA_ADDR` and `USER_DATA_SIZE`
-- `DMBOOT_CONFIG_DIR` (optional, defaults to `build/cfg`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/cfg/` at boot time. Configuration entries in the flash `*.dmd` files are routed via `dmf-get --config-map` based on their tag (`driver=`, `rule=`, `service=`) into `drivers/`, `rules/` and `services/` subdirectories under this path; untagged entries fall back to the directory root. The units and rules of the sdcard and ext modules land here too (libsystemd loads them from `/cfg` only); their `driver=` files go to `build/sdcard/cfg/drivers` and `build/ext/cfg/drivers`, i.e. to `<card>/cfg/drivers` and `/ext/cfg/drivers`, where `devscan` hands them to dmdevfs once the file system is mounted (see [Configuration of a mount point](#configuration-of-a-mount-point)). A build directory configured before `/configs` became `/cfg` is switched over automatically when it still has the old defaults.
+- `DMBOOT_CONFIG_DIR` (optional, defaults to `build/cfg`) - Path to a directory that will be converted to a dmffs filesystem image and mounted at `/cfg/` at boot time. Configuration entries in the flash `*.dmd` files are routed via `dmf-get --config-map` based on their tag (`driver=`, `rule=`, `service=`) into `drivers/`, `rules/` and `services/` subdirectories under this path; untagged entries fall back to the directory root. The sdcard and ext modules bring their configuration with them, in the same layout: `build/sdcard/cfg/` and `build/ext/cfg/` go to `<card>/cfg/` and `/ext/cfg/`, where libsystemd and dmdevfs load it once the file system is mounted (see [Configuration of a mount point](#configuration-of-a-mount-point)). A build directory configured before `/configs` became `/cfg` is switched over automatically when it still has the old defaults.
 - `DMBOOT_MAIN_MODULE` (optional, defaults to `dmell`) - Name of the main module to start after boot. Set to empty string to disable.
 - `DMBOOT_LICENSE_DIR` (defaults to `build/lic`) - Flash module licenses collected on the host in `<dir>/<module>/`. SD card module licenses are installed separately to `build/sdcard/lic/<module>/`.
 - `DMBOOT_EMBED_LICENSES` (defaults to `OFF`) - Embed flash module licenses as `license_fs.dmffs` and mount them at `/lic/<module>/`. Enable only when there is enough flash space; this option does not affect licenses on the SD card.
@@ -224,24 +224,24 @@ For a full list of all available CMake options (including DMOD library and VFS c
 
 ### Configuration of a mount point
 
-A mounted file system may bring the driver configuration of its own modules. The flash modules' drivers are in the
-firmware (`/cfg/drivers`); an SD card or the external flash carries those of its own modules in `cfg/drivers`, beside
-their `bin/`. Units and rules are always the firmware's (`/cfg/services`, `/cfg/rules`):
+Every module's configuration goes where the module goes. The flash modules' units, rules and driver configurations
+are in the firmware (`/cfg`); an SD card or the external flash carries the configuration of its own modules in
+`cfg/`, beside their `bin/`:
 
 ```
-/cfg/{services,rules,drivers}/       flash modules, and the units and rules of all modules (firmware)
-/mnt/<label>/cfg/drivers/            sdcard modules' drivers (build/sdcard/cfg, upload-files)
-/ext/cfg/drivers/                    ext modules' drivers (build/ext/cfg, upload-ext)
+/cfg/{services,rules,drivers}/          flash modules (firmware)
+/mnt/<label>/cfg/{services,rules,drivers}/   sdcard modules (build/sdcard/cfg, upload-files)
+/ext/cfg/{services,rules,drivers}/      ext modules (build/ext/cfg, upload-ext)
 ```
 
-libsystemd reports every mount as a device of class `mount` (it implements dmfsi's `_mount_changed` dif, which dmvfs
-calls) and `devscan.rules` starts the one-shot `devscan` service (from dmdevfs) for it: once a file system is mounted,
-`devscan` asks dmdevfs (an ioctl on `/dev`) to configure its `cfg/drivers`; before it is unmounted - the unmount waits
-for it - it asks for them to be dropped again, and nothing stays running.
-
-A service of a module on the card starts when the card is there - not at boot, before automount has mounted it - by a
-rule of its own on the same class: the board's `carhmi.rules` starts an instance of `carhmi@.ini` for a mount, and
-stops it when that mount goes away.
+libsystemd implements dmfsi's `_mount_changed` dif, which dmvfs calls after every mount and before every unmount: once a
+file system is mounted it adds its `cfg/services` and `cfg/rules` to what it has loaded and starts the units; before
+it is unmounted they stop and go away again (the unmount waits for it). It also reports the mount as a device of class
+`mount`, and `devscan.rules` starts the one-shot `devscan` service (from dmdevfs) for it, which asks dmdevfs - an
+ioctl on `/dev` - to configure its `cfg/drivers`, and to drop them before the unmount; nothing stays running. So a
+service of a module on the card starts when the card is there - not at boot, before automount has mounted it - and
+stops when the card goes. In such a unit `%m` is the mount point, e.g. `exec=%m/bin/app.dmfc` for the module of that very
+card.
 
 ## CMake Targets
 
