@@ -61,9 +61,10 @@ sends `build/ext` over the console (YMODEM) to `/ext`, so the modules land in **
 It uses `DMBOOT_UPLOAD_WAIT` while waiting for the console and requires the external flash to be formatted and mounted;
 it never runs `format-ext` automatically.
 
-Moving a module from `flash.dmd` to `ext.dmd` takes it out of the ROM - with its configuration: the `driver=`,
-`service=` and `rules=` files of the ext modules go to `build/ext/cfg` and from there to `/ext/cfg`, which `mountcfg`
-loads once `/ext` is mounted (and unloads before it is unmounted). What stays in `flash.dmd`: everything that is
+Moving a module from `flash.dmd` to `ext.dmd` takes it out of the ROM - with its drivers' configuration: the
+`driver=` files of the ext modules go to `build/ext/cfg/drivers` and from there to `/ext/cfg/drivers`, which `devscan`
+hands to dmdevfs once `/ext` is mounted (and drops before it is unmounted). Their `service=` and `rules=` files stay
+in the firmware's `/cfg`, like every module's. What stays in `flash.dmd`: everything that is
 needed before `/ext` is mounted - the drivers and services, the file system (`dmlittlefs`) and the chain to the chip
 (`dmspiflash`, `dmqspi`, `dmqspi_port`, `dmdma`, `dmclk`, `dmgpio`), the shell, and `ls`, `mount`, `umount`, `ymodem`
 and `mklittlefs` (what `format-ext` / `upload-ext` and a recovery by hand need - with an empty or broken flash). An
@@ -76,8 +77,8 @@ For this board:
   they are missing until `upload-ext` or `install-all` has been run. A board without an external flash keeps them in the firmware.
 - **The car HMI demo** (`carhmi`), the image decoders (`dmimg_png`, `dmimg_jpeg`) and the MP3 decoder (`dmmp3`) are on
   the SD card (`sdcard.dmd`, sent by `upload-files`), loaded from `/mnt/<label>/bin` once the card is mounted. Its unit
-  (`carhmi.ini`) is on the card too (`/mnt/<label>/cfg/services`): `mountcfg` starts it when the card is mounted and
-  stops it before the card is unmounted.
+  is the board's (`services/carhmi@.ini`, `rules/carhmi.rules`): the rule starts an instance of it for each mount - it
+  finds the module only on the card - and stops it when that mount is unmounted.
 
 ## Notes
 

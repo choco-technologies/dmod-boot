@@ -49,7 +49,7 @@ def check_layout(dmf_get, explicit_manifest):
                 )))
             entries.append(f"{module} {archive}\n")
             (source / f"configs/common/{kind}.dmd").write_text(
-                f"{module} driver=fixture.ini\n")
+                f"{module} driver=fixture.ini\n{module} service=fixture.ini\n")
         manifest.write_text("".join(entries))
         (source / "CMakeLists.txt").write_text('''cmake_minimum_required(VERSION 3.10)
 project(layout NONE)
@@ -83,7 +83,8 @@ add_subdirectory(modules)
             (path / ".download_complete").touch()
         run("cmake", "--build", str(build), "--target", "download_modules",
             "download_sdcard_modules", env=env)
-        # The configuration goes where the module goes: the firmware's /cfg, the card's cfg/
+        # The drivers go where the module goes: the firmware's /cfg, the card's cfg/ - the units and rules
+        # are the firmware's, libsystemd loads no others
         for kind, binary_dir, license_dir, views_dir, config_dir in (
             ("flash", build / "dmf", build / "lic", build / "eviews", build / "cfg"),
             ("sdcard", build / "sdcard/bin", build / "sdcard/lic", build / "sdcard/views", build / "sdcard/cfg"),
@@ -93,6 +94,7 @@ add_subdirectory(modules)
             assert (license_dir / module / "LICENSE").read_text() == module + " license\n"
             assert (views_dir / module / "main.dmv").is_file()
             assert (config_dir / f"drivers/{module}/fixture.ini").is_file()
+            assert (build / f"cfg/services/{module}/fixture.ini").is_file()
             packages = build / "packages" / kind
             assert (packages / f"{module}.dmd").is_file()
             assert (packages / f"{module}.dmr").is_file()
@@ -101,6 +103,7 @@ add_subdirectory(modules)
             assert (build / f"modules/{kind}.download_complete").is_file()
         assert {p.name for p in (build / "sdcard").iterdir()} == {"bin", "cfg", "lic", "views"}
         assert not (build / "cfg/drivers/sdcardmod").exists()
+        assert not (build / "sdcard/cfg/services").exists()
         # Validation rejects stray resources, and migration never overwrites a backup.
         (build / "dmf/unexpected.txt").write_text("stray file")
         script = str(source / "scripts/module_output.cmake")

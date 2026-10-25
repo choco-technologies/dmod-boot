@@ -92,11 +92,12 @@ function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     message(STATUS "${name} filesystem will be embedded from: ${sourceDir}")
 endfunction()
 
-# Config filesystem (/cfg/) - the configuration of the flash modules; the sdcard and ext modules bring theirs to the
-# card and /ext (<mount point>/cfg, see modules/CMakeLists.txt)
+# Config filesystem (/cfg/) - the units and rules of all the modules and the driver configuration of the flash modules;
+# the driver configuration of the sdcard and ext modules goes to the card and /ext (<mount point>/cfg/drivers, see
+# modules/CMakeLists.txt)
 if(DMBOOT_CONFIG_DIR)
     message(STATUS "Config directory specified: ${DMBOOT_CONFIG_DIR}")
-    dmboot_embed_dmffs(config_fs "${DMBOOT_CONFIG_DIR}" .embedded.config_fs CONFIG_FS_OBJECT ${DMBOOT_BOARD_CONFIG_FILES})
+    dmboot_embed_dmffs(config_fs "${DMBOOT_CONFIG_DIR}" .embedded.config_fs CONFIG_FS_OBJECT ${DMBOOT_BOARD_CONFIG_FILES} ${DMBOOT_CONFIG_EXTRA_DEPENDS})
     set(CONFIG_FS_IMAGE "${CMAKE_BINARY_DIR}/config_fs.dmffs")
 else()
     message(STATUS "No config directory specified (DMBOOT_CONFIG_DIR not set)")
