@@ -11,6 +11,11 @@
 # driver draws without decoding anything - and placed at the same path under
 # DMBOOT_EVIEWS_DIR. Sets DMBOOT_SPLASH_LOGO_FILE to that file (for the
 # eviews image to depend on), empty when nothing is built.
+#
+# A logo under the mount point of the external flash (DMBOOT_EXT_MOUNT, e.g.
+# /ext/views/splash_logo.dmvir) stays out of the firmware: it is unpacked into
+# build/ext, which upload-ext sends to the flash chip. The display driver
+# (an ext module then) shows it once /ext is mounted.
 
 set(DMBOOT_SPLASH_ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets/splash")
 set(DMBOOT_SPLASH_LOGO_FILE "")
@@ -23,6 +28,15 @@ if(_SPLASH_PREFIX_AT EQUAL 0)
     set(_SPLASH_OUTPUT "${DMBOOT_EVIEWS_DIR}/${_SPLASH_RELATIVE_PATH}")
 else()
     set(_SPLASH_OUTPUT "")
+    set(_SPLASH_EXT_PREFIX "${DMBOOT_EXT_MOUNT}/")
+    string(LENGTH "${_SPLASH_EXT_PREFIX}" _SPLASH_EXT_PREFIX_LENGTH)
+    string(FIND "${DMBOOT_SPLASH_LOGO_PATH}" "${_SPLASH_EXT_PREFIX}" _SPLASH_EXT_AT)
+    if(DMBOOT_EXT_DEVICE AND DMBOOT_EXT_MOUNT AND _SPLASH_EXT_AT EQUAL 0)
+        string(SUBSTRING "${DMBOOT_SPLASH_LOGO_PATH}" ${_SPLASH_EXT_PREFIX_LENGTH} -1 _SPLASH_EXT_RELATIVE_PATH)
+        set(_SPLASH_EXT_OUTPUT "${CMAKE_BINARY_DIR}/ext/${_SPLASH_EXT_RELATIVE_PATH}")
+    else()
+        set(_SPLASH_EXT_OUTPUT "")
+    endif()
 endif()
 
 if(DMBOOT_SPLASH_LOGO)
@@ -48,8 +62,20 @@ if(DMBOOT_SPLASH_LOGO)
         )
         set(DMBOOT_SPLASH_LOGO_FILE "${_SPLASH_OUTPUT}")
         message(STATUS "Splash logo: ${_SPLASH_SOURCE} -> ${DMBOOT_SPLASH_LOGO_PATH}")
+    elseif(_SPLASH_EXT_OUTPUT)
+        get_filename_component(_SPLASH_EXT_DIR "${_SPLASH_EXT_OUTPUT}" DIRECTORY)
+        add_custom_command(
+            OUTPUT "${_SPLASH_EXT_OUTPUT}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${_SPLASH_EXT_DIR}"
+            COMMAND python3 "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py" "${_SPLASH_SOURCE}" "${_SPLASH_EXT_OUTPUT}"
+            DEPENDS "${_SPLASH_SOURCE}" "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py"
+            COMMENT "Unpacking splash logo ${_SPLASH_SOURCE} into build/ext (${DMBOOT_SPLASH_LOGO_PATH})"
+            VERBATIM
+        )
+        add_custom_target(splash_logo_ext ALL DEPENDS "${_SPLASH_EXT_OUTPUT}")
+        message(STATUS "Splash logo: ${_SPLASH_SOURCE} -> ${DMBOOT_SPLASH_LOGO_PATH} (external flash)")
     else()
-        message(WARNING "DMBOOT_SPLASH_LOGO is set, but DMBOOT_SPLASH_LOGO_PATH (${DMBOOT_SPLASH_LOGO_PATH}) is not under /eviews/ - the logo is not built into the firmware")
+        message(WARNING "DMBOOT_SPLASH_LOGO is set, but DMBOOT_SPLASH_LOGO_PATH (${DMBOOT_SPLASH_LOGO_PATH}) is under neither /eviews/ nor the external flash - the logo is not built")
     endif()
 else()
     message(STATUS "No splash logo (DMBOOT_SPLASH_LOGO not set)")

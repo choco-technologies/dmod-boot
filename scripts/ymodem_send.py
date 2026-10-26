@@ -199,7 +199,7 @@ def send_file(link, path, name, block, progress):
         link.write(bytes([EOT]))
         if wait_for(link, (ACK, NAK), 3.0, f'{name}: end') == ACK:
             break
-    wait_for(link, (CRC,), 10.0, f'{name}: next')
+    wait_for(link, (CRC,), 45.0, f'{name}: next')
     return size
 
 

@@ -1,6 +1,7 @@
 #
 # STM32F746G Discovery board ext modules - for the external flash (/ext/bin), sent by upload-ext
 #
+# (Everything else the firmware does not need to bring /ext up is in late.dmd.)
 #
 # Shell tools (the ones of tools.dmd are added to the list by DMBOOT_EXT_TOOLS): not needed to bring /ext up, so
 # they are not in the firmware. They are found by name in /ext/bin.
