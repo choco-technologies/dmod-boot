@@ -1,6 +1,6 @@
 # This script sets up ROM filesystems using dmffs and integrates them into the build
 # It checks for the required tools, creates the dmffs images, and embeds them into the firmware:
-#   - DMBOOT_CONFIG_DIR -> section .embedded.config_fs, mounted at /configs/
+#   - DMBOOT_CONFIG_DIR -> section .embedded.config_fs, mounted at /cfg/
 #   - DMBOOT_EVIEWS_DIR -> section .embedded.eviews_fs, mounted at /eviews/
 #   - DMBOOT_LICENSE_DIR -> section .embedded.license_fs, mounted at /lic/ (opt-in)
 
@@ -92,11 +92,11 @@ function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     message(STATUS "${name} filesystem will be embedded from: ${sourceDir}")
 endfunction()
 
-# Config filesystem (/configs/)
+# Config filesystem (/cfg/) - the configuration of the flash modules; the sdcard and ext modules bring theirs to the
+# card and /ext (<mount point>/cfg, see modules/CMakeLists.txt)
 if(DMBOOT_CONFIG_DIR)
     message(STATUS "Config directory specified: ${DMBOOT_CONFIG_DIR}")
-    # (download_sdcard_modules: the units of the sdcard modules - service= - go to the config directory as well)
-    dmboot_embed_dmffs(config_fs "${DMBOOT_CONFIG_DIR}" .embedded.config_fs CONFIG_FS_OBJECT ${DMBOOT_BOARD_CONFIG_FILES} download_sdcard_modules)
+    dmboot_embed_dmffs(config_fs "${DMBOOT_CONFIG_DIR}" .embedded.config_fs CONFIG_FS_OBJECT ${DMBOOT_BOARD_CONFIG_FILES})
     set(CONFIG_FS_IMAGE "${CMAKE_BINARY_DIR}/config_fs.dmffs")
 else()
     message(STATUS "No config directory specified (DMBOOT_CONFIG_DIR not set)")

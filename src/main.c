@@ -394,7 +394,7 @@ static void mount_rom_filesystem(const char* name, void* fs_start, void* fs_end,
 
 static void mount_config_filesystem(void)
 {
-    mount_rom_filesystem("Config", &__config_fs_start, &__config_fs_end, "/configs");
+    mount_rom_filesystem("Config", &__config_fs_start, &__config_fs_end, "/cfg");
 }
 
 static void mount_eviews_filesystem(void)
@@ -403,7 +403,7 @@ static void mount_eviews_filesystem(void)
     mount_rom_filesystem("Embedded views", &__eviews_fs_start, &__eviews_fs_end, "/eviews");
 }
 
-#define DEVFS_CONFIG_PATH   "/configs/drivers"
+#define DEVFS_CONFIG_PATH   "/cfg/drivers"
 
 #ifdef DMBOOT_HAS_DEVICE_SECRET
 #include "device_secret.h"      /* DMBOOT_DEVICE_SECRET_STRING, made by CMake */

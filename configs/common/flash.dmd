@@ -15,6 +15,13 @@ umount
 ymodem
 tty
 systemd
+# The cfg/drivers of every mount point - an SD card, /ext - into dmdevfs: libsystemd reports mounts as devices of class
+# "mount" and devscan.rules starts a one-shot devscan for each, when it is mounted and before it is unmounted. (Its
+# cfg/services and cfg/rules libsystemd loads by itself.) The configuration of the sdcard and ext modules comes with
+# them (see modules/CMakeLists.txt)
+devscan service=devscan@.ini
+devscan service=devscan-remove@.ini
+devscan rules=devscan.rules
 dmtty driver=dmtty.ini
 console rules=console.rules
 console service=console@.ini
