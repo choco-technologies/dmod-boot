@@ -41,7 +41,7 @@ SDCARD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_sdcard.py"
 SDCARD_IMAGE="$BUILD_DIR/sdcard.img"
 LCD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_lcd.py"
 LCD_FRAME_FILE="$BUILD_DIR/lcd_frame.bin"
-SPLASH_LOGO="$BUILD_DIR/eviews/splash_logo.dmvir"
+SPLASH_LOGO="$BUILD_DIR/ext/views/splash_logo.dmvir"
 TEST_MODULES_DMD="$SOURCE_DIR/configs/renode/test-modules.dmd"
 TOUCH_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_touch.py"
 MONITOR_PORT=3457
@@ -58,8 +58,10 @@ LCD_TIMEOUT=120
 TOUCH_TIMEOUT=120
 NETWORK_TIMEOUT=120
 EXT_TIMEOUT=120
+# Sending build/ext to the emulated flash (it is slow)
+EXT_FILL_TIMEOUT=1800
 # Renode has to outlive the monitor and the UART, SD card, LCD, touch, network and external flash tests
-TESTS_TIMEOUT=$((UART_TIMEOUT + SDCARD_TIMEOUT + LCD_TIMEOUT + TOUCH_TIMEOUT + NETWORK_TIMEOUT + EXT_TIMEOUT))
+TESTS_TIMEOUT=$((EXT_FILL_TIMEOUT + UART_TIMEOUT + SDCARD_TIMEOUT + LCD_TIMEOUT + TOUCH_TIMEOUT + NETWORK_TIMEOUT + EXT_TIMEOUT))
 CONNECT_TIMEOUT=$((RENODE_READY_TIMEOUT + MONITOR_READY_TIMEOUT + TESTS_TIMEOUT + 60))
 
 # The network test needs a TAP interface: root and /dev/net/tun
@@ -192,6 +194,30 @@ echo "✓ monitor-gdb connected to the dmlog ring"
 echo ""
 
 # -------------------------------------------------------
+# Step 4b – Fill the external flash: everything but the way to /ext is on it
+# -------------------------------------------------------
+echo "[4b] Formatting the emulated external flash and sending build/ext (like install-all)..."
+EXT_DEVICE=$(sed -n 's/^DMBOOT_EXT_DEVICE:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")
+EXT_MOUNT=$(sed -n 's/^DMBOOT_EXT_MOUNT:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")
+EXT_FS=$(sed -n 's/^DMBOOT_EXT_FS:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")
+EXT_MKFS=$(sed -n 's/^DMBOOT_EXT_MKFS:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")
+if [ -n "$EXT_DEVICE" ]; then
+    YMODEM=(python3 "$SOURCE_DIR/scripts/ymodem_send.py" --port "tcp:127.0.0.1:$UART_PORT" --quiet)
+    EXT_MOUNT_CMD="mount -t $EXT_FS -o device=$EXT_DEVICE $EXT_MOUNT"
+    # (the chip is empty: the "ext" service could not mount it at boot)
+    "${YMODEM[@]}" --wait 60 --timeout 120 --run "-umount $EXT_MOUNT" --run "$EXT_MKFS $EXT_DEVICE" \
+        --run "$EXT_MOUNT_CMD" --ensure-dir "$EXT_MOUNT" \
+        && "${YMODEM[@]}" --timeout 120 --dest "$EXT_MOUNT" --card none "$BUILD_DIR/ext" \
+        && "${YMODEM[@]}" --timeout 120 --run "umount $EXT_MOUNT" --run "$EXT_MOUNT_CMD" \
+        || { echo "✗ could not fill the external flash"; exit 1; }
+    # (the mount loads /ext/cfg: units, rules, drivers - they start now)
+    echo "✓ build/ext is on $EXT_MOUNT"
+else
+    echo "Skipped: the board has no external flash"
+fi
+echo ""
+
+# -------------------------------------------------------
 # Step 5 – Check that the shell answers on the console UART
 # -------------------------------------------------------
 echo "[5/10] Checking the shell on the console UART..."
@@ -256,9 +282,9 @@ EXT_STATUS=0
 if [ "$UART_STATUS" -ne 0 ]; then
     echo "Skipped: the shell on the console UART does not work"
 else
-    # QSPI_IMAGE is empty above: this process owns a fresh, disposable flash.
+    # (/ext was filled in step 4b)
     python3 "$SOURCE_DIR/scripts/test_renode_ext.py" --port "$UART_PORT" \
-        --timeout "$EXT_TIMEOUT" --format || EXT_STATUS=$?
+        --timeout "$EXT_TIMEOUT" || EXT_STATUS=$?
 fi
 pkill -f dmlog_monitor 2>/dev/null || true
 

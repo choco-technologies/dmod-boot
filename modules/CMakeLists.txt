@@ -27,24 +27,11 @@ if(BOARD)
     endif()
 endif()
 
-# What the firmware does not need to bring /ext up: the shell tools (configs/common/tools.dmd) and the late modules
-# (late.dmd of the common, MCU and board configuration). They are in the firmware, or - on a board with an external
-# flash (DMBOOT_EXT_TOOLS) - on /ext, in the ext modules below
-set(DMBOOT_LATE_DMD_FILES "")
-set(_LATE_DMD_LIST
-    "${CMAKE_SOURCE_DIR}/configs/common/tools.dmd"
-    "${CMAKE_SOURCE_DIR}/configs/common/late.dmd"
-    "${CMAKE_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/late.dmd")
-if(BOARD)
-    list(APPEND _LATE_DMD_LIST "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/late.dmd")
-endif()
-foreach(_LATE_DMD IN LISTS _LATE_DMD_LIST)
-    if(EXISTS "${_LATE_DMD}")
-        list(APPEND DMBOOT_LATE_DMD_FILES "${_LATE_DMD}")
-    endif()
-endforeach()
-if(NOT DMBOOT_EXT_TOOLS)
-    list(APPEND DMBOOT_FLASH_DMD_FILES ${DMBOOT_LATE_DMD_FILES})
+# The shell tools that are not needed to bring /ext up (configs/common/tools.dmd): in the firmware, or - on a board
+# with an external flash (DMBOOT_EXT_TOOLS) - on /ext, in the ext modules below
+set(_COMMON_TOOLS_DMD "${CMAKE_SOURCE_DIR}/configs/common/tools.dmd")
+if(EXISTS "${_COMMON_TOOLS_DMD}" AND NOT DMBOOT_EXT_TOOLS)
+    list(APPEND DMBOOT_FLASH_DMD_FILES "${_COMMON_TOOLS_DMD}")
 endif()
 
 # Extra flash modules from cmake parameter
@@ -109,9 +96,9 @@ if(EXISTS "${_MCU_EXT_DMD}")
     list(APPEND DMBOOT_EXT_DMD_FILES "${_MCU_EXT_DMD}")
 endif()
 
-# The late modules (tools, services, drivers), when they are on /ext
-if(DMBOOT_EXT_TOOLS)
-    list(APPEND DMBOOT_EXT_DMD_FILES ${DMBOOT_LATE_DMD_FILES})
+# The common tools, when they are on /ext
+if(EXISTS "${_COMMON_TOOLS_DMD}" AND DMBOOT_EXT_TOOLS)
+    list(APPEND DMBOOT_EXT_DMD_FILES "${_COMMON_TOOLS_DMD}")
 endif()
 
 # Board-specific ext modules (only if BOARD is set)

@@ -49,25 +49,15 @@ set(DMBOOT_EXT_DEVICE "/dev/dmspiflashx/flash" CACHE STRING "Block device of the
 set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
 set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
 set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
-# Renode loads the QUADSPI/N25Q128A model below. Its flash starts erased, so keep everything in the firmware (the
-# shell tools, late.dmd) for provisioning and tests. On hardware the tools of configs/common/tools.dmd and the late
-# modules (late.dmd: the network, the SD card, the display, the audio, ...) are on /ext (upload-ext sends them): the
-# ROM is small. flash.dmd keeps what brings /ext up (the console, the clocks, the SDRAM, the chain to the chip, the
-# file system, ls, mount, umount, ymodem, mklittlefs - format-ext and upload-ext need them), and the default vault is
-# /ext/secrets.vault (wifid waits for the file to appear).
-if(DMBOOT_EMULATION)
-    set(DMBOOT_EXT_TOOLS OFF)
-else()
-    set(DMBOOT_EXT_TOOLS ON CACHE BOOL "Put the shell tools and the late modules (late.dmd) on the external flash instead of in the firmware")
-    # (a cache entry that already exists is not changed - pass -DDMBOOT_DMSECRETS_PATH=...)
-    set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
-endif()
-
-# The display driver is a late module (late.dmd): on /ext, it shows the splash logo as soon as /ext is mounted - the
-# logo (60 kB of raw pixels) is on /ext too then, not in the firmware. Renode has no QUADSPI image to put it on.
-if(DMBOOT_EXT_TOOLS)
-    set(DMBOOT_SPLASH_LOGO_PATH "/ext/views/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target")
-endif()
+# flash.dmd keeps what brings /ext up (the console, the clocks, the SDRAM, the chain to the chip, the file system, ls,
+# mount, umount, ymodem, mklittlefs - format-ext and upload-ext need them); the shell tools of configs/common/tools.dmd
+# and ext.dmd (the network, the SD card, the display, the audio, ...) are on /ext, in Renode too: upload-ext sends them.
+# The default vault is /ext/secrets.vault (wifid waits for the file to appear).
+set(DMBOOT_EXT_TOOLS ON CACHE BOOL "Put the shell tools and the services of tools.dmd on the external flash instead of in the firmware")
+# (a cache entry that already exists is not changed - pass -DDMBOOT_DMSECRETS_PATH=...)
+set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
+# The display driver is on /ext: the splash logo (60 kB of raw pixels) is too, and shows as soon as /ext is mounted.
+set(DMBOOT_SPLASH_LOGO_PATH "/ext/views/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target")
 
 # QUADSPI bank 1 + N25Q128A, DMA2 stream 7/channel 3, IRQ 92 (RM0385).
 set(DMBOOT_RENODE_QSPI_MODEL "${CMAKE_SOURCE_DIR}/configs/renode/STM32F7_QUADSPI.cs")

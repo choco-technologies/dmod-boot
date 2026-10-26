@@ -107,7 +107,7 @@ Board configuration files are located in `configs/board/<BOARD>/board.cmake`. Wh
 ### STM32F746G-DISCO: the Car HMI Demo
 
 The `stm32f746g-disco` board runs the [car HMI demo](https://github.com/choco-technologies/carhmi-demo)
-out of the box: its `late.dmd` (on the external flash, see [docs/external-flash.md](docs/external-flash.md)) starts the display (`dmview`), audio
+out of the box: its `ext.dmd` (on the external flash, see [docs/external-flash.md](docs/external-flash.md)) starts the display (`dmview`), audio
 (`dmaudio`, on the WM8994 codec) and the `carhmi` service, and its
 `sdcard.dmd` downloads the view, which is too big for the flash, to
 `build/sdcard`. Flash the firmware, then send the view to the card in the slot

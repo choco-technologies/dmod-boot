@@ -69,25 +69,16 @@ needed before `/ext` is mounted - the drivers and services, the file system (`dm
 and `mklittlefs` (what `format-ext` / `upload-ext` and a recovery by hand need - with an empty or broken flash). An
 application or a library loaded by name later can be on `/ext`.
 
-### `late.dmd`: the firmware or `/ext`
-
-Next to `flash.dmd`, a configuration level (common, MCU, board) can have a `late.dmd`: the modules **not needed to bring
-`/ext` up** - the network, the SD card, the display, the audio, the RTC, the services of the system. `DMBOOT_EXT_TOOLS`
-decides where they go: `ON` (a board with an external flash) - to `/ext` like `ext.dmd` (modules in `/ext/bin`, drivers,
-units and rules in `/ext/cfg`); `OFF` (Renode, or a board without the chip) - into the firmware, like `flash.dmd`. The
-shell tools of `configs/common/tools.dmd` are handled the same way. So one list serves both: a small firmware that
-brings `/ext` up, and a firmware that has everything.
-
 For this board:
 
 - **The firmware** (`flash.dmd`, `configs/common/flash.dmd`) holds only the way to `/ext` and the console: dmell, the
   file systems (dmffs, dmramfs, dmdevfs, dmlittlefs), libsystemd with `systemd`, `devscan` and `console`, the drivers of
   the clocks, the pins, the console UART (usart1), the SDRAM, DMA, the QUADSPI bus and the chip on it, and `ls`, `mount`,
   `umount`, `ymodem`, `tty`, `mklittlefs`. Built with `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 390 kB
-  (150 kB of it the firmware itself); the `Debug` build type has no optimization at all and the same image is about
+  (160 kB of it the core of the firmware); the `Debug` build type has no optimization at all and the same image is about
   470 kB.
-- **Everything else is on `/ext`** (`late.dmd`): the shell tools (`configs/common/tools.dmd`: `ps`, `cat`, `catini`,
-  `mkdir`, `reboot`, `memory`, `service`, and the board's `ext.dmd`: `rm`, `tree`, ...), the Ethernet and Wi-Fi stacks,
+- **Everything else is on `/ext`** (`ext.dmd`, `configs/common/tools.dmd`): the shell tools (`ps`, `cat`, `catini`,
+  `mkdir`, `reboot`, `memory`, `service`, `rm`, `tree`, ...), the Ethernet and Wi-Fi stacks,
   telnetd, the crypto/secrets modules, the RTC and UTC/NTP, the SD card driver and its file system (dmsdio, dmfatfs,
   automount), the display (dmlcdtft, dmview), the touch panel and the audio. They are missing until `upload-ext` or
   `install-all` has been run, and they start when the `ext` service has mounted `/ext` (so the splash logo, which is on
@@ -105,7 +96,7 @@ For this board:
   filesystem next to the ones of the modules (`services/board/`, `rules/board/`).
 - **In Renode**, the board loads `configs/renode/STM32F7_QUADSPI.cs`: QUADSPI at `0xA0001000`,
   IRQ 92, DMA2 stream 7, and the read-only mapped window at `0x90000000`. The model contains a
-  16 MiB N25Q128A (`20 BA 18`). The shell tools and the late modules stay in the firmware (`DMBOOT_EXT_TOOLS=OFF`) for provisioning a fresh chip.
+  16 MiB N25Q128A (`20 BA 18`). The chip starts empty: `scripts/run_renode_tests.sh` formats it and sends `build/ext` like `install-all` does on the board.
   See [Renode QUADSPI](renode-qspi.md) for image persistence and tests.
 - `dmqspi` and `dmqspi_port` are listed in `flash.dmd` because `dmspiflash` talks to the bus only through the file
   system, so `dmf-get` does not pull them in as dependencies of it.

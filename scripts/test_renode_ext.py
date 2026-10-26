@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Format a fresh emulated N25Q128A and test littlefs through the firmware shell.
+"""Test littlefs on the emulated N25Q128A through the firmware shell.
 
-Use only with a disposable Renode instance. --format is required explicitly;
-this destroys the contents of /dev/dmspiflashx/flash in that instance.
+/ext is filled by run_renode_tests.sh (format and upload-ext, like install-all)
+before this runs, so nothing is formatted here: the test writes a file, reads
+it back. (The unmount and mount are in run_renode_tests.sh step 4b; unmounting
+a /ext whose units are running stops them, that takes long and is not a QSPI test.)
 """
 import argparse
 import socket
@@ -15,8 +17,6 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=3456)
     parser.add_argument('--timeout', type=float, default=120)
-    parser.add_argument('--format', action='store_true', required=True,
-                        help='erase the disposable emulator flash and create littlefs')
     args = parser.parse_args()
     deadline = time.monotonic() + args.timeout
     with connect('127.0.0.1', args.port, deadline) as sock:
@@ -33,15 +33,11 @@ def main():
             return result
 
         run('ls /dev/dmspiflashx/flash', 'flash')
-        run('mklittlefs /dev/dmspiflashx/flash')
-        run('mount -t dmlittlefs -o device=/dev/dmspiflashx/flash /ext')
+        run('ls /ext/bin', 'cat.dmfc')            # (the modules sent in step 4b)
         token = f'qspi-littlefs-{time.time_ns()}'
         run(f'echo {token} > /ext/qspi-test.txt')
         run('cat /ext/qspi-test.txt', token)
-        run('umount /ext')
-        run('mount -t dmlittlefs -o device=/dev/dmspiflashx/flash /ext')
-        run('cat /ext/qspi-test.txt', token)
-        print('PASS QUADSPI: format, mount, write, read and remount littlefs')
+        print('PASS QUADSPI: /ext/bin is there (sent in step 4b, after a remount); write and read littlefs')
     return 0
 
 
