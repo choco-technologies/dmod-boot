@@ -28,3 +28,12 @@ dmqspi_port
 dmspiflash driver=board/stm32f746g-disco/n25q128.ini
 dmlittlefs
 mklittlefs
+#
+# automount (dmblock) mounts every FAT/exFAT volume dmdevfs reports as a block device at /mnt/<label> (or
+# /mnt/<node name>) and unmounts it when the card is removed. It is here, not on /ext, so that unmounting /ext does not
+# unmount the card: the units of /ext stop with it, and stopping automount's unit unmounts what it mounted - and the
+# card holds the car HMI, which does not stop in time (see docs/external-flash.md). The file system itself (dmfatfs)
+# is loaded by name from /ext/bin when a card appears, which is after /ext is mounted.
+#
+automount service=automount@.ini
+automount rules=automount.rules

@@ -74,9 +74,9 @@ For this board:
 - **The firmware** (`flash.dmd`, `configs/common/flash.dmd`) holds only the way to `/ext` and the console: dmell, the
   file systems (dmffs, dmramfs, dmdevfs, dmlittlefs), libsystemd with `systemd`, `devscan` and `console`, the drivers of
   the clocks, the pins, the console UART (usart1), the SDRAM, DMA, the QUADSPI bus and the chip on it, and `ls`, `mount`,
-  `umount`, `ymodem`, `tty`, `mklittlefs`. Built with `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 390 kB
+  `umount`, `ymodem`, `tty`, `mklittlefs`, and `automount`, which mounts the SD card (see below). Built with `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 404 kB
   (160 kB of it the core of the firmware); the `Debug` build type has no optimization at all and the same image is about
-  470 kB.
+  485 kB.
 - **Everything else is on `/ext`** (`ext.dmd`, `configs/common/tools.dmd`): the shell tools (`ps`, `cat`, `catini`,
   `mkdir`, `reboot`, `memory`, `service`, `rm`, `tree`, ...), the Ethernet and Wi-Fi stacks,
   telnetd, the crypto/secrets modules, the RTC and UTC/NTP, the SD card driver and its file system (dmsdio, dmfatfs,
@@ -85,6 +85,12 @@ For this board:
   `/ext/views/` too, appears then - a second or two after the firmware starts). Expect more RAM in use than with
   everything in the firmware: measured on the STM32F746G-DISCO with the car HMI running, about 34 kB more of the main heap
   and 0.4 MB more of the SDRAM.
+- **`automount` is in the firmware**, although nothing needs it to bring `/ext` up: the units of `/ext` stop when it is
+  unmounted, and stopping automount's unit unmounts the cards it mounted - and the card holds the car HMI, which does
+  not stop within the time the unmount gives it (the card stayed busy, `umount /ext` took minutes and left the system
+  half stopped). With `automount` in the firmware, `umount /ext` stops the units of `/ext` (the network, the display,
+  the audio, ...; about 15 s) and leaves the card alone; `mount` brings them back. It costs about 13 kB of the ROM
+  (`automount`, `libautomount`, `dmblkid`, its unit and rules).
 - **The car HMI demo** (`carhmi`), the image decoders (`dmimg_png`, `dmimg_jpeg`) and the MP3 decoder (`dmmp3`) are on
   the SD card (`sdcard.dmd`, sent by `upload-files`), loaded from `/mnt/<label>/bin` once the card is mounted. Its unit
   (`carhmi.ini`) is on the card too (`/mnt/<label>/cfg/services`): libsystemd starts it when the card is mounted and
