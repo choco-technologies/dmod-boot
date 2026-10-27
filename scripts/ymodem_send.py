@@ -29,6 +29,7 @@ import fcntl
 import os
 import re
 import select
+import socket
 import sys
 import termios
 import time
@@ -69,11 +70,22 @@ def other_users(port):
 
 
 class Link:
-    """Bytes in and out: a serial port, or stdin / stdout (--stdio, tests)"""
+    """Bytes in and out: a serial port, a TCP socket (--port tcp:HOST:PORT, the UART of Renode), or stdin / stdout (--stdio, tests)"""
 
     retries = 0
+    sock = None
 
     def __init__(self, port, baud):
+        if port is not None and port.startswith('tcp:'):
+            host, _, number = port[4:].rpartition(':')
+            try:
+                self.sock = socket.create_connection((host or '127.0.0.1', int(number)), timeout=10)
+            except (OSError, ValueError) as e:
+                raise Failure(f'{port}: {e}')
+            self.sock.settimeout(None)
+            self.rfd = self.wfd = self.sock.fileno()
+            self.saved = None
+            return
         if port is None:
             self.rfd, self.wfd, self.saved = sys.stdin.fileno(), sys.stdout.fileno(), None
             return
@@ -99,6 +111,8 @@ class Link:
         self.rfd = self.wfd = fd
 
     def close(self):
+        if self.sock is not None:
+            self.sock.close()
         if self.saved is not None:
             termios.tcsetattr(self.rfd, termios.TCSADRAIN, self.saved)
             os.close(self.rfd)
@@ -147,10 +161,14 @@ def packet(number, data, size):
     return bytes([SOH if size == 128 else STX, number & 0xFF, 0xFF - (number & 0xFF)]) + data + bytes([c >> 8, c & 0xFF])
 
 
+HEADER_TIMEOUT = 60.0
+
+
 def wait_for(link, wanted, timeout, what):
     """One of `wanted` (bytes) - others skipped; CAN CAN: the device gave up"""
     end = time.monotonic() + timeout
     cans = 0
+    skipped = bytearray()
     while time.monotonic() < end:
         b = link.read(max(0.0, end - time.monotonic()))
         if b is None:
@@ -163,17 +181,19 @@ def wait_for(link, wanted, timeout, what):
         cans = 0
         if b in wanted:
             return b
-    raise Failure(f'no answer from the device ({what})')
+        skipped.append(b)
+    said = (bytes(skipped) + link.drain(0.5, 2.0)).decode(errors='replace').strip()
+    raise Failure(f'no answer from the device ({what})' + (f', it said: {said!r}' if said else ''))
 
 
-def send_packet(link, number, data, size, what, retries=10):
+def send_packet(link, number, data, size, what, retries=10, timeout=3.0):
     p = packet(number, data, size)
     for attempt in range(retries):
         if attempt > 0:
             link.retries += 1
         link.write(p)
         try:
-            if wait_for(link, (ACK, NAK), 3.0, what) == ACK:
+            if wait_for(link, (ACK, NAK), timeout, what) == ACK:
                 return
         except Failure as e:
             if 'cancelled' in str(e):
@@ -186,7 +206,9 @@ def send_file(link, path, name, block, progress):
     header = name.encode() + b'\x00' + str(size).encode() + b'\x00'
     if len(header) > 128:
         raise Failure(f'{name}: name too long for YMODEM')
-    send_packet(link, 0, header, 128, f'{name}: header')
+    # (the device creates the file before it answers - a littlefs directory may compact first, seconds on a slow
+    # flash; a header sent again meanwhile is a second packet to the receiver and the two lose each other)
+    send_packet(link, 0, header, 128, f'{name}: header', timeout=HEADER_TIMEOUT)
     wait_for(link, (CRC,), 10.0, f'{name}: data')
     sent, number = 0, 1
     with open(path, 'rb') as f:

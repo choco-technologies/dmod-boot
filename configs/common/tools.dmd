@@ -1,5 +1,5 @@
 #
-# Common tools - the shell commands that are not needed to bring /ext up (flash.dmd keeps those)
+# Common tools and services - the modules that are not needed to bring /ext up (flash.dmd keeps those)
 #
 # Where they go depends on the board: into the firmware (flash.dmd), or - DMBOOT_EXT_TOOLS, set by a board that has an
 # external flash - to /ext/bin (ext.dmd, sent by upload-ext), which takes them out of the ROM.
@@ -11,3 +11,9 @@ cat
 catini
 memory
 service
+dmdevmon
+dmdevmon service=dmdevmon@.ini
+dmdevmon rules=dmdevmon.rules
+# Bind RTC devices to the shared UTC library through libsystemd rules.
+dmutc service=dmutc@.ini
+dmutc rules=dmutc.rules

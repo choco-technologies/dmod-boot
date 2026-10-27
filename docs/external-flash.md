@@ -71,9 +71,26 @@ application or a library loaded by name later can be on `/ext`.
 
 For this board:
 
-- **The shell tools** (`configs/common/tools.dmd`: `ps`, `cat`, `catini`, `mkdir`, `reboot`, `memory`, `service`, and the
-  board's `ext.dmd`: `rm`, `tree`, `printf`, `touch`, `which`, `mv`, `find`) are on `/ext` (`DMBOOT_EXT_TOOLS=ON`), so
-  they are missing until `upload-ext` or `install-all` has been run. A board without an external flash keeps them in the firmware.
+- **The firmware** (`flash.dmd`, `configs/common/flash.dmd`) holds only the way to `/ext` and the console: dmell, the
+  file systems (dmffs, dmramfs, dmdevfs, dmlittlefs), libsystemd with `systemd`, `devscan` and `console`, the drivers of
+  the clocks, the pins, the console UART (usart1), the SDRAM, DMA, the QUADSPI bus and the chip on it, and `ls`, `mount`,
+  `umount`, `ymodem`, `tty`, `mklittlefs`, and `automount`, which mounts the SD card (see below). Built with `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 404 kB
+  (160 kB of it the core of the firmware); the `Debug` build type has no optimization at all and the same image is about
+  485 kB.
+- **Everything else is on `/ext`** (`ext.dmd`, `configs/common/tools.dmd`): the shell tools (`ps`, `cat`, `catini`,
+  `mkdir`, `reboot`, `memory`, `service`, `rm`, `tree`, ...), the Ethernet and Wi-Fi stacks,
+  telnetd, the crypto/secrets modules, the RTC and UTC/NTP, the SD card driver and its file system (dmsdio, dmfatfs,
+  automount), the display (dmlcdtft, dmview), the touch panel and the audio. They are missing until `upload-ext` or
+  `install-all` has been run, and they start when the `ext` service has mounted `/ext` (so the splash logo, which is on
+  `/ext/views/` too, appears then - a second or two after the firmware starts). Expect more RAM in use than with
+  everything in the firmware: measured on the STM32F746G-DISCO with the car HMI running, about 34 kB more of the main heap
+  and 0.4 MB more of the SDRAM.
+- **`automount` is in the firmware**, although nothing needs it to bring `/ext` up: the units of `/ext` stop when it is
+  unmounted, and stopping automount's unit unmounts the cards it mounted - and the card holds the car HMI, which does
+  not stop within the time the unmount gives it (the card stayed busy, `umount /ext` took minutes and left the system
+  half stopped). With `automount` in the firmware, `umount /ext` stops the units of `/ext` (the network, the display,
+  the audio, ...; about 15 s) and leaves the card alone; `mount` brings them back. It costs about 13 kB of the ROM
+  (`automount`, `libautomount`, `dmblkid`, its unit and rules).
 - **The car HMI demo** (`carhmi`), the image decoders (`dmimg_png`, `dmimg_jpeg`) and the MP3 decoder (`dmmp3`) are on
   the SD card (`sdcard.dmd`, sent by `upload-files`), loaded from `/mnt/<label>/bin` once the card is mounted. Its unit
   (`carhmi.ini`) is on the card too (`/mnt/<label>/cfg/services`): libsystemd starts it when the card is mounted and
@@ -85,7 +102,7 @@ For this board:
   filesystem next to the ones of the modules (`services/board/`, `rules/board/`).
 - **In Renode**, the board loads `configs/renode/STM32F7_QUADSPI.cs`: QUADSPI at `0xA0001000`,
   IRQ 92, DMA2 stream 7, and the read-only mapped window at `0x90000000`. The model contains a
-  16 MiB N25Q128A (`20 BA 18`). The shell tools stay in the firmware for provisioning a fresh chip.
+  16 MiB N25Q128A (`20 BA 18`). The chip starts empty: `scripts/run_renode_tests.sh` formats it and sends `build/ext` like `install-all` does on the board.
   See [Renode QUADSPI](renode-qspi.md) for image persistence and tests.
 - `dmqspi` and `dmqspi_port` are listed in `flash.dmd` because `dmspiflash` talks to the bus only through the file
   system, so `dmf-get` does not pull them in as dependencies of it.

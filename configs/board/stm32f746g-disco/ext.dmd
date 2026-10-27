@@ -1,6 +1,144 @@
 #
 # STM32F746G Discovery board ext modules - for the external flash (/ext/bin), sent by upload-ext
 #
+# Everything the firmware (flash.dmd) does not need to bring /ext up: the drivers' configurations, units and rules
+# of these modules go to /ext/cfg and are loaded once /ext is mounted.
+#
+dmuart driver=board/stm32f746g-disco/usart6.ini
+# Hardware entropy source (/dev/rng); CLK48 comes from dmclk.
+dmrng driver=board/stm32f746g-disco/rng.ini
+# Civil RTC calendar; dmutc will supply UTC synchronization policy.
+dmrtc driver=board/stm32f746g-disco/rtc.ini
+rtc
+#
+# Network: eth0 on the on-board RMII PHY. dmnetif reports the interface as a
+# "netif" device, networkd.rules and dhcp.rules then start networkd@eth0 (RX
+# pump) and dhcp@eth0 (lease) for it. The pump brings eth0 up by itself once
+# the PHY reports a link (dmnetbridge 1.2.4+), so DHCP needs no manual
+# "ifconfig eth0 up".
+#
+dmeth driver=board/stm32f746g-disco/eth0.ini
+dmnetbridge
+dmnetif
+dmarp
+dmroute
+dmip
+dmicmp service=icmp.ini
+ifconfig
+ip
+ping
+networkd service=networkd@.ini
+networkd rules=networkd.rules
+dmudp
+dhcpc service=dhcp@.ini
+dhcpc rules=dhcp.rules
+#
+# Wi-Fi: wlan0 on an ESP32-C3 running ESP-Hosted (dmesphosted's coprocessor/
+# firmware, wired to the Arduino header over SPI2 - see the README of
+# dmesphosted's configs/board/stm32f746g-disco). dmesphosted's wifi.ini
+# configures the pins, the dmspi bus (dmspi moves the frames by DMA, dmdma
+# and dmheap must be up) and the device. dmnetif lists wlan0 only when the
+# ESP answered - without one there is no wlan0 and networkd.rules / dhcp.rules
+# start nothing for it; with one they start networkd@wlan0 and dhcp@wlan0 like
+# for eth0. "wifi" is dmnet's tool (scan, connect, save a network).
+#
+# The networks to connect to by themselves are saved in the "wifi" vault of
+# dmsecrets (wifi save SSID / wifi connect SSID -s): dmcrypto does the
+# cryptography and, through its /dev/crypto node (crypto.ini), takes its random
+# bytes from /dev/rng; the vault is opened with the key of the device secret
+# (/dev/devkey, DMBOOT_DEVICE_SECRET), so nobody types a passphrase. wifid, a
+# service libsystemd starts for every network interface (wifid.rules; it ends at
+# once on one that is not Wi-Fi), connects wlan0 to the saved network in range
+# with the strongest signal. The vault is a file: DMBOOT_DMSECRETS_PATH (by default
+# /ext/secrets.vault on the external flash, or e.g. /mnt/<card>/secrets.vault) sets
+# DMSECRETS_PATH - wifid waits for it to appear.
+#
+dmspi
+dmspi_port
+dmesphosted driver=board/stm32f746g-disco/wifi.ini
+wifi
+dmcrypto driver=board/stm32f746g-disco/crypto.ini
+crypto
+dmsecrets
+secrets
+wifid service=wifid@.ini
+wifid rules=wifid.rules
+#
+# DNS: the dmdns resolver, brought up once for the whole system by the dns
+# unit (type=library) - no per-interface rule. Name servers come from the
+# DHCP lease (option 6): dmdhcp reports them through dmdns's
+# dmdns_provide_servers DIF on every lookup. nslookup looks names up from
+# the shell.
+#
+dmdns service=dns.ini
+nslookup
+#
+# Time: dmntp, loaded at boot by the ntp unit (type=library), is one of
+# dmutc's external UTC sources - dmutc sets the RTC from it after the start
+# (again every minute until the network is up) and then once a day. The
+# servers: the DHCP lease's (option 42), else pool.ntp.org/time.google.com.
+#
+dmntp service=ntp.ini
+#
+# Telnet: telnetd (dmtcp + dmtelnet) listens on TCP port 23; every connection
+# becomes a tty node with its own console@ / dmell, like a UART does.
+#
+telnetd driver=telnetd.ini
+#
+# SD card: on-board microSD slot (CN3) on SDMMC1. dmdevfs creates the host
+# node /dev/dmsdio0, the dmdevmon service (common flash.dmd) monitors the
+# card detect pin and announces /dev/dmsdio0/0 when a card is inserted.
+# The DMA2 controller (dma.ini) and CLK48 from dmclk must be up before it.
+#
+dmsdio driver=board/stm32f746g-disco/sdmmc1.ini
+blkid
+#
+# SD card file systems: dmfatfs mounts FAT/exFAT, mkfatfs formats a card. (automount, which mounts the card, is in
+# flash.dmd: see there.)
+#
+dmfatfs
+mkfatfs
+#
+dmlcdtft driver=board/stm32f746g-disco/lcd.ini
+#
+# Touch panel of the LCD: FT5336 on I2C3. dmft5336's touch.ini configures
+# the I2C3 pins, the dmi2c bus (/dev/dmi2cx/touch_i2c, its i2c_bus friend)
+# and the panel (/dev/touch, polled: its INT pin shares EXTI13 with the
+# microSD card detect) - dmi2c is only needed as a module here, its own
+# i2c3.ini would configure the same controller a second time.
+#
+dmi2c
+dmft5336 driver=board/stm32f746g-disco/touch.ini
+#
+# Audio: the WM8994 codec - stereo headphone output and the board's digital
+# microphone - on SAI2 (PCM, dmsai) with I2C3 for its registers. The config
+# joins the touch panel's I2C3 bus node (touch.ini above) instead of
+# configuring I2C3 again, so both work at once. The nodes are /dev/wm8994
+# (codec controls and stereo PCM) and /dev/dmsai1 (the raw SAI stream the codec
+# drives); an application plays through /dev/wm8994 with the DMDRVI_IOCTL_AUDIO_*
+# commands (dmdrvi 2.7). dmsai needs dmclk (SAI clock), dmdma (DMA2) and dmheap.
+#
+dmsai
+dmwm8994 driver=board/stm32f746g-disco/codec-with-touch.ini
+#
+# The audio service: dmaudio.rules starts a dmaudio@<name> for every audio
+# device dmdevfs reports - here /dev/wm8994 -, mixing what the applications
+# play (libdmaudio) into it.
+#
+dmaudio service=dmaudio@.ini
+dmaudio rules=dmaudio.rules
+#
+# The display service: dmview.rules starts a dmview@<name> for the LCD
+# (/dev/dmlcdtft0), which shows what the applications claim for it - with
+# the channel between an application and its view (0.10), which carhmi needs.
+#
+dmview
+dmview service=dmview@.ini
+dmview rules=dmview.rules
+#
+# The car HMI demo (carhmi) and what it needs - the image decoders, the MP3 decoder - are on the SD card, see
+# sdcard.dmd: it is loaded from /mnt/<label>/bin once automount has mounted the card.
+#
 #
 # Shell tools (the ones of tools.dmd are added to the list by DMBOOT_EXT_TOOLS): not needed to bring /ext up, so
 # they are not in the firmware. They are found by name in /ext/bin.

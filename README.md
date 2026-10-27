@@ -107,7 +107,7 @@ Board configuration files are located in `configs/board/<BOARD>/board.cmake`. Wh
 ### STM32F746G-DISCO: the Car HMI Demo
 
 The `stm32f746g-disco` board runs the [car HMI demo](https://github.com/choco-technologies/carhmi-demo)
-out of the box: its `flash.dmd` starts the display (`dmview`), audio
+out of the box: its `ext.dmd` (on the external flash, see [docs/external-flash.md](docs/external-flash.md)) starts the display (`dmview`), audio
 (`dmaudio`, on the WM8994 codec) and the `carhmi` service, and its
 `sdcard.dmd` downloads the view, which is too big for the flash, to
 `build/sdcard`. Flash the firmware, then send the view to the card in the slot
@@ -207,7 +207,7 @@ cmake --build build
 - `DMBOOT_EMBED_LICENSES` (defaults to `OFF`) - Embed flash module licenses as `license_fs.dmffs` and mount them at `/lic/<module>/`. Enable only when there is enough flash space; this option does not affect licenses on the SD card.
 - `DMBOOT_EVIEWS_DIR` (optional, defaults to `build/eviews`) - Directory where `dmf-get` installs the views (`.dmv`) of the flash modules, each module in its own subdirectory (`<dir>/<module>`). It is converted to a dmffs filesystem image, embedded like the config filesystem and mounted at `/eviews/` at boot time, so the views of module `X` are in `/eviews/X/`. Views of the sdcard modules stay on the sdcard, in `build/sdcard/views/<module>/`. Selecting an application with views in a `*.dmd` file is enough to get its views installed.
 - `DMBOOT_SPLASH_LOGO` (optional, set by the board configuration - `dmodos_logo_128` for `stm32f746g-disco`) - Splash logo the display driver shows as soon as the display is up: the name of an asset in [`assets/splash/`](assets/splash/README.md) or a path to a `.dmvi` file. The build unpacks it into a `.dmvir` (raw pixels, nothing to decode) and puts it into the embedded views filesystem at `DMBOOT_SPLASH_LOGO_PATH`.
-- `DMBOOT_SPLASH_LOGO_PATH` (optional, defaults to `/eviews/splash_logo.dmvir`) - Path of the splash logo on the target, set as the `SPLASH_LOGO` environment variable at boot (read by dmlcdtft).
+- `DMBOOT_SPLASH_LOGO_PATH` (optional, defaults to `/eviews/splash_logo.dmvir`; `/ext/views/splash_logo.dmvir` for `stm32f746g-disco`) - Path of the splash logo on the target, set as the `SPLASH_LOGO` environment variable at boot (read by dmlcdtft). A path on the external flash keeps the logo out of the firmware: it goes to `build/ext` and is sent by `upload-ext`.
 - `DMBOOT_MAIN_MODULE_CONFIG` (optional) - Configuration file for the main module (e.g. `board/stm32f746g-disco.ini`). Only used when `DMBOOT_MAIN_MODULE` is set. When specified, this config is passed to `dmf-get` when downloading the main module.
 - `DMBOOT_EXTRA_FLASH_DMD_MANIFESTS` (optional) - Semicolon-separated list of manifest paths/URLs (one per extra flash.dmd file). Use this to specify a custom manifest for each extra flash.dmd file.
 - `DMBOOT_EXTRA_SDCARD_DMD_FILES` (optional) - Semicolon-separated list of additional `sdcard.dmd` files. Each file adds more sdcard modules to download at build time.
