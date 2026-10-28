@@ -34,6 +34,7 @@ jobs:
         echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod/lib/third-party/dmcomp"
         git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmlog"
 
     - name: Initialize and update submodules
@@ -168,6 +169,7 @@ jobs:
       run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod"
+        git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmod/lib/third-party/dmcomp"
         git config --global --add safe.directory "$GITHUB_WORKSPACE/lib/dmlog"
 
     - name: Initialize and update submodules
