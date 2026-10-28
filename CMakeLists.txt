@@ -12,7 +12,7 @@ set(STARTUP_DMP_FILE "" CACHE FILEPATH "Optional startup.dmp file to embed in RO
 set(USER_DATA_FILE "" CACHE FILEPATH "Optional user_data file to embed in ROM")
 set(DMBOOT_CONFIG_DIR "${CMAKE_BINARY_DIR}/cfg" CACHE PATH "Config directory to mount as /cfg/ using dmffs (defaults to build/cfg)")
 option(DMBOOT_STRIP_CONFIG_COMMENTS "Drop the comments and empty lines of the .ini and .rules files from the /cfg image (they are only for people)" ON)
-set(DMBOOT_EVIEWS_DIR"${CMAKE_BINARY_DIR}/eviews" CACHE PATH "Directory with views (.dmv) of the flash modules, one subdirectory per module; embedded as a dmffs image and mounted as /eviews/ (defaults to build/eviews)")
+set(DMBOOT_EVIEWS_DIR "${CMAKE_BINARY_DIR}/eviews" CACHE PATH "Directory with views (.dmv) of the flash modules, one subdirectory per module; embedded as a dmffs image and mounted as /eviews/ (defaults to build/eviews)")
 set(DMBOOT_LICENSE_DIR "${CMAKE_BINARY_DIR}/lic" CACHE PATH "Flash module licenses on the host, one subdirectory per module")
 option(DMBOOT_EMBED_LICENSES "Embed flash module licenses and mount them at /lic/ (uses flash space)" OFF)
 set(DMBOOT_MAIN_MODULE "systemd" CACHE STRING "Name of the main module to start after boot")
