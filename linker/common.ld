@@ -114,6 +114,18 @@ SECTIONS
    } > rom AT > rom
 
    . = ALIGN(16);
+   .embedded.root_fs :
+   {
+       __root_fs_start = .;
+       PROVIDE(__root_fs_start = .);
+       KEEP(*(.embedded.root_fs))
+       __root_fs_end = .;
+       PROVIDE(__root_fs_end = .);
+       __root_fs_size = __root_fs_end - __root_fs_start;
+       PROVIDE(__root_fs_size = __root_fs_end - __root_fs_start);
+   } > rom AT > rom
+
+   . = ALIGN(16);
    .embedded.config_fs :
    {
        __config_fs_start = .;

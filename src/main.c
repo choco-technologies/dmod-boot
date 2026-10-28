@@ -25,6 +25,8 @@ extern void* __user_data_size;
 extern void* __modules_dmp_start;
 extern void* __modules_dmp_end;
 extern void* __modules_dmp_size;
+extern void* __root_fs_start;
+extern void* __root_fs_end;
 extern void* __config_fs_start;
 extern void* __config_fs_end;
 extern void* __config_fs_size;
@@ -428,7 +430,7 @@ static void mount_devfs(void)
 
 static void mount_embedded_filesystems(void)
 {
-    dmvfs_mount_fs("dmramfs", "/", NULL);
+    mount_rom_filesystem("Root", &__root_fs_start, &__root_fs_end, "/");
     mount_config_filesystem();
     mount_eviews_filesystem();
     if((uintptr_t)&__license_fs_end > (uintptr_t)&__license_fs_start)
