@@ -4,6 +4,9 @@
 # Where they go depends on the board: into the firmware (flash.dmd), or - DMBOOT_EXT_TOOLS, set by a board that has an
 # external flash - to /ext/bin (ext.dmd, sent by upload-ext), which takes them out of the ROM.
 #
+# ls and the RAM file system of /tmp (the unit that mounts it: configs/common/services/tmp.ini)
+ls
+dmramfs
 ps
 reboot
 mkdir
