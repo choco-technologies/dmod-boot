@@ -3,13 +3,11 @@
 #
 dmell
 dmffs
-dmramfs
 dmdevfs
 #
-# The tools the system needs when /ext (the external flash) is not there - to see what is mounted, to mount, unmount
-# and create a file system on it, to send files to it. The other tools: tools.dmd (the firmware or /ext).
+# The tools the system needs when /ext (the external flash) is not there - to mount, unmount and create a file system
+# on it, to send files to it. The other tools (ls, ...): tools.dmd (the firmware or /ext).
 #
-ls
 mount
 umount
 ymodem

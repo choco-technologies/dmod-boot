@@ -1,5 +1,6 @@
 # This script sets up ROM filesystems using dmffs and integrates them into the build
 # It checks for the required tools, creates the dmffs images, and embeds them into the firmware:
+#   - an empty directory -> section .embedded.root_fs, mounted at /
 #   - DMBOOT_CONFIG_DIR -> section .embedded.config_fs, mounted at /cfg/
 #   - DMBOOT_EVIEWS_DIR -> section .embedded.eviews_fs, mounted at /eviews/
 #   - DMBOOT_LICENSE_DIR -> section .embedded.license_fs, mounted at /lic/ (opt-in)
@@ -51,10 +52,21 @@ endfunction()
 # <section>  linker section the image is placed in (see linker/common.ld)
 # <file>...  files the build itself puts into <source_dir> (the image is
 #            rebuilt when they change)
+# STRIP      (among the files) the comments and empty lines of *.ini and *.rules are
+#            dropped from the image (scripts/strip_comments.cmake); <source_dir> stays as it is
 #
 function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     file(MAKE_DIRECTORY "${sourceDir}")
     dmboot_find_make_dmffs()
+
+    set(imageSource "${sourceDir}")
+    set(stripCommand)
+    if("STRIP" IN_LIST ARGN)
+        list(REMOVE_ITEM ARGN STRIP)
+        set(imageSource "${CMAKE_BINARY_DIR}/${name}_stripped")
+        set(stripCommand COMMAND ${CMAKE_COMMAND} -DSRC=${sourceDir} -DDST=${imageSource}
+            -P "${CMAKE_SOURCE_DIR}/scripts/strip_comments.cmake")
+    endif()
 
     set(FS_IMAGE "${CMAKE_BINARY_DIR}/${name}.dmffs")
     set(FS_OBJECT "${CMAKE_BINARY_DIR}/__${name}.o")
@@ -64,7 +76,8 @@ function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     # so a directory-only dependency silently ships a stale image.
     add_custom_command(
         OUTPUT "${FS_IMAGE}"
-        COMMAND ${MAKE_DMFFS_COMMAND} "${sourceDir}" "${FS_IMAGE}"
+        ${stripCommand}
+        COMMAND ${MAKE_DMFFS_COMMAND} "${imageSource}" "${FS_IMAGE}"
         DEPENDS "${sourceDir}" "${DMBOOT_MODULES_MARKER_FILE}" download_modules ${ARGN}
         COMMENT "Creating ${name} filesystem image from ${sourceDir}"
         VERBATIM
@@ -92,11 +105,23 @@ function(dmboot_embed_dmffs name sourceDir section outObjectVar)
     message(STATUS "${name} filesystem will be embedded from: ${sourceDir}")
 endfunction()
 
+# Root filesystem (/) - read-only and (almost) empty: the mount points are made by dmvfs, and what is written to without
+# a medium goes to /tmp (dmramfs, mounted by the tmp unit, configs/common/services/tmp.ini). /mnt has to be there:
+# automount makes the directories of the volumes in it, and nothing can make /mnt itself. It is what the data sector of
+# the bank is going to be.
+set(DMBOOT_ROOT_DIR "${CMAKE_BINARY_DIR}/root")
+file(MAKE_DIRECTORY "${DMBOOT_ROOT_DIR}/mnt")
+dmboot_embed_dmffs(root_fs "${DMBOOT_ROOT_DIR}" .embedded.root_fs ROOT_FS_OBJECT)
+
 # Config filesystem (/cfg/) - the configuration of the flash modules; the sdcard and ext modules bring theirs to the
 # card and /ext (<mount point>/cfg, see modules/CMakeLists.txt)
 if(DMBOOT_CONFIG_DIR)
     message(STATUS "Config directory specified: ${DMBOOT_CONFIG_DIR}")
-    dmboot_embed_dmffs(config_fs "${DMBOOT_CONFIG_DIR}" .embedded.config_fs CONFIG_FS_OBJECT ${DMBOOT_BOARD_CONFIG_FILES})
+    set(configFsOptions)
+    if(DMBOOT_STRIP_CONFIG_COMMENTS)
+        set(configFsOptions STRIP)
+    endif()
+    dmboot_embed_dmffs(config_fs "${DMBOOT_CONFIG_DIR}" .embedded.config_fs CONFIG_FS_OBJECT ${configFsOptions} ${DMBOOT_BOARD_CONFIG_FILES})
     set(CONFIG_FS_IMAGE "${CMAKE_BINARY_DIR}/config_fs.dmffs")
 else()
     message(STATUS "No config directory specified (DMBOOT_CONFIG_DIR not set)")

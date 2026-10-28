@@ -26,8 +26,10 @@ def check_layout(dmf_get, explicit_manifest):
         source, build = root / "source", root / "build"
         (source / "modules").mkdir(parents=True)
         (source / "scripts").mkdir()
-        (source / "configs/common").mkdir(parents=True)
+        (source / "configs/common/services").mkdir(parents=True)
         shutil.copy(REPO / "modules/CMakeLists.txt", source / "modules")
+        # The unit that mounts /tmp comes with the sources of the firmware, not with a package
+        shutil.copy(REPO / "configs/common/services/tmp.ini", source / "configs/common/services")
         shutil.copy(REPO / "scripts/module_output.cmake", source / "scripts")
         manifest = root / "manifest.dmm"
         entries = []

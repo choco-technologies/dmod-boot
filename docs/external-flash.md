@@ -65,16 +65,19 @@ Moving a module from `flash.dmd` to `ext.dmd` takes it out of the ROM - with its
 `service=` and `rules=` files of the ext modules go to `build/ext/cfg` and from there to `/ext/cfg`, which libsystemd
 (units, rules) and `devscan` (drivers, through dmdevfs) load once `/ext` is mounted (and unload before it is unmounted). What stays in `flash.dmd`: everything that is
 needed before `/ext` is mounted - the drivers and services, the file system (`dmlittlefs`) and the chain to the chip
-(`dmspiflash`, `dmqspi`, `dmqspi_port`, `dmdma`, `dmclk`, `dmgpio`), the shell, and `ls`, `mount`, `umount`, `ymodem`
+(`dmspiflash`, `dmqspi`, `dmqspi_port`, `dmdma`, `dmclk`, `dmgpio`), the shell, and `mount`, `umount`, `ymodem`
 and `mklittlefs` (what `format-ext` / `upload-ext` and a recovery by hand need - with an empty or broken flash). An
 application or a library loaded by name later can be on `/ext`.
 
 For this board:
 
 - **The firmware** (`flash.dmd`, `configs/common/flash.dmd`) holds only the way to `/ext` and the console: dmell, the
-  file systems (dmffs, dmramfs, dmdevfs, dmlittlefs), libsystemd with `systemd`, `devscan` and `console`, the drivers of
-  the clocks, the pins, the console UART (usart1), the SDRAM, DMA, the QUADSPI bus and the chip on it, and `ls`, `mount`,
-  `umount`, `ymodem`, `tty`, `mklittlefs`, and `automount`, which mounts the SD card (see below). Built with `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 404 kB
+  file systems (dmffs, dmdevfs, dmlittlefs), libsystemd with `systemd`, `devscan` and `console`, the drivers of
+  the clocks, the pins, the console UART (usart1), the SDRAM, DMA, the QUADSPI bus and the chip on it, and `mount`,
+  `umount`, `ymodem`, `tty`, `mklittlefs`, and `automount`, which mounts the SD card (see below). The root file system
+  `/` is a read-only dmffs embedded in the image (it holds `/mnt`); `/tmp` is a RAM file system (`dmramfs` on `/ext`,
+  mounted by `/ext/cfg/services/board/tmp.ini`), so nothing can be written before `/ext` is up. Built with
+  `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 382 kB
   (160 kB of it the core of the firmware); the `Debug` build type has no optimization at all and the same image is about
   485 kB.
 - **Everything else is on `/ext`** (`ext.dmd`, `configs/common/tools.dmd`): the shell tools (`ps`, `cat`, `catini`,

@@ -369,6 +369,18 @@ else()
     add_custom_target(download_ext_modules ALL)
 endif()
 
+# The unit that mounts the RAM file system at /tmp (dmramfs is in tools.dmd, so it is on /ext or in the firmware as
+# the other tools are; the root file system is a read-only dmffs, see scripts/romfs.cmake). It lands next to the units
+# of the modules (services/board/): in /ext/cfg when the tools are on /ext, otherwise in /cfg.
+set(_TMP_UNIT "${CMAKE_SOURCE_DIR}/configs/common/services/tmp.ini")
+if(DMBOOT_EXT_TOOLS)
+    configure_file("${_TMP_UNIT}" "${DMBOOT_EXT_CONFIG_DIR}/services/board/tmp.ini" COPYONLY)
+else()
+    configure_file("${_TMP_UNIT}" "${DMBOOT_CONFIG_DIR}/services/board/tmp.ini" COPYONLY)
+    list(APPEND DMBOOT_BOARD_CONFIG_FILES "${_TMP_UNIT}")
+    set(DMBOOT_BOARD_CONFIG_FILES "${DMBOOT_BOARD_CONFIG_FILES}" PARENT_SCOPE)
+endif()
+
 # ======================================================================
 #               Preparing dmp file from flash modules
 # ======================================================================
