@@ -7,8 +7,9 @@ prompt, then runs a few commands and checks what they print:
 
 - `echo <token>` prints the token back
 - `ls /dev/null` finds the null device, which dmdevfs always provides
-- `echo <token> > /test.txt` followed by `cat /test.txt` reads the token back
-  from a file created on the root filesystem
+- `echo <token> > /tmp/test.txt` followed by `cat /tmp/test.txt` reads the token
+  back from a file created on /tmp (the RAM file system the tmp unit mounts once
+  /ext is up - the root file system is read-only)
 
 Usage: test_renode_uart.py [--host HOST] [--port PORT] [--timeout SECONDS]
 """
@@ -23,7 +24,11 @@ ANSI_ESCAPE = re.compile(rb"\x1b\[[0-9;]*[A-Za-z]")
 PROMPT = re.compile(rb"\S+@\S*> ?$")
 # Time a single command may take to print its output and the next prompt
 COMMAND_TIMEOUT = 15
-TEST_FILE = "/test.txt"
+# The root file system is read-only; /tmp is a RAM file system, mounted by a unit that starts when /ext is mounted
+TEST_DIR = "/tmp"
+TEST_FILE = TEST_DIR + "/test.txt"
+# Time /tmp may need to appear after the shell is up
+TEST_DIR_TIMEOUT = 90
 # Log output can share the UART with the shell (stdlog is bound to the tty
 # too), so commands are only checked for what they must print, or not print
 ERROR_LINE = re.compile(r"error|fail|cannot|not found", re.IGNORECASE)
@@ -99,6 +104,16 @@ def wait_for_prompt(term, deadline):
     return False
 
 
+def wait_for_directory(term, directory, deadline):
+    """Wait until a directory can be listed - /tmp is only mounted after /ext, which comes after the shell."""
+    while time.monotonic() < deadline:
+        output = term.run(f"ls {directory}")
+        if output is not None and not any(ERROR_LINE.search(line) for line in output):
+            return True
+        time.sleep(1)
+    return False
+
+
 def check(term, command, expect, description):
     """Run command and require expect(output_lines) to hold."""
     output = term.run(command)
@@ -130,6 +145,12 @@ def main():
         print(f"Received: {term.text()[-500:]!r}")
         return 1
     print(f"✓ Shell prompt: {term.text().strip().splitlines()[-1].decode(errors='replace')!r}")
+
+    if not wait_for_directory(term, TEST_DIR, time.monotonic() + TEST_DIR_TIMEOUT):
+        print(f"✗ {TEST_DIR} did not appear (the tmp unit mounts it when /ext is mounted)")
+        print(f"Received: {term.text()[-500:]!r}")
+        return 1
+    print(f"✓ {TEST_DIR} is there")
 
     token = f"uart-test-{int(time.time())}"
     checks = [
