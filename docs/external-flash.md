@@ -77,9 +77,13 @@ For this board:
   `umount`, `ymodem`, `tty`, `mklittlefs`, and `automount`, which mounts the SD card (see below). The root file system
   `/` is a read-only dmffs embedded in the image (it holds `/mnt`); `/tmp` is a RAM file system (`dmramfs` on `/ext`,
   mounted by `/ext/cfg/services/board/tmp.ini`), so nothing can be written before `/ext` is up. Built with
-  `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 382 kB
-  (160 kB of it the core of the firmware); the `Debug` build type has no optimization at all and the same image is about
-  485 kB.
+  `-DCMAKE_BUILD_TYPE=MinSizeRel` the image is about 347 kB: 161 kB of the core of the firmware (the decoder of the
+  `deflate` compression included), 178 kB of the modules, 5 kB of the configuration. The modules of the registry are
+  compressed with DEFLATE (it was FastLZ; 32 of the 35 modules, the other three - `dmini`, `dmhaman`, `dm_sw_ring` - still
+  are): 178 kB instead of 216 kB. The tools that unpack them have to know `deflate` too - `dmf-get` and `todmp` of
+  dmod 8264cbb or newer; an older `dmf-get` does not fail, it takes the previous (FastLZ) release of the module. The
+  `Debug` build type has no optimization at all, and its image is bigger (about 485 kB, measured before the modules were
+  compressed with DEFLATE).
 - **Everything else is on `/ext`** (`ext.dmd`, `configs/common/tools.dmd`): the shell tools (`ps`, `cat`, `catini`,
   `mkdir`, `reboot`, `memory`, `service`, `rm`, `tree`, ...), the Ethernet and Wi-Fi stacks,
   telnetd, the crypto/secrets modules, the RTC and UTC/NTP, the SD card driver and its file system (dmsdio, dmfatfs,
