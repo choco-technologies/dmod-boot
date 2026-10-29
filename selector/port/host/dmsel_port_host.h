@@ -20,6 +20,7 @@ typedef struct
     int         erases;
     int         program_errors;     //!< Programs refused because the flash was not erased
     uint32_t    jumped_to;          //!< Address of the last jump (0: none)
+    uint32_t    watchdog_ms;        //!< Timeout the watchdog was started with (0: not started)
     char        log[4096];
     dmsel_port_t port;
 } host_flash_t;

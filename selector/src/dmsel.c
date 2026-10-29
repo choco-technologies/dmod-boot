@@ -194,7 +194,7 @@ static void load_state( dmsel_t* s )
 
 static int write_record( dmsel_t* s, uint32_t off, uint16_t type, const void* a, uint32_t na, const void* b, uint32_t nb )
 {
-    uint8_t* buf = s->layout->scratch;
+    uint8_t* buf = s->scratch;
     uint32_t len = na + nb, padded = pad4( len );
     rec_t r;
 
@@ -230,7 +230,7 @@ static void state_payload( const dmsel_t* s, uint8_t* out )
 /** Erases the store and writes the state and the latest value of every item again */
 static int compact( dmsel_t* s )
 {
-    uint8_t* out = s->layout->scratch;
+    uint8_t* out = s->scratch;
     uint8_t payload[STATE_SIZE];
     rec_t r, hdr;
     const uint8_t* p;
@@ -379,17 +379,18 @@ static void rebuild( dmsel_t* s )
 //      Public
 // ---------------------------------------------------------------------------------------------------------------------
 
-int dmsel_init( dmsel_t* s, const dmsel_layout_t* layout, const dmsel_port_t* port )
+int dmsel_init( dmsel_t* s, const dmsel_layout_t* layout, const dmsel_port_t* port, uint8_t* scratch )
 {
     unsigned i;
 
-    if( s == NULL || layout == NULL || port == NULL || layout->bank_count > DMSEL_MAX_BANKS || layout->scratch == NULL )
+    if( s == NULL || layout == NULL || port == NULL || layout->bank_count > DMSEL_MAX_BANKS || scratch == NULL )
     {
         return DMSEL_ERR_PARAM;
     }
     memset( s, 0, sizeof(*s) );
     s->layout = layout;
     s->port = port;
+    s->scratch = scratch;
     s->selected = s->previous = s->running = NO_BANK;
     for( i = 0; i < DMSEL_MAX_BANKS; i++ )
     {
@@ -476,6 +477,11 @@ void dmsel_boot( dmsel_t* s )
 
     if( bank >= 0 && check_image( s, (unsigned)bank, &h ) == DMSEL_OK )
     {
+        if( s->state[bank] == DMSEL_BANK_TRIAL && s->layout->watchdog_ms != 0 && s->port->watchdog_start != NULL )
+        {
+            // An image that hangs before it confirms is reset by the watchdog, and the next start counts a try
+            s->port->watchdog_start( s->port->user, s->layout->watchdog_ms );
+        }
         s->port->jump( s->port->user,
                        s->layout->flash_address + s->layout->banks[bank].offset + h.entry_offset );
     }

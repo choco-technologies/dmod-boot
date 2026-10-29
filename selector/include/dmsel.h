@@ -88,7 +88,7 @@ typedef struct
     uint32_t        bank_count;
     dmsel_bank_t    banks[DMSEL_MAX_BANKS];
     uint32_t        max_tries;          //!< Starts of an image on trial that does not confirm, before it is dropped
-    uint8_t*        scratch;            //!< store_size bytes of RAM for the compaction of the store
+    uint32_t        watchdog_ms;        //!< Watchdog armed for an image on trial (0: none); the firmware has to feed it
 } dmsel_layout_t;
 
 /** The chip */
@@ -99,6 +99,7 @@ typedef struct
     int           (*program)( void* user, uint32_t offset, const void* data, uint32_t size ); //!< Words, only on erased flash
     void          (*jump)( void* user, uint32_t vector_address );               //!< Does not return
     void          (*log)( void* user, const char* text );                       //!< May be NULL
+    void          (*watchdog_start)( void* user, uint32_t timeout_ms );         //!< May be NULL; cannot be stopped
     void*           user;
 } dmsel_port_t;
 
@@ -113,12 +114,16 @@ typedef struct
     uint8_t                 state[DMSEL_MAX_BANKS];
     uint8_t                 tries[DMSEL_MAX_BANKS];
     uint32_t                store_end;      //!< Offset in the store of the first free byte
+    uint8_t*                scratch;        //!< layout->store_size bytes of RAM (the compaction of the store, the records)
 } dmsel_t;
 
 uint32_t dmsel_crc32( uint32_t crc, const void* data, size_t size );
 
-/** Reads the state from the store (a lost state is rebuilt from the banks at the next dmsel_choose) */
-int dmsel_init( dmsel_t* s, const dmsel_layout_t* layout, const dmsel_port_t* port );
+/**
+ * Reads the state from the store (a lost state is rebuilt from the banks at the next dmsel_choose).
+ * @param scratch  layout->store_size bytes that are used while a call writes to the store, and only then
+ */
+int dmsel_init( dmsel_t* s, const dmsel_layout_t* layout, const dmsel_port_t* port, uint8_t* scratch );
 
 /**
  * Decides which bank to start, stores what has to be remembered (a try of an image on trial) and returns the bank.

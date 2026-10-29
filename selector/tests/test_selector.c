@@ -40,15 +40,16 @@ static void setup( void )
     g_layout.banks[1].offset = BANK_B;
     g_layout.banks[1].capacity = BANK_SIZE;
     g_layout.max_tries = 3;
-    g_layout.scratch = g_scratch;
+    g_layout.watchdog_ms = 0;
 }
 
 /** The selector starts again after a reset: the flash stays, the RAM does not */
 static void reset( void )
 {
     g_f.jumped_to = 0;
+    g_f.watchdog_ms = 0;
     g_f.fail_after = -1;
-    CHECK_EQ( dmsel_init( &g_s, &g_layout, &g_f.port ), DMSEL_OK );
+    CHECK_EQ( dmsel_init( &g_s, &g_layout, &g_f.port, g_scratch ), DMSEL_OK );
 }
 
 /** An image: header, vectors at 512, a body; written straight into the flash (as the update tool would) */
@@ -161,6 +162,19 @@ static void test_trial_not_confirmed_goes_back( void )
     reset();
     CHECK_EQ( dmsel_choose( &g_s ), 0 );
     CHECK_EQ( g_s.state[1], DMSEL_BANK_INVALID );
+}
+
+static void test_watchdog_only_for_a_trial( void )
+{
+    setup(); put_image( 0, 1, 0x4000, 1 ); put_image( 1, 2, 0x4000, 2 );
+    g_layout.watchdog_ms = 5000; reset();
+    dmsel_boot( &g_s );                                         // B, newest, not on trial
+    CHECK_EQ( g_f.watchdog_ms, 0 );
+    CHECK_EQ( dmsel_select( &g_s, 0, 1 ), DMSEL_OK );           // A on trial
+    reset();
+    dmsel_boot( &g_s );
+    CHECK_EQ( g_f.jumped_to, vector_of( 0 ) );
+    CHECK_EQ( g_f.watchdog_ms, 5000 );
 }
 
 static void test_permanent_select( void )
@@ -377,14 +391,41 @@ static void test_get_info_extensible( void )
     CHECK_EQ( info.capacity, BANK_SIZE );
 }
 
-int main( void )
+/** An image made by tools/dmsel_mkimage.py (the file is the argument) is a good image for the core */
+static int check_tool_image( const char* path )
 {
+    FILE* f = fopen( path, "rb" );
+    size_t n;
+
+    setup(); reset();
+    if( f == NULL )
+    {
+        printf( "cannot open %s\n", path );
+        return 1;
+    }
+    n = fread( g_f.flash + BANK_A, 1, BANK_SIZE, f );
+    fclose( f );
+    CHECK( n > 512 );
+    CHECK_EQ( dmsel_verify( &g_s, 0 ), DMSEL_OK );
+    g_f.flash[BANK_A + n - 1] ^= 1;
+    CHECK_EQ( dmsel_verify( &g_s, 0 ), DMSEL_ERR_BAD );
+    printf( "image of the tool: %d checks, %d failures\n", g_checks, g_failures );
+    return g_failures ? 1 : 0;
+}
+
+int main( int argc, char** argv )
+{
+    if( argc > 1 )
+    {
+        return check_tool_image( argv[1] );
+    }
     RUN( test_crc );
     RUN( test_nothing_to_start );
     RUN( test_single_image_starts );
     RUN( test_newest_image_without_a_state );
     RUN( test_trial_confirmed );
     RUN( test_trial_not_confirmed_goes_back );
+    RUN( test_watchdog_only_for_a_trial );
     RUN( test_permanent_select );
     RUN( test_damaged_image_falls_back );
     RUN( test_header_checks );

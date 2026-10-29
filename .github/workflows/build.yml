@@ -160,6 +160,18 @@ jobs:
         cmake --build build-selector
         ctest --test-dir build-selector --output-on-failure
 
+    - name: Install the ARM toolchain
+      run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi libnewlib-arm-none-eabi binutils-arm-none-eabi
+
+    - name: Build the selector for the STM32F7 (it has to fit 32 kB; the linker checks)
+      run: |
+        cmake -S selector/fw -B build-selector-fw
+        cmake --build build-selector-fw
+        ls -l build-selector-fw/dmsel.bin
+
+    - name: Build the test images of the banks
+      run: selector/fw/testbank/build.sh build-selector-banks 1 2
+
   test-renode:
     name: Test Renode Simulation
     runs-on: ubuntu-latest

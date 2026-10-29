@@ -55,6 +55,11 @@ static void h_jump( void* user, uint32_t vector_address )
     ((host_flash_t*)user)->jumped_to = vector_address;
 }
 
+static void h_watchdog( void* user, uint32_t ms )
+{
+    ((host_flash_t*)user)->watchdog_ms = ms;
+}
+
 static void h_log( void* user, const char* text )
 {
     host_flash_t* f = (host_flash_t*)user;
@@ -75,5 +80,6 @@ void host_flash_init( host_flash_t* f )
     f->port.program = h_program;
     f->port.jump = h_jump;
     f->port.log = h_log;
+    f->port.watchdog_start = h_watchdog;
     f->port.user = f;
 }

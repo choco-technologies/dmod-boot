@@ -22,3 +22,13 @@ if(DMSEL_SANITIZE)
     endforeach()
 endif()
 add_test(NAME test_selector COMMAND test_selector)
+
+# The tool that makes the images (python) and the core have to agree on the header and on the CRC
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_FOUND)
+    file(WRITE ${CMAKE_BINARY_DIR}/code.bin "vectors and code of a test image - 0123456789")
+    add_test(NAME mkimage COMMAND ${CMAKE_COMMAND}
+        -DPY=${Python3_EXECUTABLE} -DTOOL=${CMAKE_CURRENT_SOURCE_DIR}/tools/dmsel_mkimage.py
+        -DIN=${CMAKE_BINARY_DIR}/code.bin -DOUT=${CMAKE_BINARY_DIR}/image.bin -DCHECK=$<TARGET_FILE:test_selector>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/mkimage.cmake)
+endif()
