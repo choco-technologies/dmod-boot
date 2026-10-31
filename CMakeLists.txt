@@ -276,8 +276,24 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_MAIN_HEAP_TAGS_STRING="${DMBOOT_MAIN_HEAP_TAGS}"
 )
 
+# The image can be linked for a bank of the flash, to be started by the selector (selector/): the ROM is the bank without the
+# 512 bytes of the header; the whole flash otherwise
+set(DMBOOT_BANK "" CACHE STRING "Bank (A or B) that the image is linked for, started by the selector; empty: the whole flash, no selector")
+set(DMBOOT_ROM_ORIGIN 0x08000000)
+set(DMBOOT_ROM_LENGTH 0x100000)
+if(DMBOOT_BANK)
+    if(NOT DEFINED DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN)
+        message(FATAL_ERROR "DMBOOT_BANK=${DMBOOT_BANK}: the board does not define the bank (DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN)")
+    endif()
+    math(EXPR DMBOOT_ROM_ORIGIN "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} + 512" OUTPUT_FORMAT HEXADECIMAL)
+    math(EXPR DMBOOT_ROM_LENGTH "${DMBOOT_BANK_${DMBOOT_BANK}_SIZE} - 512" OUTPUT_FORMAT HEXADECIMAL)
+    message(STATUS "Linked for the bank ${DMBOOT_BANK}: vectors at ${DMBOOT_ROM_ORIGIN}, ${DMBOOT_ROM_LENGTH} bytes")
+endif()
+
 target_link_options(${MODULE_NAME}.elf
     PRIVATE 
+        -Wl,--defsym=DMBOOT_ROM_ORIGIN=${DMBOOT_ROM_ORIGIN}
+        -Wl,--defsym=DMBOOT_ROM_LENGTH=${DMBOOT_ROM_LENGTH}
         -L${DMOD_DIR}/scripts
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/arch.ld
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/mcu.ld

@@ -59,5 +59,16 @@ set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default
 # The display driver is on /ext: the splash logo (60 kB of raw pixels) is too, and shows as soon as /ext is mounted.
 set(DMBOOT_SPLASH_LOGO_PATH "/ext/views/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target")
 
+# Dual bank layout of the internal flash (selector/): S0 the selector, S1 its store (the state of the banks, the persistent
+# items), S2 and S3 the file systems of the banks, A = S4+S5, B = S6+S7 (384 kB each; the header of the image takes the first
+# 512 bytes of a bank, the vectors follow). Linking for a bank: -DDMBOOT_BANK=A (or B).
+set(DMBOOT_BANK_A_ORIGIN 0x08020000)
+set(DMBOOT_BANK_A_SIZE   0x00060000)
+set(DMBOOT_BANK_B_ORIGIN 0x08080000)
+set(DMBOOT_BANK_B_SIZE   0x00060000)
+set(DMBOOT_SELECTOR_ORIGIN 0x08000000)
+set(DMBOOT_SELECTOR_STORE  0x08008000)
+set(DMBOOT_SELECTOR_STORE_SECTOR 1)
+
 # QUADSPI bank 1 + N25Q128A, DMA2 stream 7/channel 3, IRQ 92 (RM0385).
 set(DMBOOT_RENODE_QSPI_MODEL "${CMAKE_SOURCE_DIR}/configs/renode/STM32F7_QUADSPI.cs")

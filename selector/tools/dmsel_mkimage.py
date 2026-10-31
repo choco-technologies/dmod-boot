@@ -29,9 +29,11 @@ def make(code, version, capacity=None):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument('code'); ap.add_argument('image')
-    ap.add_argument('--version', type=lambda x: int(x, 0), required=True)
+    ap.add_argument('--version', required=True, help='a number, or auto: the time of the build (the bigger the newer)')
     ap.add_argument('--capacity', type=lambda x: int(x, 0))
     a = ap.parse_args()
-    out = make(open(a.code, 'rb').read(), a.version, a.capacity)
+    import time
+    version = int(time.time()) if a.version == 'auto' else int(a.version, 0)
+    out = make(open(a.code, 'rb').read(), version, a.capacity)
     open(a.image, 'wb').write(out)
-    print(f'{a.image}: {len(out)} bytes, version {a.version}')
+    print(f'{a.image}: {len(out)} bytes, version {version}')

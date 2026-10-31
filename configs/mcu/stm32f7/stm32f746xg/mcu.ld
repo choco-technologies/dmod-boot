@@ -1,6 +1,7 @@
 MEMORY
 {
-    rom     (rx)  : ORIGIN = 0x08000000, LENGTH = 1024K
+    /* The whole flash, or a bank of it (DMBOOT_BANK, see CMakeLists.txt): the origin and the length come from --defsym */
+    rom     (rx)  : ORIGIN = DMBOOT_ROM_ORIGIN, LENGTH = DMBOOT_ROM_LENGTH
     ram     (rwx) : ORIGIN = 0x20010000, LENGTH = 256K
     ext     (rwx) : ORIGIN = 0x60000000, LENGTH = 2047M
     dma     (rwx) : ORIGIN = 0x20000000, LENGTH = 64k
