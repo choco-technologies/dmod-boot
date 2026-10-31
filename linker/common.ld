@@ -31,6 +31,7 @@ SECTIONS
       PROVIDE(__text_start__ = __text_start__);
       
       . = ALIGN(4);
+      . = ALIGN(512);   /* VTOR wants the table aligned to its size rounded up to a power of 2 (114 entries: 512) */
       KEEP(*(.vectors)) /* Startup code */
       
       . = ALIGN(4);

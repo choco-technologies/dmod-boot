@@ -146,12 +146,56 @@ else()
     set(CONNECT_COMMENT "Connecting to ${TARGET} with OpenOCD...")
 endif()
 
+# Linked for a bank: the image gets the header of the selector, and the board is programmed with the selector as well
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
+    set(DMBOOT_BANK_IMAGE ${CMAKE_BINARY_DIR}/${MODULE_NAME}_bank_${DMBOOT_BANK}.bin)
+    set(DMBOOT_SELECTOR_BUILD_DIR ${CMAKE_BINARY_DIR}/selector)
+    set(DMBOOT_SELECTOR_BIN ${DMBOOT_SELECTOR_BUILD_DIR}/dmsel.bin)
+    set(DMBOOT_BANK_VERSION "auto" CACHE STRING "Version in the header of the image: a number, or auto - the time of the build (the bigger the newer)")
+
+    add_custom_command(TARGET ${MODULE_NAME}.elf POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${MODULE_NAME}.elf ${MODULE_NAME}.code.bin
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/selector/tools/dmsel_mkimage.py
+                ${MODULE_NAME}.code.bin ${DMBOOT_BANK_IMAGE} --version ${DMBOOT_BANK_VERSION}
+                --capacity ${DMBOOT_BANK_${DMBOOT_BANK}_SIZE}
+        COMMENT "Image of the bank ${DMBOOT_BANK}: ${DMBOOT_BANK_IMAGE}"
+        VERBATIM)
+
+    add_custom_target(selector
+        COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/selector/fw -B ${DMBOOT_SELECTOR_BUILD_DIR}
+        COMMAND ${CMAKE_COMMAND} --build ${DMBOOT_SELECTOR_BUILD_DIR}
+        BYPRODUCTS ${DMBOOT_SELECTOR_BIN}
+        COMMENT "Building the selector...")
+
+    # The whole flash: the selector, the store erased (the state is rebuilt from the banks: the newest good image
+    # starts), the image of the bank. The file systems of the banks (S2, S3) are not touched.
+    set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+        -c "init" -c "reset halt"
+        -c "flash write_image erase ${DMBOOT_SELECTOR_BIN} ${DMBOOT_SELECTOR_ORIGIN} bin"
+        -c "flash erase_sector 0 ${DMBOOT_SELECTOR_STORE_SECTOR} ${DMBOOT_SELECTOR_STORE_SECTOR}"
+        -c "flash write_image erase ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+        -c "verify_image ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+        -c "reset run" -c "shutdown")
+    set(INSTALL_FIRMWARE_COMMENT "Installing the selector and the bank ${DMBOOT_BANK} on ${TARGET}...")
+    add_custom_target(install-bank
+        COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+            -c "init" -c "reset halt"
+            -c "flash write_image erase ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+            -c "verify_image ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+            -c "reset run" -c "shutdown"
+        DEPENDS ${MODULE_NAME}.elf
+        COMMENT "Writing the bank ${DMBOOT_BANK} only (the selector and its store stay)...")
+endif()
+
 # Define install-firmware target
 add_custom_target(install-firmware
     COMMAND ${INSTALL_FIRMWARE_COMMAND}
     DEPENDS ${MODULE_NAME}.elf
     COMMENT ${INSTALL_FIRMWARE_COMMENT}
 )
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
+    add_dependencies(install-firmware selector)
+endif()
 
 # Define connect target
 add_custom_target(connect

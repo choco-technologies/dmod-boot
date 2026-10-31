@@ -276,8 +276,34 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_MAIN_HEAP_TAGS_STRING="${DMBOOT_MAIN_HEAP_TAGS}"
 )
 
+# The image can be linked for a bank of the flash, to be started by the selector (selector/): the ROM is the bank without the
+# 512 bytes of the header; the whole flash otherwise
+set(DMBOOT_BANK "" CACHE STRING "Bank (A or B) that the image is linked for, started by the selector; empty: the whole flash, no selector")
+set(DMBOOT_ROM_ORIGIN 0x08000000)
+set(DMBOOT_ROM_LENGTH 0x100000)
+if(DMBOOT_BANK)
+    if(NOT DEFINED DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN)
+        message(FATAL_ERROR "DMBOOT_BANK=${DMBOOT_BANK}: the board does not define the bank (DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN)")
+    endif()
+    math(EXPR DMBOOT_ROM_ORIGIN "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} + 512" OUTPUT_FORMAT HEXADECIMAL)
+    math(EXPR DMBOOT_ROM_LENGTH "${DMBOOT_BANK_${DMBOOT_BANK}_SIZE} - 512" OUTPUT_FORMAT HEXADECIMAL)
+    message(STATUS "Linked for the bank ${DMBOOT_BANK}: vectors at ${DMBOOT_ROM_ORIGIN}, ${DMBOOT_ROM_LENGTH} bytes")
+
+    # Dmod_Firmware*, Dmod_*Persistency over the table of the selector (an object library: the weak defaults of the SAL
+    # would otherwise be enough for the linker and the archive member would not be taken)
+    string(FIND "ABCD" "${DMBOOT_BANK}" DMBOOT_BANK_INDEX)
+    add_library(dmboot_firmware OBJECT src/firmware/dmboot_firmware.c)
+    dmod_set_current_allocator(dmboot_firmware)
+    target_compile_definitions(dmboot_firmware PRIVATE DMBOOT_BANK_INDEX=${DMBOOT_BANK_INDEX})
+    target_include_directories(dmboot_firmware PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/selector/include)
+    target_link_libraries(dmboot_firmware PRIVATE dmod)
+    target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_firmware)
+endif()
+
 target_link_options(${MODULE_NAME}.elf
     PRIVATE 
+        -Wl,--defsym=DMBOOT_ROM_ORIGIN=${DMBOOT_ROM_ORIGIN}
+        -Wl,--defsym=DMBOOT_ROM_LENGTH=${DMBOOT_ROM_LENGTH}
         -L${DMOD_DIR}/scripts
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/arch.ld
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/mcu.ld
