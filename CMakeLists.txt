@@ -288,6 +288,16 @@ if(DMBOOT_BANK)
     math(EXPR DMBOOT_ROM_ORIGIN "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} + 512" OUTPUT_FORMAT HEXADECIMAL)
     math(EXPR DMBOOT_ROM_LENGTH "${DMBOOT_BANK_${DMBOOT_BANK}_SIZE} - 512" OUTPUT_FORMAT HEXADECIMAL)
     message(STATUS "Linked for the bank ${DMBOOT_BANK}: vectors at ${DMBOOT_ROM_ORIGIN}, ${DMBOOT_ROM_LENGTH} bytes")
+
+    # Dmod_Firmware*, Dmod_*Persistency over the table of the selector (an object library: the weak defaults of the SAL
+    # would otherwise be enough for the linker and the archive member would not be taken)
+    string(FIND "ABCD" "${DMBOOT_BANK}" DMBOOT_BANK_INDEX)
+    add_library(dmboot_firmware OBJECT src/firmware/dmboot_firmware.c)
+    dmod_set_current_allocator(dmboot_firmware)
+    target_compile_definitions(dmboot_firmware PRIVATE DMBOOT_BANK_INDEX=${DMBOOT_BANK_INDEX})
+    target_include_directories(dmboot_firmware PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/selector/include)
+    target_link_libraries(dmboot_firmware PRIVATE dmod)
+    target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_firmware)
 endif()
 
 target_link_options(${MODULE_NAME}.elf
