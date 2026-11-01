@@ -269,7 +269,9 @@ def run_command(link, command, timeout):
         if PROMPT.search(clean(seen)):
             seen += link.drain(0.3)     # (the prompt is back: the rest of the output; a log that never stops is no reason to wait)
             return clean(seen)
-    raise Failure(f'"{command}" did not finish in {timeout:.0f} s')
+    # (what the device said is all there is to go by when it hangs: the last lines of it)
+    tail = '\n'.join(clean(seen).splitlines()[-30:])
+    raise Failure(f'"{command}" did not finish in {timeout:.0f} s' + (f'; the console said:\n{tail}' if tail else '; the console said nothing'))
 
 
 def wait_shell(link, wait):
