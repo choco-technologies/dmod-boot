@@ -149,6 +149,20 @@ cmake --build build
 cmake --build build --target install-firmware
 ```
 
+### Build for the ESP32-S3 2.8" display board (`esp32s3-lcd28`)
+
+Needs ESP-IDF (`IDF_PATH`: only its headers and `libxt_hal.a` are used; 5.2 and older work, the headers that 5.2 renamed are
+forwarded by `src/arch/xtensa/lx7/shim`), the `xtensa-esp-elf` toolchain and `esptool` (`pip install esptool`). The FreeRTOS port
+of the kernel needs the patch of `lib/dmosi-freertos/patches` on a fresh checkout (see the README there).
+
+```bash
+git -C lib/dmosi-freertos/lib/freertos apply ../../patches/freertos-xtensa-esp32.patch
+cmake -DBOARD=esp32s3-lcd28 -DCMAKE_BUILD_TYPE=MinSizeRel -DDMBOOT_ESP_PORT=/dev/ttyACM0 -S . -B build -G Ninja
+cmake --build build
+cmake --build build --target selector          # the selector (second stage bootloader), built by install-firmware as well
+cmake --build build --target install-firmware  # esptool: the selector at 0x0, the bank A, erases the store, resets the chip
+```
+
 ### Build for Renode emulation
 
 ```bash

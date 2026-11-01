@@ -1,7 +1,8 @@
 # ======================================================================
 #               DMOD Tools Configuration – Xtensa LX7
 # ======================================================================
-set(DMOD_TOOLS_NAME "arch/xtensa/lx7" CACHE STRING "Name of the tools configuration")
+# (the profile of dmod for the ESP32-S3 is arch/xtensa/esp32s3: dmod has no arch/xtensa/lx7)
+set(DMOD_TOOLS_NAME "arch/xtensa/esp32s3" CACHE STRING "Name of the tools configuration")
 
 # ======================================================================
 #               FreeRTOS port (dmosi-freertos maps only the family "esp32")
