@@ -1,0 +1,22 @@
+/* Generated from the board's layout of the flash (DMBOOT_BANK_*, DMBOOT_SELECTOR_* of configs/board/@DMSEL_BOARD@/board.cmake) */
+#ifndef DMSEL_LAYOUT_H
+#define DMSEL_LAYOUT_H
+
+#include "dmsel.h"
+#include "dmsel_mcu.h"
+
+#define DMSEL_STORE_SIZE    @DMSEL_STORE_SIZE@u
+
+/** The user of the port: the mcu erases and programs the store only */
+static const dmsel_layout_t dmsel_layout =
+{
+    .flash_address = DMSEL_MCU_FLASH_ADDRESS,
+    .store_offset = @DMSEL_STORE_OFFSET@u,
+    .store_size = DMSEL_STORE_SIZE,
+    .bank_count = @DMSEL_BANK_COUNT@,
+    .banks = { @DMSEL_BANKS_INIT@ },
+    .max_tries = @DMSEL_MAX_TRIES@,
+    .watchdog_ms = @DMSEL_WATCHDOG_MS@,
+};
+
+#endif

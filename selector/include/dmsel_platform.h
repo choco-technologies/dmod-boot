@@ -1,13 +1,12 @@
 /**
  * @file dmsel_platform.h
- * @brief What the selector firmware takes from the platform: configs/arch, configs/mcu and configs/board of the selector
+ * @brief What the selector firmware takes from the platform
  *
- * The directories follow the configs/ of dmboot (arch/<family>/<core>, mcu/<family>/<mcu>, board/<board>):
- *  - arch: the core - the reset handler and the vectors, the jump into an image (dmsel_arch_jump)
- *  - mcu:  the chip - the flash controller (dmsel_mcu_erase, dmsel_mcu_program), the watchdog, the memory map (mcu.ld);
+ *  - selector/arch/<arch>: the core - the reset handler and the vectors, the jump into an image (dmsel_arch_jump)
+ *  - selector/mcu/<series>/<mcu>: the chip - the flash controller (dmsel_mcu_erase, dmsel_mcu_program), the watchdog;
  *          its dmsel_mcu.h defines DMSEL_MCU_FLASH_ADDRESS
- *  - board: the layout of the flash - the banks and the store (dmsel_board_layout); its dmsel_board.h defines
- *          DMSEL_BOARD_STORE_SIZE
+ *  - the board: the layout of the flash, from configs/board/<board>/board.cmake of dmboot (fw/dmsel_layout.h.in); the memory
+ *          map and the entry are in configs/mcu/.../selector.ld and configs/arch/.../selector.ld
  * The `user` of the port is the layout (the mcu uses it to erase and program the store only).
  */
 #ifndef DMSEL_PLATFORM_H
@@ -27,9 +26,6 @@ void dmsel_arch_jump( void* user, uint32_t vector_address );
 int  dmsel_mcu_erase( void* user, uint32_t offset, uint32_t size );
 int  dmsel_mcu_program( void* user, uint32_t offset, const void* data, uint32_t size );
 void dmsel_mcu_watchdog_start( void* user, uint32_t timeout_ms );
-
-// board
-extern const dmsel_layout_t dmsel_board_layout;
 
 #ifdef __cplusplus
 }
