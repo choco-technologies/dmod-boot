@@ -103,6 +103,12 @@ project(dmboot
     DESCRIPTION "DMOD Bootloader"
     LANGUAGES C CXX ASM)
 
+# Release is -O2, not CMake's -O3: 23 kB less of the firmware (stm32f746g-disco: 369 kB instead of
+# 392 kB) - at -O3 it no longer fits into a bank of the selector (384 kB). The modules are built
+# by their own projects and do not change.
+string(REPLACE "-O3" "-O2" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+string(REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+
 # ======================================================================
 #               For VS Code
 # ======================================================================

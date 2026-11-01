@@ -270,7 +270,7 @@ if(Python3_Interpreter_FOUND)
             --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --block ${DMBOOT_UPLOAD_BLOCK})
         add_custom_target(format-ext
             COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5
-                --run "-umount ${DMBOOT_EXT_MOUNT}"
+                "--run=-umount ${DMBOOT_EXT_MOUNT}"
                 --run "${DMBOOT_EXT_MKFS} ${DMBOOT_EXT_DEVICE}"
                 --run "mount -t ${DMBOOT_EXT_FS} -o device=${DMBOOT_EXT_DEVICE} ${DMBOOT_EXT_MOUNT}"
                 --ensure-dir ${DMBOOT_EXT_MOUNT}
