@@ -17,7 +17,10 @@
 extern "C" {
 #endif
 
-#define DMSEL_TABLE_ADDRESS     0x08000100u
+#ifndef DMSEL_TABLE_ADDRESS
+#define DMSEL_TABLE_ADDRESS     0x08000100u     //!< In the sector of the selector; a selector that runs from the RAM has it there (ram.ld)
+#endif
+#define DMSEL_RUNNING_STARTED   (-2)            //!< init(): the bank that the selector has started (for a firmware linked for no bank in particular)
 #define DMSEL_TABLE_MAGIC       0x4C455344u     //!< "DSEL"
 #define DMSEL_TABLE_ABI         1
 
@@ -31,7 +34,7 @@ typedef struct
     uint32_t    version;            //!< Of the selector (a number)
     uint32_t    log_address;        //!< The log of the selector (a dmlog buffer in the DTCM), valid until the firmware uses that RAM
     uint32_t    log_size;
-    /** @param running  the bank that the firmware was linked for, i.e. runs from */
+    /** @param running  the bank that the firmware was linked for, i.e. runs from; DMSEL_RUNNING_STARTED: the one that the selector started */
     int       (*init)( dmsel_t* s, int running, uint8_t* scratch );
     int       (*bank_count)( const dmsel_t* s );
     int       (*running_bank)( const dmsel_t* s );

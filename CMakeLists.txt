@@ -37,6 +37,7 @@ set_property(CACHE DMBOOT_MODULE_TYPE PROPERTY STRINGS dmfc dmf)
 if(NOT DMBOOT_MODULE_TYPE MATCHES "^(dmf|dmfc)$")
     message(FATAL_ERROR "DMBOOT_MODULE_TYPE must be either 'dmf' or 'dmfc' (got '${DMBOOT_MODULE_TYPE}')")
 endif()
+option(DMBOOT_NO_FLASH_MODULES "No modules in the firmware (no download, no main module, no shell): a port that has none built for its architecture yet" OFF)
 option(DMBOOT_EMULATION "Enable Renode emulation mode" OFF)
 option(DMBOOT_RENODE_WAIT_FOR_GDB "Keep the Renode machine paused until a GDB client continues it" OFF)
 
@@ -186,7 +187,7 @@ set(MODULES_DMP_OBJECT "${CMAKE_BINARY_DIR}/__modules_dmp.o")
 add_custom_command(
     OUTPUT "${MODULES_DMP_OBJECT}"
     COMMAND ${CMAKE_COMMAND} -E echo "Checking for modules.dmp..."
-    COMMAND bash -c "if [ -f ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents /dev/null ${MODULES_DMP_OBJECT}; fi"
+    COMMAND bash -c "if [ -s ${MODULES_DMP_FILE} ]; then echo 'Embedding modules.dmp'; ${CMAKE_OBJCOPY} --input-target=binary --output-target=${DMBOOT_OBJCOPY_OUTPUT_FORMAT} --binary-architecture=${DMBOOT_OBJCOPY_BINARY_ARCH} --rename-section .data=.embedded.modules_dmp,alloc,load,readonly,data,contents ${MODULES_DMP_FILE} ${MODULES_DMP_OBJECT}; else echo 'No modules.dmp found, creating empty object'; echo '.section .embedded.modules_dmp,\"a\"' | ${CMAKE_C_COMPILER} -c -x assembler -o ${MODULES_DMP_OBJECT} -; fi"
     DEPENDS "${MODULES_DMP_FILE}" prepare_modules_dmp
     COMMENT "Conditionally embedding modules.dmp if it exists"
     VERBATIM
@@ -204,6 +205,10 @@ set(DMOSI_ARCH        ${DMBOOT_ARCH} CACHE STRING "Architecture for dmosi-freert
 set(DMOSI_ARCH_FAMILY ${DMBOOT_ARCH_FAMILY} CACHE STRING "Architecture family for dmosi-freertos configuration")
 
 add_subdirectory(lib/dmosi-freertos)
+# What the port of the architecture needs besides (the headers of the vendor, the replacements of its functions)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/freertos.cmake")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/${DMBOOT_ARCH_FAMILY}/freertos.cmake")
+endif()
 
 # ======================================================================
 #               dmod-boot application
@@ -292,7 +297,12 @@ if(DMBOOT_BANK)
     if(NOT DEFINED DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN)
         message(FATAL_ERROR "DMBOOT_BANK=${DMBOOT_BANK}: the board does not define the bank (DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN)")
     endif()
-    math(EXPR DMBOOT_ROM_ORIGIN "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} + 512" OUTPUT_FORMAT HEXADECIMAL)
+    # (a chip whose flash is not in the memory - the ESP32-S3 - links the image for the window that the selector maps it into)
+    if(DEFINED DMBOOT_BANK_IMAGE_WINDOW)
+        math(EXPR DMBOOT_ROM_ORIGIN "${DMBOOT_BANK_IMAGE_WINDOW} + 512" OUTPUT_FORMAT HEXADECIMAL)
+    else()
+        math(EXPR DMBOOT_ROM_ORIGIN "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} + 512" OUTPUT_FORMAT HEXADECIMAL)
+    endif()
     math(EXPR DMBOOT_ROM_LENGTH "${DMBOOT_BANK_${DMBOOT_BANK}_SIZE} - 512" OUTPUT_FORMAT HEXADECIMAL)
     message(STATUS "Linked for the bank ${DMBOOT_BANK}: vectors at ${DMBOOT_ROM_ORIGIN}, ${DMBOOT_ROM_LENGTH} bytes")
 
@@ -301,10 +311,23 @@ if(DMBOOT_BANK)
     string(FIND "ABCD" "${DMBOOT_BANK}" DMBOOT_BANK_INDEX)
     add_library(dmboot_firmware OBJECT src/firmware/dmboot_firmware.c)
     dmod_set_current_allocator(dmboot_firmware)
-    target_compile_definitions(dmboot_firmware PRIVATE DMBOOT_BANK_INDEX=${DMBOOT_BANK_INDEX})
+    if(DMBOOT_BANK_ONE_BUILD)
+        # one build for every bank (the window of the image is the same): the selector says which one it has started; its table
+        # is in the RAM, at a place the board names
+        target_compile_definitions(dmboot_firmware PRIVATE DMBOOT_BANK_INDEX=DMSEL_RUNNING_STARTED DMSEL_TABLE_ADDRESS=${DMBOOT_SELECTOR_TABLE_ADDRESS})
+    else()
+        target_compile_definitions(dmboot_firmware PRIVATE DMBOOT_BANK_INDEX=${DMBOOT_BANK_INDEX})
+    endif()
     target_include_directories(dmboot_firmware PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/selector/include)
     target_link_libraries(dmboot_firmware PRIVATE dmod)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_firmware)
+endif()
+
+# The sections: the same for the chips whose code and read-only data are in one place; a chip with another memory map has its own
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/sections.ld")
+    set(DMBOOT_SECTIONS_LD "${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/sections.ld")
+else()
+    set(DMBOOT_SECTIONS_LD "${CMAKE_CURRENT_SOURCE_DIR}/linker/common.ld")
 endif()
 
 target_link_options(${MODULE_NAME}.elf
@@ -314,7 +337,7 @@ target_link_options(${MODULE_NAME}.elf
         -L${DMOD_DIR}/scripts
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/arch.ld
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/mcu.ld
-        -T${CMAKE_CURRENT_SOURCE_DIR}/linker/common.ld
+        -T${DMBOOT_SECTIONS_LD}
         -Wl,-Map=${MODULE_NAME}.map
 )
 
@@ -331,6 +354,11 @@ target_link_libraries(${MODULE_NAME}.elf
         dmboot_arch
         dmosi_freertos
 )
+
+# What the port of the architecture needs besides (see configs/arch/<arch>/<family>/freertos.cmake)
+if(TARGET dmboot_port_shim)
+    target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_port_shim)
+endif()
 
 if(TARGET dmboot_power)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_power)
