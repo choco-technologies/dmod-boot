@@ -147,7 +147,7 @@ else()
 endif()
 
 # Linked for a bank: the image gets the header of the selector, and the board is programmed with the selector as well
-if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND NOT DMBOOT_ARCH STREQUAL "xtensa")
     set(DMBOOT_BANK_IMAGE ${CMAKE_BINARY_DIR}/${MODULE_NAME}_bank_${DMBOOT_BANK}.bin)
     set(DMBOOT_SELECTOR_BUILD_DIR ${CMAKE_BINARY_DIR}/selector)
     set(DMBOOT_SELECTOR_BIN ${DMBOOT_SELECTOR_BUILD_DIR}/dmsel.bin)
@@ -185,6 +185,49 @@ if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
             -c "reset run" -c "shutdown"
         DEPENDS ${MODULE_NAME}.elf
         COMMENT "Writing the bank ${DMBOOT_BANK} only (the selector and its store stay)...")
+endif()
+
+# The ESP32-S3: the flash is written through the ROM's download mode (esptool), not through the debug probe. The selector is the
+# second stage bootloader (offset 0), the image of the bank is linked for the window the selector maps it into; the store is erased
+# after the write (the state is rebuilt from the banks: the newest good image starts) - and esptool resets the chip after its last
+# command, so the erase must be the last one.
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND DMBOOT_ARCH STREQUAL "xtensa")
+    find_program(DMBOOT_ESPTOOL NAMES esptool esptool.py DOC "esptool (pip install esptool)")
+    if(NOT DMBOOT_ESPTOOL)
+        message(WARNING "esptool not found: install-firmware and the selector need it (pip install esptool, or -DDMBOOT_ESPTOOL=<path>)")
+    endif()
+    set(DMBOOT_ESP_PORT "/dev/ttyACM0" CACHE STRING "Serial port of the ESP32-S3 (its USB-Serial/JTAG) for esptool")
+    set(DMBOOT_BANK_IMAGE ${CMAKE_BINARY_DIR}/${MODULE_NAME}_bank_${DMBOOT_BANK}.bin)
+    set(DMBOOT_SELECTOR_BUILD_DIR ${CMAKE_BINARY_DIR}/selector)
+    set(DMBOOT_SELECTOR_BIN ${DMBOOT_SELECTOR_BUILD_DIR}/dmsel.bin)
+    set(DMBOOT_BANK_VERSION "auto" CACHE STRING "Version in the header of the image: a number, or auto - the time of the build (the bigger the newer)")
+    math(EXPR DMBOOT_ESP_BANK_OFFSET "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} - ${DMBOOT_SELECTOR_ORIGIN}" OUTPUT_FORMAT HEXADECIMAL)
+    math(EXPR DMBOOT_ESP_STORE_OFFSET "${DMBOOT_SELECTOR_STORE} - ${DMBOOT_SELECTOR_ORIGIN}" OUTPUT_FORMAT HEXADECIMAL)
+    set(DMBOOT_ESP_STORE_SLOT 0x10000)  # the 64 kB page the store is in
+    set(DMBOOT_ESPTOOL_WRITE ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep)
+
+    add_custom_command(TARGET ${MODULE_NAME}.elf POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${MODULE_NAME}.elf ${MODULE_NAME}.code.bin
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/selector/tools/dmsel_mkimage.py
+                ${MODULE_NAME}.code.bin ${DMBOOT_BANK_IMAGE} --version ${DMBOOT_BANK_VERSION}
+                --capacity ${DMBOOT_BANK_${DMBOOT_BANK}_SIZE}
+        COMMENT "Image of the bank ${DMBOOT_BANK}: ${DMBOOT_BANK_IMAGE}"
+        VERBATIM)
+
+    add_custom_target(selector
+        COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/selector/fw -B ${DMBOOT_SELECTOR_BUILD_DIR} -DDMSEL_BOARD=${BOARD} -DDMSEL_ARCH=${DMBOOT_ARCH} -DDMSEL_ARCH_CORE=${DMBOOT_ARCH_FAMILY} -DDMSEL_MCU_SERIES=${DMBOOT_MCU_SERIES} -DDMSEL_MCU=${DMBOOT_MCU_NAME} -DDMSEL_ESPTOOL=${DMBOOT_ESPTOOL}
+        COMMAND ${CMAKE_COMMAND} --build ${DMBOOT_SELECTOR_BUILD_DIR}
+        BYPRODUCTS ${DMBOOT_SELECTOR_BIN}
+        COMMENT "Building the selector...")
+
+    set(INSTALL_FIRMWARE_COMMAND ${DMBOOT_ESPTOOL_WRITE} 0x0 ${DMBOOT_SELECTOR_BIN} ${DMBOOT_ESP_BANK_OFFSET} ${DMBOOT_BANK_IMAGE}
+        COMMAND ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after hard-reset erase-region ${DMBOOT_ESP_STORE_OFFSET} ${DMBOOT_ESP_STORE_SLOT})
+    set(INSTALL_FIRMWARE_COMMENT "Installing the selector and the bank ${DMBOOT_BANK} on ${TARGET}...")
+    add_custom_target(install-bank
+        COMMAND ${DMBOOT_ESPTOOL_WRITE} ${DMBOOT_ESP_BANK_OFFSET} ${DMBOOT_BANK_IMAGE}
+        COMMAND ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after hard-reset erase-region ${DMBOOT_ESP_STORE_OFFSET} ${DMBOOT_ESP_STORE_SLOT}
+        DEPENDS ${MODULE_NAME}.elf
+        COMMENT "Writing the bank ${DMBOOT_BANK} only (the selector stays)...")
 endif()
 
 # Define install-firmware target
