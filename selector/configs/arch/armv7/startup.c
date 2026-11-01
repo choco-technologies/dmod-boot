@@ -1,6 +1,6 @@
 /**
  * @file startup.c
- * @brief Vectors and the reset handler of the selector: the RAM is the DTCM, nothing else runs here
+ * @brief ARMv7-M: the vectors and the reset handler of the selector (the RAM and its stack: mcu.ld, arch.ld)
  */
 #include <stdint.h>
 

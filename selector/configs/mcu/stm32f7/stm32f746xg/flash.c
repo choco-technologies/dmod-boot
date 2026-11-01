@@ -1,13 +1,14 @@
 /**
- * @file dmsel_port_f7.c
- * @brief The selector's port for the STM32F7 (RM0385): the flash, the jump, the watchdog
+ * @file flash.c
+ * @brief The selector's port for the STM32F746 (RM0385): the flash controller
  *
- * Only the store sector is ever erased or programmed from here (a guard): a mistake of the core cannot touch the selector
- * or the banks. The flash is single bank: the CPU is stopped while a sector is erased (up to a second for 256 kB).
+ * Only the store of the layout (user) is ever erased or programmed from here (a guard): a mistake of the core cannot touch
+ * the selector or the banks. The flash is single bank: the CPU is stopped while a sector is erased (up to a second for 256 kB).
  */
 #include <stdint.h>
 #include "dmsel.h"
-#include "dmsel_f7.h"
+#include "dmsel_platform.h"
+#include "dmsel_mcu.h"
 
 #define REG(a)          (*(volatile uint32_t*)(a))
 #define FLASH_BASE      0x40023C00u
@@ -62,7 +63,7 @@ static void flash_refresh( uint32_t offset, uint32_t size )
     FLASH_ACR = acr;
     if( REG( 0xE000ED14u ) & (1u << 16) )       // CCR.DC: the data cache of the core is on (the firmware turned it on)
     {
-        for( a = (0x08000000u + offset) & ~31u; a < 0x08000000u + offset + size; a += 32 )
+        for( a = (DMSEL_MCU_FLASH_ADDRESS + offset) & ~31u; a < DMSEL_MCU_FLASH_ADDRESS + offset + size; a += 32 )
         {
             REG( 0xE000EF5Cu ) = a;             // DCIMVAC
         }
@@ -71,18 +72,19 @@ static void flash_refresh( uint32_t offset, uint32_t size )
     __asm volatile ( "isb" ::: "memory" );
 }
 
-static int allowed( uint32_t offset, uint32_t size )
+static int allowed( void* user, uint32_t offset, uint32_t size )
 {
-    return offset >= DMSEL_F7_STORE_OFFSET && offset + size <= DMSEL_F7_STORE_OFFSET + DMSEL_F7_STORE_SIZE && offset + size >= offset;
+    const dmsel_layout_t* l = (const dmsel_layout_t*)user;
+
+    return offset >= l->store_offset && offset + size <= l->store_offset + l->store_size && offset + size >= offset;
 }
 
-int dmsel_f7_erase( void* user, uint32_t offset, uint32_t size )
+int dmsel_mcu_erase( void* user, uint32_t offset, uint32_t size )
 {
     unsigned n;
     int result = 0;
 
-    (void)user;
-    if( !allowed( offset, size ) )
+    if( !allowed( user, offset, size ) )
     {
         return -1;
     }
@@ -103,14 +105,13 @@ int dmsel_f7_erase( void* user, uint32_t offset, uint32_t size )
     return result;
 }
 
-int dmsel_f7_program( void* user, uint32_t offset, const void* data, uint32_t size )
+int dmsel_mcu_program( void* user, uint32_t offset, const void* data, uint32_t size )
 {
     const uint8_t* d = (const uint8_t*)data;
     uint32_t i;
     int result = 0;
 
-    (void)user;
-    if( (offset & 3u) != 0 || (size & 3u) != 0 || !allowed( offset, size ) )
+    if( (offset & 3u) != 0 || (size & 3u) != 0 || !allowed( user, offset, size ) )
     {
         return -1;
     }
@@ -121,7 +122,7 @@ int dmsel_f7_program( void* user, uint32_t offset, const void* data, uint32_t si
         uint32_t w = (uint32_t)d[i] | ((uint32_t)d[i + 1] << 8) | ((uint32_t)d[i + 2] << 16) | ((uint32_t)d[i + 3] << 24);
         result = flash_wait();
         FLASH_CR |= CR_PG;
-        *(volatile uint32_t*)(0x08000000u + offset + i) = w;
+        *(volatile uint32_t*)(DMSEL_MCU_FLASH_ADDRESS + offset + i) = w;
         __asm volatile ( "dsb" ::: "memory" );
         result |= flash_wait();
         FLASH_CR &= ~CR_PG;
@@ -129,38 +130,4 @@ int dmsel_f7_program( void* user, uint32_t offset, const void* data, uint32_t si
     FLASH_CR |= CR_LOCK;
     flash_refresh( offset, size );
     return result;
-}
-
-void dmsel_f7_jump( void* user, uint32_t vector_address )
-{
-    const uint32_t* vectors = (const uint32_t*)vector_address;
-    uint32_t sp = vectors[0], reset = vectors[1], i;
-
-    (void)user;
-    __asm volatile ( "cpsid i" ::: "memory" );
-    REG( 0xE000E010u ) = 0;                     // SysTick off
-    for( i = 0; i < 8; i++ )
-    {
-        REG( 0xE000E180u + 4 * i ) = 0xFFFFFFFFu;   // ICER
-        REG( 0xE000E280u + 4 * i ) = 0xFFFFFFFFu;   // ICPR
-    }
-    REG( 0xE000ED08u ) = vector_address;        // VTOR
-    __asm volatile ( "dsb\n isb\n msr msp, %0\n cpsie i\n bx %1" :: "r"(sp), "r"(reset) : "memory" );
-    for( ;; ) {}
-}
-
-void dmsel_f7_watchdog_start( void* user, uint32_t timeout_ms )
-{
-    uint32_t reload = timeout_ms / 8u;          // LSI 32 kHz / 256 = 125 Hz: 8 ms per tick
-
-    (void)user;
-    if( reload > 0xFFFu ) reload = 0xFFFu;
-    if( reload == 0 ) reload = 1;
-    REG( 0xE0042008u ) |= (1u << 12);           // DBGMCU: the watchdog stops while the core is halted by the debugger
-    REG( 0x40003000u ) = 0xCCCCu;               // IWDG: start (cannot be stopped)
-    REG( 0x40003000u ) = 0x5555u;
-    REG( 0x40003004u ) = 6;                     // /256
-    REG( 0x40003008u ) = reload;
-    while( REG( 0x4000300Cu ) != 0 ) {}
-    REG( 0x40003000u ) = 0xAAAAu;
 }
