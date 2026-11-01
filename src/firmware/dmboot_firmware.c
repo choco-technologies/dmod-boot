@@ -112,6 +112,8 @@ int Dmod_FirmwareGetBankInfo(int Bank, Dmod_FirmwareBankInfo_t* Info)
         return -EINVAL;
     }
     dmsel_bank_info_t info;
+    memset(&info, 0, sizeof(info));
+    info.struct_size = sizeof(info);        /* [in] the size of the caller's structure: the selector fills what fits in it */
     int result = table->get_info(&g_state, Bank, &info);
     if(result != 0)
     {
