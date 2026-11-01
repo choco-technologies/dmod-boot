@@ -152,6 +152,13 @@ dmview rules=dmview.rules
 # sdcard.dmd: it is loaded from /mnt/<label>/bin once automount has mounted the card.
 #
 #
+# Firmware update (selector/): fwupdate writes an image to a bank and chooses the bank to start, through the nodes of
+# the banks of dmflash (bank_a, bank_b: the flash.ini of the board). The unit that confirms a start on trial,
+# bootok, is made by the build (configs/common/services/bootok.ini) into /ext/cfg/services.
+#
+dmflash driver=board/stm32f746g-disco/flash.ini
+fwupdate
+#
 # Shell tools (the ones of tools.dmd are added to the list by DMBOOT_EXT_TOOLS): not needed to bring /ext up, so
 # they are not in the firmware. They are found by name in /ext/bin.
 #

@@ -381,6 +381,13 @@ else()
     set(DMBOOT_BOARD_CONFIG_FILES "${DMBOOT_BOARD_CONFIG_FILES}" PARENT_SCOPE)
 endif()
 
+# The unit that confirms the start of a firmware linked for a bank (fwupdate confirm, see selector/). It is in /ext/cfg:
+# libsystemd loads it when /ext is mounted, and fwupdate (ext.dmd) is on /ext - a unit of the firmware would start
+# before the mount is done.
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND DMBOOT_EXT_TOOLS)
+    configure_file("${CMAKE_SOURCE_DIR}/configs/common/services/bootok.ini" "${DMBOOT_EXT_CONFIG_DIR}/services/board/bootok.ini" COPYONLY)
+endif()
+
 # ======================================================================
 #               Preparing dmp file from flash modules
 # ======================================================================
