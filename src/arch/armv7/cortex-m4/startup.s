@@ -70,6 +70,18 @@ Initialize the process stack pointer
    msr      PSP, r0
 
 /*==============================================================================
+The vector table is where this image is linked, which is not address 0 when a
+boot loader (the selector) starts it from a bank of the flash: it sets VTOR
+itself, and so does the image, so that it also runs when it is started the
+other way (the vectors are aligned to 512 bytes in the linker script)
+==============================================================================*/
+   ldr      r0, =0xE000ED08                 // VTOR
+   ldr      r1, =vectors
+   str      r1, [r0]
+   dsb
+   isb
+
+/*==============================================================================
 Thread mode uses process stack (PSP) and is privileged
 ==============================================================================*/
    movs     r0, #2                          // CONTROL_ALTERNATE_STACK = (1 << 1) = 2

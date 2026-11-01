@@ -209,7 +209,7 @@ if [ -n "$EXT_DEVICE" ]; then
         --run "$EXT_MOUNT_CMD" --ensure-dir "$EXT_MOUNT" \
         && "${YMODEM[@]}" --timeout 120 --dest "$EXT_MOUNT" --card none "$BUILD_DIR/ext" \
         && "${YMODEM[@]}" --timeout 120 --run "umount $EXT_MOUNT" --run "$EXT_MOUNT_CMD" \
-        || { echo "✗ could not fill the external flash"; exit 1; }
+        || { echo "✗ could not fill the external flash"; echo "--- monitor.log (tail: the log of the firmware) ---"; tail -n 120 "$MONITOR_LOG"; exit 1; }
     # (the mount loads /ext/cfg: units, rules, drivers - they start now)
     echo "✓ build/ext is on $EXT_MOUNT"
 else

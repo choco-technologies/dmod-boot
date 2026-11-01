@@ -57,7 +57,7 @@ cmake --build build --target upload-ext
 ```
 
 sends `build/ext` over the console (YMODEM) to `/ext`, so the modules land in **`/ext/bin`**, on the module search path.
-`install-all` also downloads and sends these files, after installing the firmware and uploading the SD card files.
+`install-all` also downloads and sends these files, after installing the firmware and before the SD card files (the SD card driver is on `/ext`), then restarts the device to start them.
 It uses `DMBOOT_UPLOAD_WAIT` while waiting for the console and requires the external flash to be formatted and mounted;
 it never runs `format-ext` automatically.
 

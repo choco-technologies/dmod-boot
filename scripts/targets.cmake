@@ -146,12 +146,56 @@ else()
     set(CONNECT_COMMENT "Connecting to ${TARGET} with OpenOCD...")
 endif()
 
+# Linked for a bank: the image gets the header of the selector, and the board is programmed with the selector as well
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
+    set(DMBOOT_BANK_IMAGE ${CMAKE_BINARY_DIR}/${MODULE_NAME}_bank_${DMBOOT_BANK}.bin)
+    set(DMBOOT_SELECTOR_BUILD_DIR ${CMAKE_BINARY_DIR}/selector)
+    set(DMBOOT_SELECTOR_BIN ${DMBOOT_SELECTOR_BUILD_DIR}/dmsel.bin)
+    set(DMBOOT_BANK_VERSION "auto" CACHE STRING "Version in the header of the image: a number, or auto - the time of the build (the bigger the newer)")
+
+    add_custom_command(TARGET ${MODULE_NAME}.elf POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${MODULE_NAME}.elf ${MODULE_NAME}.code.bin
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/selector/tools/dmsel_mkimage.py
+                ${MODULE_NAME}.code.bin ${DMBOOT_BANK_IMAGE} --version ${DMBOOT_BANK_VERSION}
+                --capacity ${DMBOOT_BANK_${DMBOOT_BANK}_SIZE}
+        COMMENT "Image of the bank ${DMBOOT_BANK}: ${DMBOOT_BANK_IMAGE}"
+        VERBATIM)
+
+    add_custom_target(selector
+        COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/selector/fw -B ${DMBOOT_SELECTOR_BUILD_DIR} -DDMSEL_BOARD=${BOARD} -DDMSEL_ARCH=${DMBOOT_ARCH} -DDMSEL_ARCH_CORE=${DMBOOT_ARCH_FAMILY} -DDMSEL_MCU_SERIES=${DMBOOT_MCU_SERIES} -DDMSEL_MCU=${DMBOOT_MCU_NAME}
+        COMMAND ${CMAKE_COMMAND} --build ${DMBOOT_SELECTOR_BUILD_DIR}
+        BYPRODUCTS ${DMBOOT_SELECTOR_BIN}
+        COMMENT "Building the selector...")
+
+    # The whole flash: the selector, the store erased (the state is rebuilt from the banks: the newest good image
+    # starts), the image of the bank. The file systems of the banks (S2, S3) are not touched.
+    set(INSTALL_FIRMWARE_COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+        -c "init" -c "reset halt"
+        -c "flash write_image erase ${DMBOOT_SELECTOR_BIN} ${DMBOOT_SELECTOR_ORIGIN} bin"
+        -c "flash erase_sector 0 ${DMBOOT_SELECTOR_STORE_SECTOR} ${DMBOOT_SELECTOR_STORE_SECTOR}"
+        -c "flash write_image erase ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+        -c "verify_image ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+        -c "reset run" -c "shutdown")
+    set(INSTALL_FIRMWARE_COMMENT "Installing the selector and the bank ${DMBOOT_BANK} on ${TARGET}...")
+    add_custom_target(install-bank
+        COMMAND ${OPENOCD} -f ${OPENOCD_INTERFACE} -f ${OPENOCD_TARGET}
+            -c "init" -c "reset halt"
+            -c "flash write_image erase ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+            -c "verify_image ${DMBOOT_BANK_IMAGE} ${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} bin"
+            -c "reset run" -c "shutdown"
+        DEPENDS ${MODULE_NAME}.elf
+        COMMENT "Writing the bank ${DMBOOT_BANK} only (the selector and its store stay)...")
+endif()
+
 # Define install-firmware target
 add_custom_target(install-firmware
     COMMAND ${INSTALL_FIRMWARE_COMMAND}
     DEPENDS ${MODULE_NAME}.elf
     COMMENT ${INSTALL_FIRMWARE_COMMENT}
 )
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
+    add_dependencies(install-firmware selector)
+endif()
 
 # Define connect target
 add_custom_target(connect
@@ -209,11 +253,12 @@ if(Python3_Interpreter_FOUND)
         USES_TERMINAL
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
     )
+    # The SD card driver and its file system are on /ext when the board has one (docs/external-flash.md): there the files
+    # of /ext go first, the device restarts to start them, and only then the card is looked for (POST_BUILD steps, in order).
     add_custom_target(install-all
-        COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
+        COMMAND ${CMAKE_COMMAND} -E echo "Firmware installed, uploading the files..."
         DEPENDS install-firmware download_sdcard_modules
         USES_TERMINAL
-        COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
 
     # The external flash (DMBOOT_EXT_DEVICE, set by the board): the console runs the commands, YMODEM sends build/ext.
@@ -225,7 +270,7 @@ if(Python3_Interpreter_FOUND)
             --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --block ${DMBOOT_UPLOAD_BLOCK})
         add_custom_target(format-ext
             COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5
-                --run "-umount ${DMBOOT_EXT_MOUNT}"
+                "--run=-umount ${DMBOOT_EXT_MOUNT}"
                 --run "${DMBOOT_EXT_MKFS} ${DMBOOT_EXT_DEVICE}"
                 --run "mount -t ${DMBOOT_EXT_FS} -o device=${DMBOOT_EXT_DEVICE} ${DMBOOT_EXT_MOUNT}"
                 --ensure-dir ${DMBOOT_EXT_MOUNT}
@@ -244,9 +289,15 @@ if(Python3_Interpreter_FOUND)
         add_dependencies(install-all download_ext_modules)
         add_custom_command(TARGET install-all POST_BUILD
             COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT}
-            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
+            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 "--run=-reboot"
+            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM), then restarting to start its modules..."
         )
     endif()
+
+    add_custom_command(TARGET install-all POST_BUILD
+        COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
+        COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
+    )
 else()
     message(STATUS "Python 3 not found - the upload-files, install-all, format-ext and upload-ext targets are not available")
 endif()
