@@ -253,11 +253,12 @@ if(Python3_Interpreter_FOUND)
         USES_TERMINAL
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
     )
+    # The SD card driver and its file system are on /ext when the board has one (docs/external-flash.md): there the files
+    # of /ext go first, the device restarts to start them, and only then the card is looked for (POST_BUILD steps, in order).
     add_custom_target(install-all
-        COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
+        COMMAND ${CMAKE_COMMAND} -E echo "Firmware installed, uploading the files..."
         DEPENDS install-firmware download_sdcard_modules
         USES_TERMINAL
-        COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
 
     # The external flash (DMBOOT_EXT_DEVICE, set by the board): the console runs the commands, YMODEM sends build/ext.
@@ -288,9 +289,15 @@ if(Python3_Interpreter_FOUND)
         add_dependencies(install-all download_ext_modules)
         add_custom_command(TARGET install-all POST_BUILD
             COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT}
-            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM)..."
+            COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 "--run=-reboot"
+            COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM), then restarting to start its modules..."
         )
     endif()
+
+    add_custom_command(TARGET install-all POST_BUILD
+        COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
+        COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
+    )
 else()
     message(STATUS "Python 3 not found - the upload-files, install-all, format-ext and upload-ext targets are not available")
 endif()
