@@ -123,10 +123,14 @@ dmwm8994 driver=board/stm32f746g-disco/codec-with-touch.ini
 #
 # The audio service: dmaudio.rules starts a dmaudio@<name> for every audio
 # device dmdevfs reports - here /dev/wm8994 -, mixing what the applications
-# play (libdmaudio) into it.
+# play (libdmaudio) into it. Through the speaker (JP3; speaker=mono in the
+# codec's configuration mixes both channels into it) - service=dmaudio@.ini
+# for the headphone jack. audioctl output headphone|speaker switches it while
+# it plays.
 #
-dmaudio service=dmaudio@.ini
+dmaudio service=speaker/dmaudio@.ini
 dmaudio rules=dmaudio.rules
+audioctl
 #
 # The display service: dmview.rules starts a dmview@<name> for the LCD
 # (/dev/dmlcdtft0), which shows what the applications claim for it - with
