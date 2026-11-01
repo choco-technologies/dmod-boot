@@ -121,6 +121,12 @@ endforeach()
 # ======================================================================
 #               Downloading modules from DMD
 # ======================================================================
+# A port without any module built for it yet (no .dmf for its architecture to download): the firmware alone
+if(DMBOOT_NO_FLASH_MODULES)
+    set(DMBOOT_FLASH_DMD_FILES "")
+    set(DMBOOT_MAIN_MODULE "")
+    set(DMBOOT_SHELL "")
+endif()
 find_program(DMF_GET dmf-get HINTS ${DMBOOT_TOOLS_DIR})
 if(NOT DMF_GET)
     message(FATAL_ERROR "dmf-get tool not found. Please build and install dmod tools first.")
@@ -256,8 +262,15 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     message(STATUS "Main module: ${DMBOOT_MAIN_MODULE}")
     message(STATUS "Shell module: ${DMBOOT_SHELL}")
 else()
-    message(WARNING "No flash.dmd files, main module, or shell module configured. Skipping flash module download.")
-    add_custom_target(download_modules ALL)
+    if(DMBOOT_NO_FLASH_MODULES)
+        message(STATUS "DMBOOT_NO_FLASH_MODULES: no flash modules, the firmware alone")
+    else()
+        message(WARNING "No flash.dmd files, main module, or shell module configured. Skipping flash module download.")
+    endif()
+    # (modules.dmp is made after the marker; with nothing to download the marker is only there)
+    file(MAKE_DIRECTORY "${DMBOOT_MODULES_OUT_DIR}")
+    add_custom_command(OUTPUT "${DMBOOT_MODULES_MARKER_FILE}" COMMAND ${CMAKE_COMMAND} -E touch "${DMBOOT_MODULES_MARKER_FILE}")
+    add_custom_target(download_modules ALL DEPENDS "${DMBOOT_MODULES_MARKER_FILE}")
 endif()
 
 # ======================================================================
@@ -411,7 +424,7 @@ else()
         COMMAND ${CMAKE_COMMAND} -E echo "Checking if modules directory contains files..."
         COMMAND ${CMAKE_COMMAND} -E echo "Contents of ${DMBOOT_MODULES_OUT_DIR}:"
         COMMAND ls -la ${DMBOOT_MODULES_OUT_DIR} || ${CMAKE_COMMAND} -E echo "Directory is empty or does not exist"
-        COMMAND bash -c "if compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmf' > /dev/null || compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmfc' > /dev/null; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf ${DMBOOT_MODULES_OUT_DIR}/*.dmfc 2> /dev/null || true; else echo 'No .dmf/.dmfc files found, skipping DMP creation'; fi"
+        COMMAND bash -c "if compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmf' > /dev/null || compgen -G '${DMBOOT_MODULES_OUT_DIR}/*.dmfc' > /dev/null; then ${TODMP} modules ${DMBOOT_MODULES_OUT_DIR} ${DMBOOT_MODULES_DMP}; ls ${DMBOOT_MODULES_OUT_DIR}/*.dmf ${DMBOOT_MODULES_OUT_DIR}/*.dmfc 2> /dev/null || true; else echo 'No .dmf/.dmfc files found, skipping DMP creation'; touch ${DMBOOT_MODULES_DMP}; fi"
         DEPENDS "${DMBOOT_MODULES_MARKER_FILE}" download_modules
         COMMENT "Creating modules dmp file from flash modules (if any exist)..."
         VERBATIM

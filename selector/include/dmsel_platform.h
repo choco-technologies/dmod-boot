@@ -21,11 +21,20 @@ extern "C" {
 
 // arch
 void dmsel_arch_jump( void* user, uint32_t vector_address );
+void dmsel_arch_idle( void );                       //!< Waits for an interrupt
 
 // mcu
 int  dmsel_mcu_erase( void* user, uint32_t offset, uint32_t size );
 int  dmsel_mcu_program( void* user, uint32_t offset, const void* data, uint32_t size );
 void dmsel_mcu_watchdog_start( void* user, uint32_t timeout_ms );
+
+// mcu, optional (weak defaults in main.c): a chip without a debug probe that reads the log from the RAM has to bring the text out
+void dmsel_mcu_init( void );                        //!< The first thing main() does: the clocks, the watchdogs, the flash, ...
+void dmsel_mcu_console( const char* text );         //!< Every line of the log goes here as well
+void dmsel_mcu_idle( void );                        //!< One round of the loop the selector stays in when nothing can be started
+/** What has to be done before the jump into a bank (the image is not in the memory of the chip yet: the MMU, the cache).
+ *  @param address  the entry, in the memory of the layout (flash_address + offset); @return the address to jump to, 0: failed */
+uint32_t dmsel_mcu_prepare_jump( void* user, uint32_t address );
 
 #ifdef __cplusplus
 }
