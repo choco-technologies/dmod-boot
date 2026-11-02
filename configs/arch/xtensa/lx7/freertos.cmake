@@ -25,7 +25,7 @@ target_include_directories(dmboot_idf_headers INTERFACE
     ${DMBOOT_IDF_DIR}/components/heap/include)
 target_link_libraries(freertos_config INTERFACE dmboot_idf_headers)
 # (the headers of the vendor are not written for -Werror)
-target_compile_options(dmboot_idf_headers INTERFACE -Wno-unused-parameter -Wno-deprecated-declarations)
+target_compile_options(dmboot_idf_headers INTERFACE -Wno-unused-parameter)
 
 # libxt_hal.a: the functions of the HAL of the Xtensa core that the port calls (xthal_*); the rest of what the port needs from
 # ESP-IDF is in shim/ (compiled with it, as an object library: the port and the shim call each other, a static library

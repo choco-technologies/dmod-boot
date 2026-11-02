@@ -152,8 +152,8 @@ cmake --build build --target install-firmware
 ### Build for the ESP32-S3 2.8" display board (`esp32s3-lcd28`)
 
 Needs ESP-IDF (`IDF_PATH`: only its headers and `libxt_hal.a` are used; 5.2 and older work, the headers that 5.2 renamed are
-forwarded by `src/arch/xtensa/lx7/shim`), the `xtensa-esp-elf` toolchain and `esptool` (`pip install esptool`). The FreeRTOS port
-of the kernel needs the patch of `lib/dmosi-freertos/patches` on a fresh checkout (see the README there).
+forwarded by `lib/dmosi-freertos/config/arch/xtensa_esp32`), the `xtensa-esp-elf` toolchain and `esptool` (`pip install esptool`).
+The FreeRTOS port of the kernel needs the patch of `lib/dmosi-freertos/patches` on a fresh checkout (see the README there).
 
 ```bash
 git -C lib/dmosi-freertos/lib/freertos apply ../../patches/freertos-xtensa-esp32.patch
