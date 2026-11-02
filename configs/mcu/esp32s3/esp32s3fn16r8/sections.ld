@@ -170,6 +170,7 @@ SECTIONS
       *(.iram1.literal .iram1 .iram1.*)
       . = ALIGN(16);
       _iram_end = ABSOLUTE(.);
+      PROVIDE(_iram_text_end = _iram_end);   /* the handler of the 8/16-bit accesses (xtensa_loadstore_handler.S) */
    } > iram
    /* where the start reads them from and writes them to: the data bus */
    _iram_load_d  = LOADADDR(.iram) - CODE_TO_DATA;

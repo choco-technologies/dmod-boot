@@ -13,5 +13,8 @@
 #define CONFIG_FREERTOS_ASSERT_FAIL_ABORT 1
 #define CONFIG_FREERTOS_NO_AFFINITY 0xFFFFFFFFu     /* tskNO_AFFINITY of the kernel: (UBaseType_t) -1 */
 #define CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ 240
+/* the handler of the 8/16-bit loads and stores that the bus of the IRAM (and of the flash, see the patch of the FreeRTOS port) does not do:
+   code reads the bytes of an address of a function of the firmware, e.g. the loader of dmod checking if an entry is a signature */
+#define CONFIG_ESP32_IRAM_AS_8BIT_ACCESSIBLE_MEMORY 1
 
 #endif
