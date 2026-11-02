@@ -31,8 +31,15 @@ set(DMBOOT_SELECTOR_ORIGIN 0x3C000000)
 set(DMBOOT_SELECTOR_STORE  0x3C010000)
 set(DMBOOT_SELECTOR_STORE_SIZE 0x00008000)
 
-# No module is built for the Xtensa yet (dmf-get has nothing to download): the firmware alone, until there are
-set(DMBOOT_NO_FLASH_MODULES ON CACHE BOOL "No modules in the firmware" FORCE)
+# The modules of the Xtensa run since dmod relocates them by a table (DMOD_USE_RELDYN, dmod: docs/reldyn.md), but the ones that
+# were released before have no such table, and dmclk and dmgpio have no port for the ESP32-S3 released yet: the firmware alone
+# until they are. -DDMBOOT_ESP32S3_MODULES=ON builds it with the modules (and a manifest with the packages built with it).
+option(DMBOOT_ESP32S3_MODULES "ESP32-S3: the firmware with the modules (the packages must be built with DMOD_USE_RELDYN)" OFF)
+if(DMBOOT_ESP32S3_MODULES)
+    set(DMBOOT_NO_FLASH_MODULES OFF CACHE BOOL "No modules in the firmware" FORCE)
+else()
+    set(DMBOOT_NO_FLASH_MODULES ON CACHE BOOL "No modules in the firmware" FORCE)
+endif()
 
 # The image of a bank (dmboot): one build for both banks, linked for the window that the selector maps the bank into (the code
 # bus; the data bus sees the same pages at 0x3D000000), started as the bank A by default
