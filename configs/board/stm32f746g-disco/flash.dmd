@@ -11,7 +11,9 @@ dmclk driver=board/stm32f746g-disco.ini
 dmgpio driver=board/stm32f746g-disco.ini
 # The console. The other UART (usart6) is on /ext.
 dmuart driver=board/stm32f746g-disco/usart1.ini
-dmfmc driver=board/stm32f746g-disco/sdram.ini
+# 1.3 opts this board into disabling unused NOR/SRAM bank 1 in the FMC driver
+# (AN4861), before SDRAM setup. The policy is in its board/sdram.ini config.
+dmfmc@>=1.3 driver=board/stm32f746g-disco/sdram.ini
 dmdma driver=board/stm32f746g-disco/dma.ini
 #
 # External flash: the 16 MB Micron N25Q128A on QUADSPI. dmspiflash identifies the chip and exports it as the
