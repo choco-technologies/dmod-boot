@@ -287,6 +287,11 @@ if(Python3_Interpreter_FOUND)
         )
         # Keep both transfers in one target: parallel builds must not share the UART.
         add_dependencies(install-all download_ext_modules)
+        # The splash logo is in build/ext too (scripts/splash.cmake), not only after a build of everything
+        if(TARGET splash_logo_ext)
+            add_dependencies(upload-ext splash_logo_ext)
+            add_dependencies(install-all splash_logo_ext)
+        endif()
         add_custom_command(TARGET install-all POST_BUILD
             COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT}
             COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 "--run=-reboot"
