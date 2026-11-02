@@ -245,6 +245,7 @@ def receiver_ready(link, command, timeout):
 
 
 PROMPT = re.compile(r'@\S*>')
+LOG_LINE = re.compile(r'\[(ERROR|WARN|INFO|DEBUG|VERBOSE)\]')     # (a line of the log: 'module: [WARN] ...')
 
 
 def clean(data):
@@ -323,7 +324,7 @@ def mounted_cards(link):
     said = re.sub(r'\S*@\S*>', '', said)                   # (the prompts)
     names = []
     for line in said.replace('\r', '\n').split('\n'):
-        names += [n for n in re.split(r'\s{2,}', line.strip()) if n]
+        names += [n for n in re.split(r'\s{2,}', line.strip()) if n and not LOG_LINE.search(n)]   # (another thread's log line run into it)
     return [n for n in names if re.fullmatch(r'[\x21-\x7e][\x20-\x7e]*', n)]   # (not what the line had before)
 
 
