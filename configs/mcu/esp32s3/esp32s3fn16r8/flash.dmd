@@ -1,7 +1,9 @@
 #
 # ESP32-S3FN16R8 flash modules – MCU-specific modules for flash
 #
-# dmclk and dmgpio have a port for the ESP32-S3 (choco-technologies/dmclk#36, dmgpio#42) but no release of it yet: dmf-get has no
-# package to download. Add them here (with the configuration of the board) when they are released.
-#dmclk
+# dmclk and dmgpio have a port for the ESP32-S3 (choco-technologies/dmclk#36, dmgpio#42). dmclk needs a release of it: until it
+# exists dmf-get has no package to download and the build of this MCU fails. The CPU stays on 20 MHz without it, and the tick of
+# the RTOS (it counts with DMOSI_CPU_CLOCK_HZ = 240 MHz) is then 12 times too slow.
+# dmgpio: add it here with the configuration of the pins of the board when it is released.
+dmclk driver=board/esp32s3-lcd28.ini
 #dmgpio

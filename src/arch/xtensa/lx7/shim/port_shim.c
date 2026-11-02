@@ -9,12 +9,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-extern int ets_get_cpu_frequency( void );               /* the ROM: the frequency in MHz that the boot of the chip left */
-
-/** The frequency of the CPU in Hz: the counter of the core (CCOUNT) drives the tick of the scheduler */
+/**
+ * The frequency of the CPU in Hz: the counter of the core (CCOUNT) drives the tick of the scheduler, and the port reads this
+ * once, when the scheduler starts. It is the frequency that the clocks are configured to (DMOSI_CPU_CLOCK_HZ of the MCU,
+ * the same constant that the tick of the ARM ports counts with): dmclk brings the CPU there, a little after the start.
+ */
 int esp_clk_cpu_freq( void )
 {
-    return ets_get_cpu_frequency() * 1000000;
+    return ( int ) DMOSI_CPU_CLOCK_HZ;
 }
 
 /* port_common.c of the port: the scheduler of a core is running */
@@ -69,4 +71,42 @@ __attribute__(( section( ".iram1" ) )) void xt_unhandled_exception( void * frame
 {
     ( void ) frame;
     _xt_panic();
+}
+
+/*
+ * The interrupts of the CPU for the modules: the vector of the port calls the handler of _xt_interrupt_table for the line that
+ * fired. Each line that nothing took gets the handler that hands the line to dmod (Dmod_IrqAll), where the modules register theirs
+ * (DMOD_IRQ_HANDLER(line)) - what the generic handler of the ARM ports does with the number of the IRQ.
+ */
+typedef struct
+{
+    void ( * handler )( void * );
+    void * arg;
+} xt_interrupt_entry_t;
+
+extern xt_interrupt_entry_t _xt_interrupt_table[ 32 ];
+extern void xt_unhandled_interrupt( void * );
+extern void Dmod_IrqAll( int IrqNumber );
+
+static void dmod_irq_dispatch( void * line )
+{
+    Dmod_IrqAll( ( int ) ( uintptr_t ) line );
+}
+
+void dmboot_xtensa_irq_init( int count )
+{
+    if( count > 32 )
+    {
+        count = 32;
+    }
+
+    for( int line = 0; line < count; line++ )
+    {
+        /* the lines that the port or the firmware took (the tick, the yield) have a handler of their own */
+        if( _xt_interrupt_table[ line ].handler == xt_unhandled_interrupt )
+        {
+            _xt_interrupt_table[ line ].handler = dmod_irq_dispatch;
+            _xt_interrupt_table[ line ].arg = ( void * ) ( uintptr_t ) line;
+        }
+    }
 }
