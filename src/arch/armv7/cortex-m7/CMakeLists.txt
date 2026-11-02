@@ -23,3 +23,8 @@ target_link_libraries(dmboot_cpu
     PRIVATE
         dmod
 )
+
+# Only boards with no asynchronous memory on FMC bank 1 opt in.
+if(DMBOOT_DISABLE_UNUSED_FMC_BANK1)
+    target_compile_definitions(dmboot_cpu PRIVATE DMBOOT_DISABLE_UNUSED_FMC_BANK1)
+endif()

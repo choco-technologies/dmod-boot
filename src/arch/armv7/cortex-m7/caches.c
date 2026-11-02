@@ -49,6 +49,29 @@ static inline void barriers(void)
     __asm volatile ("isb" ::: "memory");
 }
 
+#ifdef DMBOOT_DISABLE_UNUSED_FMC_BANK1
+/* STM32F7: AN4861, "Special recommendations for Cortex-M7 (STM32F7/H7)".
+ * The unused asynchronous bank is enabled after reset. Speculative accesses
+ * can hold the FMC bus long enough to underrun the LTDC's SDRAM reads.
+ * Boards that use NOR/SRAM on this bank must not enable this option.
+ */
+static void disable_unused_fmc_bank1(void)
+{
+    volatile uint32_t* ahb3enr = (volatile uint32_t*)0x40023838UL;
+    volatile uint32_t* bcr1 = (volatile uint32_t*)0xA0000000UL;
+    const uint32_t fmc_en = 1UL << 0;
+    const uint32_t mbken = 1UL << 0;
+    uint32_t clocks = *ahb3enr;
+
+    *ahb3enr = clocks | fmc_en;
+    (void)*ahb3enr;                     /* Clock-enable delay before FMC access */
+    *bcr1 &= ~mbken;
+    (void)*bcr1;                        /* Complete the write before gating the clock */
+    *ahb3enr = clocks;
+    barriers();
+}
+#endif
+
 /* The log buffer non-cacheable: Normal memory, TEX=001 C=0 B=0, not
  * executable. An MPU region is a power of two of at least 32 bytes, aligned
  * to its size - false when the buffer is not like that. */
@@ -104,6 +127,9 @@ static void enable_dcache(void)
 /* Called by startup.s before main() */
 void low_level_init_1(void)
 {
+#ifdef DMBOOT_DISABLE_UNUSED_FMC_BANK1
+    disable_unused_fmc_bank1();
+#endif
     enable_icache();
     if (logs_uncached())
         enable_dcache();                /* Else the debugger would not see the logs */

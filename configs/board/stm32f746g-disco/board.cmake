@@ -2,6 +2,11 @@
 # Sets TARGET for the build system
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller" FORCE)
 
+# There is no asynchronous NOR/SRAM on FMC bank 1. Leaving its reset-default
+# MBKEN set lets Cortex-M7 speculative reads stall SDRAM and starve the LTDC
+# (AN4861). Disable it before enabling the caches; the SDRAM bank is separate.
+set(DMBOOT_DISABLE_UNUSED_FMC_BANK1 ON)
+
 # Splash logo dmlcdtft shows on the 480x272 LCD as soon as it is up (an asset
 # of assets/splash/, see DMBOOT_SPLASH_LOGO)
 set(DMBOOT_SPLASH_LOGO "dmodos_logo_128" CACHE STRING "Splash logo the display driver shows at start")
