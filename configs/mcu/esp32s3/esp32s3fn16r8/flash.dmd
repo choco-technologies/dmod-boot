@@ -1,5 +1,7 @@
 #
 # ESP32-S3FN16R8 flash modules – MCU-specific modules for flash
 #
-dmclk
-dmgpio
+# dmclk and dmgpio have a port for the ESP32-S3 (choco-technologies/dmclk#36, dmgpio#42) but no release of it yet: dmf-get has no
+# package to download. Add them here (with the configuration of the board) when they are released.
+#dmclk
+#dmgpio

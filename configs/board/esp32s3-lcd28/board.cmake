@@ -31,10 +31,9 @@ set(DMBOOT_SELECTOR_ORIGIN 0x3C000000)
 set(DMBOOT_SELECTOR_STORE  0x3C010000)
 set(DMBOOT_SELECTOR_STORE_SIZE 0x00008000)
 
-# The modules of the Xtensa run since dmod relocates them by a table (DMOD_USE_RELDYN, dmod: docs/reldyn.md), but the ones that
-# were released before have no such table, and dmclk and dmgpio have no port for the ESP32-S3 released yet: the firmware alone
-# until they are. -DDMBOOT_ESP32S3_MODULES=ON builds it with the modules (and a manifest with the packages built with it).
-option(DMBOOT_ESP32S3_MODULES "ESP32-S3: the firmware with the modules (the packages must be built with DMOD_USE_RELDYN)" OFF)
+# The modules of the Xtensa run: dmod relocates them by a table (DMOD_USE_RELDYN, dmod: docs/reldyn.md) and runs them from the alias
+# of the RAM on the instruction bus. -DDMBOOT_ESP32S3_MODULES=OFF builds the firmware alone.
+option(DMBOOT_ESP32S3_MODULES "ESP32-S3: the firmware with the modules (the packages must be built with DMOD_USE_RELDYN)" ON)
 if(DMBOOT_ESP32S3_MODULES)
     set(DMBOOT_NO_FLASH_MODULES OFF CACHE BOOL "No modules in the firmware" FORCE)
 else()

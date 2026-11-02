@@ -163,10 +163,10 @@ cmake --build build --target selector          # the selector (second stage boot
 cmake --build build --target install-firmware  # esptool: the selector at 0x0, the bank A, erases the store, resets the chip
 ```
 
-By default the firmware has no modules. `-DDMBOOT_ESP32S3_MODULES=ON` builds it with them. The Xtensa has no position independent
+The firmware has the modules. `-DDMBOOT_ESP32S3_MODULES=OFF` builds it without them. The Xtensa has no position independent
 code, so dmod relocates its modules by a table (`DMOD_USE_RELDYN`, see `lib/dmod/docs/reldyn.md`) and runs them from the alias of the
-RAM on the instruction bus; the packages must be built with it (the ones released before have no table and do not run), and the
-ports of `dmclk` and `dmgpio` for the ESP32-S3 must be released too (or a manifest with them: `-DDMBOOT_MANIFEST_URL=`).
+RAM on the instruction bus; the packages must be built with it (the ones released before have no table and do not run). The ports of
+`dmclk` and `dmgpio` for the ESP32-S3 are not in `configs/mcu/esp32s3/*/flash.dmd` until they are released.
 
 ### Build for Renode emulation
 
