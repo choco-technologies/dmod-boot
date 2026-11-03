@@ -2,6 +2,10 @@
 # Sets TARGET for the build system
 set(TARGET "STM32F746xG" CACHE STRING "Target microcontroller" FORCE)
 
+if("${DMBOOT_SCREEN}" STREQUAL "")
+    set(DMBOOT_SCREEN "480x272" CACHE STRING "Default screen variant" FORCE)
+endif()
+
 # Splash logo dmlcdtft shows on the 480x272 LCD as soon as it is up (an asset
 # of assets/splash/, see DMBOOT_SPLASH_LOGO)
 set(DMBOOT_SPLASH_LOGO "dmodos_logo_128" CACHE STRING "Splash logo the display driver shows at start")
