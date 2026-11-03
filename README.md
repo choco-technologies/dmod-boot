@@ -130,6 +130,16 @@ carhmi reads the directory when it starts: restart it (`service restart carhmi`)
 or the board after adding files - a few seconds after the transfer, so FAT has
 written them to the card.
 
+CarHMI's `carhmi_view` package includes 480x272 and 320x240 view bundles.
+A board `.dmd` can select one with `carhmi_view @screen 320x240`; the installed
+path remains `views/carhmi_view/carhmi.dmv`. STM32F746G-DISCO explicitly selects
+480x272. `DMBOOT_SCREEN` supplies a board-wide default to `dmf-get` for flash,
+external-flash and SD-card modules, and a per-entry `@screen` takes precedence.
+Use an updated `dmf-get` that supports `--screen` and DMR screen attributes;
+configuration checks its capability when a board-wide screen is selected.
+Changing `DMBOOT_SCREEN` invalidates module download markers so the selected
+assets are installed again.
+
 ### Building for LILYGO T-Deck Pro
 
 The T-Deck Pro is based on the **ESP32-S3FN16R8** (Xtensa LX7 dual-core, 240 MHz, 16 MB flash, 8 MB PSRAM).

@@ -132,6 +132,32 @@ if(NOT _DMF_GET_RESULT EQUAL 0 OR NOT _DMF_GET_HELP MATCHES "--package-dir" OR N
     message(FATAL_ERROR "dmf-get must support --package-dir and --license-dir. Build/install the tools from lib/dmod, then set DMF_GET to the updated executable. Selected: ${DMF_GET}")
 endif()
 
+set(DMBOOT_SCREEN_ARGS "")
+if(DMBOOT_SCREEN)
+    if(NOT DMBOOT_SCREEN MATCHES "^[1-9][0-9]*x[1-9][0-9]*$")
+        message(FATAL_ERROR "DMBOOT_SCREEN must be WIDTHxHEIGHT: ${DMBOOT_SCREEN}")
+    endif()
+    string(REPLACE "x" ";" _SCREEN_DIMENSIONS "${DMBOOT_SCREEN}")
+    foreach(_DIMENSION IN LISTS _SCREEN_DIMENSIONS)
+        if(_DIMENSION GREATER 65535)
+            message(FATAL_ERROR "DMBOOT_SCREEN dimensions must be 1..65535")
+        endif()
+    endforeach()
+    if(NOT _DMF_GET_HELP MATCHES "--screen")
+        message(FATAL_ERROR "dmf-get must support --screen/@screen. Build/install updated DMOD tools and set DMF_GET to that executable. Selected: ${DMF_GET}")
+    endif()
+    set(DMBOOT_SCREEN_ARGS --screen "${DMBOOT_SCREEN}")
+endif()
+
+set(_SCREEN_STAMP "${CMAKE_CURRENT_BINARY_DIR}/screen.selection")
+set(_OLD_SCREEN "")
+if(EXISTS "${_SCREEN_STAMP}")
+    file(READ "${_SCREEN_STAMP}" _OLD_SCREEN)
+endif()
+if(NOT EXISTS "${_SCREEN_STAMP}" OR NOT "${_OLD_SCREEN}" STREQUAL "${DMBOOT_SCREEN}")
+    file(WRITE "${_SCREEN_STAMP}" "${DMBOOT_SCREEN}")
+endif()
+
 # Routes tagged configuration entries in *.dmd files ("driver=", "rules=", "service=")
 # to their own subdirectory of a configuration directory, instead of all landing together.
 # The ';' separators must be escaped: an unescaped ';' makes CMake treat this
@@ -222,12 +248,12 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     if(DMBOOT_MANIFEST_URL)
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules (manifest: ${DMBOOT_MANIFEST_URL})..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
+            COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
         )
     else()
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules..."
-            COMMAND ${DMF_GET} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
+            COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
         )
     endif()
     if(DMBOOT_EMULATION)
@@ -245,7 +271,7 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     add_custom_command(
         OUTPUT "${DMBOOT_MODULES_MARKER_FILE}"
         ${_FLASH_DOWNLOAD_COMMANDS}
-        DEPENDS ${DMBOOT_FLASH_DMD_FILES} "${DMBOOT_COMBINED_FLASH_DMD}" "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
+        DEPENDS "${_SCREEN_STAMP}" ${DMBOOT_FLASH_DMD_FILES} "${DMBOOT_COMBINED_FLASH_DMD}" "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
         COMMENT "Downloading flash modules from: ${DMBOOT_FLASH_DMD_FILES}; main module: ${DMBOOT_MAIN_MODULE}; shell: ${DMBOOT_SHELL}"
         VERBATIM
     )
@@ -284,12 +310,12 @@ if(DMBOOT_SDCARD_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
             )
         else()
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
             )
         endif()
     endforeach()
@@ -301,7 +327,7 @@ if(DMBOOT_SDCARD_DMD_FILES)
     add_custom_command(
         OUTPUT "${DMBOOT_SDCARD_MARKER_FILE}"
         ${_SDCARD_DOWNLOAD_COMMANDS}
-        DEPENDS ${DMBOOT_SDCARD_DMD_FILES} "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
+        DEPENDS "${_SCREEN_STAMP}" ${DMBOOT_SDCARD_DMD_FILES} "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
         COMMENT "Downloading sdcard modules from: ${DMBOOT_SDCARD_DMD_FILES}"
         VERBATIM
     )
@@ -339,12 +365,12 @@ if(DMBOOT_EXT_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _EXT_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading ext modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
             )
         else()
             list(APPEND _EXT_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading ext modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} -d "${_DMD_FILE}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
             )
         endif()
     endforeach()
@@ -356,7 +382,7 @@ if(DMBOOT_EXT_DMD_FILES)
     add_custom_command(
         OUTPUT "${DMBOOT_EXT_MARKER_FILE}"
         ${_EXT_DOWNLOAD_COMMANDS}
-        DEPENDS ${DMBOOT_EXT_DMD_FILES} "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
+        DEPENDS "${_SCREEN_STAMP}" ${DMBOOT_EXT_DMD_FILES} "${DMF_GET}" "${DMBOOT_MODULE_OUTPUT_SCRIPT}" "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
         COMMENT "Downloading ext modules from: ${DMBOOT_EXT_DMD_FILES}"
         VERBATIM
     )

@@ -20,7 +20,7 @@ def run(*args, env=None, success=True):
     return result.stdout
 
 
-def check_layout(dmf_get, explicit_manifest):
+def check_layout(dmf_get, explicit_manifest, screen_variants=False):
     with tempfile.TemporaryDirectory(prefix="dmboot layout ") as tmp:
         root = Path(tmp)
         source, build = root / "source", root / "build"
@@ -33,7 +33,7 @@ def check_layout(dmf_get, explicit_manifest):
         shutil.copy(REPO / "scripts/module_output.cmake", source / "scripts")
         manifest = root / "manifest.dmm"
         entries = []
-        for kind in ("flash", "sdcard"):
+        for kind in ("flash", "sdcard", "ext"):
             module = kind + "mod"
             archive = root / (module + ".zip")
             with zipfile.ZipFile(archive, "w") as package:
@@ -41,17 +41,25 @@ def check_layout(dmf_get, explicit_manifest):
                 package.writestr(module + ".dmd", "# No dependencies\n")
                 package.writestr("LICENSE", module + " license\n")
                 package.writestr("configs/fixture.ini", module + " config\n")
-                package.writestr("views/main.dmv", module + " view\n")
+                if screen_variants:
+                    for screen in ("480x272", "320x240"):
+                        package.writestr(f"views/{screen}/main.dmv", module + " " + screen)
+                        package.writestr(f"views/{screen}/{screen}.dmvf", "font " + screen)
+                else:
+                    package.writestr("views/main.dmv", module + " view\n")
                 package.writestr(module + ".dmr", "\n".join((
                     "dmfc=./${module}.dmfc => ${destination}/${module}.dmfc",
                     "dmd=./${module}.dmd => ${destination}/${module}.dmd",
                     "license=./LICENSE => ${destination}/${module}/LICENSE",
                     "config=./configs => ${destination}/${module}/configs",
-                    "views=./views => ${views_dir}",
+                    ("views=./views/480x272 => ${views_dir} [screen=480x272] [default=true]\n"
+                     "views=./views/320x240 => ${views_dir} [screen=320x240]" if screen_variants else
+                     "views=./views => ${views_dir}"),
                 )))
             entries.append(f"{module} {archive}\n")
             (source / f"configs/common/{kind}.dmd").write_text(
-                f"{module} driver=fixture.ini\n")
+                f"{module} driver=fixture.ini" +
+                (" @screen 480x272" if screen_variants and kind == "sdcard" else "") + "\n")
         manifest.write_text("".join(entries))
         (source / "CMakeLists.txt").write_text('''cmake_minimum_required(VERSION 3.10)
 project(layout NONE)
@@ -65,7 +73,7 @@ add_subdirectory(modules)
         env = os.environ.copy()
         env["DMOD_CACHE_DIR"] = str(root / "cache")
         env["DMOD_MANIFEST"] = str(manifest)
-        for name in ("DMOD_TOOLS_NAME", "DMOD_LICENSE_DIR", "DMOD_PACKAGE_DIR", "DMOD_VIEWS_DIR"):
+        for name in ("DMOD_TOOLS_NAME", "DMOD_LICENSE_DIR", "DMOD_PACKAGE_DIR", "DMOD_VIEWS_DIR", "DMOD_SCREEN"):
             env.pop(name, None)
         # The fixture payload tests installation paths, not binary decoding.
         # Run the actual downloader with architecture checks disabled for fixtures.
@@ -74,26 +82,33 @@ add_subdirectory(modules)
                            ' --skip-arch-check --skip-dmod-ver-check --no-fallback "$@"\n')
         wrapper.chmod(0o755)
         args = ["cmake", "-S", str(source), "-B", str(build), f"-DDMF_GET={wrapper}"]
+        if screen_variants:
+            args.append("-DDMBOOT_SCREEN=320x240")
         if explicit_manifest:
             args.append(f"-DDMBOOT_MANIFEST_URL={manifest}")
         run(*args, env=env)
         # Simulate an earlier installation, including hidden download stamps.
-        for path in (build / "dmf", build / "sdcard/bin"):
+        for path in (build / "dmf", build / "sdcard/bin", build / "ext/bin"):
             path.mkdir(parents=True, exist_ok=True)
             (path / "old-package").mkdir()
             (path / "old-package/README").write_text("preserve me")
             (path / ".download_complete").touch()
         run("cmake", "--build", str(build), "--target", "download_modules",
-            "download_sdcard_modules", env=env)
+            "download_sdcard_modules", "download_ext_modules", env=env)
         # The configuration goes where the module goes: the firmware's /cfg, the card's cfg/
         for kind, binary_dir, license_dir, views_dir, config_dir in (
             ("flash", build / "dmf", build / "lic", build / "eviews", build / "cfg"),
             ("sdcard", build / "sdcard/bin", build / "sdcard/lic", build / "sdcard/views", build / "sdcard/cfg"),
+            ("ext", build / "ext/bin", build / "ext/lic", build / "ext/views", build / "ext/cfg"),
         ):
             module = kind + "mod"
             assert {p.name for p in binary_dir.iterdir()} == {module + ".dmfc"}
             assert (license_dir / module / "LICENSE").read_text() == module + " license\n"
             assert (views_dir / module / "main.dmv").is_file()
+            if screen_variants:
+                selected = "480x272" if kind == "sdcard" else "320x240"
+                assert (views_dir / module / "main.dmv").read_text() == module + " " + selected
+                assert {p.name for p in (views_dir / module).iterdir()} == {"main.dmv", selected + ".dmvf"}
             assert (config_dir / f"drivers/{module}/fixture.ini").is_file()
             packages = build / "packages" / kind
             assert (packages / f"{module}.dmd").is_file()
@@ -103,6 +118,17 @@ add_subdirectory(modules)
             assert (build / f"modules/{kind}.download_complete").is_file()
         assert {p.name for p in (build / "sdcard").iterdir()} == {"bin", "cfg", "lic", "views"}
         assert not (build / "cfg/drivers/sdcardmod").exists()
+        if screen_variants:
+            # Only changing the CMake selection must invalidate all download markers.
+            args = [a for a in args if not a.startswith("-DDMBOOT_SCREEN=")]
+            run(*args, "-DDMBOOT_SCREEN=480x272", env=env)
+            run("cmake", "--build", str(build), "--target", "download_modules",
+                "download_sdcard_modules", "download_ext_modules", env=env)
+            for kind, views in (("flash", build / "eviews"), ("sdcard", build / "sdcard/views"),
+                                ("ext", build / "ext/views")):
+                module = kind + "mod"
+                assert (views / module / "main.dmv").read_text() == module + " 480x272"
+                assert not (views / module / "320x240.dmvf").exists()
         # Validation rejects stray resources, and migration never overwrites a backup.
         (build / "dmf/unexpected.txt").write_text("stray file")
         script = str(source / "scripts/module_output.cmake")
@@ -119,5 +145,6 @@ if __name__ == "__main__":
     parser.add_argument("--dmf-get", required=True, type=Path)
     args = parser.parse_args()
     for explicit_manifest in (True, False):
-        check_layout(args.dmf_get.resolve(), explicit_manifest)
-    print("Module layout tests passed (explicit and default manifests).")
+        for screen_variants in (False, True):
+            check_layout(args.dmf_get.resolve(), explicit_manifest, screen_variants)
+    print("Module layout tests passed (legacy and screen variants, explicit/default manifests, all storage targets).")

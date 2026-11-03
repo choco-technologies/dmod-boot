@@ -13,7 +13,7 @@ carhmi service=carhmi.ini
 # The car HMI's view (carhmi.dmv with its fonts and images, ~320 kB - too big for the flash): installed to
 # build/sdcard/views/carhmi_view/, it goes to <card>/views/carhmi_view/ (upload-files), where carhmi.ini looks for it.
 #
-carhmi_view
+carhmi_view @screen 480x272
 #
 # The decoders of the album covers carhmi makes of the MP3 files' pictures: dmimg finds them by name, so they are not
 # in carhmi's dependencies.
