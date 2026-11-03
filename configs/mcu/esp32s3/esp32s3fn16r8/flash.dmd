@@ -9,3 +9,6 @@
 dmclk driver=board/esp32s3-lcd28.ini
 dmpsram driver=board/esp32s3-lcd28.ini
 #dmgpio
+# dmusbserial (choco-technologies/dmusbserial) serves the USB serial port of the chip (the USB connector: /dev/ttyACM* on the host)
+# and dmtty attaches a tty to it, so the shell runs there. Needs a release and an entry in dmod-registry.
+dmusbserial driver=board/esp32s3-lcd28.ini
