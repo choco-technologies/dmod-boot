@@ -311,17 +311,20 @@ target there is the second, parked core), so for this architecture the target pa
 milliseconds each). The OpenOCD to start is the one of Espressif (`openocd-esp32`, `-f board/esp32s3-builtin.cfg`).
 `DMBOOT_MONITOR_ARGS` adds arguments of your own for any architecture.
 
-### `console` (ESP32-S3)
-The shell on the USB connector: the USB Serial/JTAG of the chip is a CDC-ACM serial port, served by
-[dmusbserial](https://github.com/choco-technologies/dmusbserial) with a tty (dmtty) on it. The target starts a terminal program
-(`minicom`, `picocom`, `screen` or `miniterm`, the first one found; `-DDMBOOT_CONSOLE_TERMINAL=` picks one) on `DMBOOT_ESP_PORT`:
+### `console`
+The shell of the board in a terminal program on its serial port (`minicom`, `picocom`, `screen` or `miniterm`, the first one found;
+`-DDMBOOT_CONSOLE_TERMINAL=` picks one):
 
 ```bash
 cmake --build . --target console
 ```
 
-It is an ordinary serial port, so any terminal works. **Opening it resets the board** (the reset of the USB Serial/JTAG
-follows DTR / RTS), so the boot runs with the terminal open and the prompt comes after it (about 45 s with all the modules).
+| Board | Port | Notes |
+|-------|------|-------|
+| ESP32-S3 | `DMBOOT_ESP_PORT` - the USB connector of the chip: the USB Serial/JTAG is a CDC-ACM port, served by [dmusbserial](https://github.com/choco-technologies/dmusbserial) with a tty (dmtty) on it | **Opening it resets the board** (the reset follows DTR / RTS): the boot runs with the terminal open, the prompt comes after about 45 s. 115200 (the USB port ignores it) |
+| STM32 | `DMBOOT_UPLOAD_PORT` (`/dev/ttyACM0`) - the ST-Link's virtual COM port, the console UART | `DMBOOT_UPLOAD_BAUD` (921600 on the STM32F746G-DISCO). Does not reset the MCU |
+
+`DMBOOT_CONSOLE_PORT` / `DMBOOT_CONSOLE_BAUD` override the port and the baud rate. Not available with emulation.
 `scripts/serial_console.py` sends commands from a script.
 
 ### Caches (Cortex-M7)

@@ -33,7 +33,7 @@ if(terminal STREQUAL "")
 endif()
 
 if(terminal STREQUAL "minicom")
-    set(command ${terminal_exe} -D ${DMBOOT_CONSOLE_PORT} -b ${DMBOOT_CONSOLE_BAUD})
+    set(command ${terminal_exe} -o -D ${DMBOOT_CONSOLE_PORT} -b ${DMBOOT_CONSOLE_BAUD})   # -o: no modem initialization string
 elseif(terminal STREQUAL "picocom")
     set(command ${terminal_exe} -b ${DMBOOT_CONSOLE_BAUD} ${DMBOOT_CONSOLE_PORT})
 elseif(terminal STREQUAL "screen")
