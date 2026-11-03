@@ -42,7 +42,7 @@ def check_layout(dmf_get, explicit_manifest, screen_variants=False):
                 package.writestr("LICENSE", module + " license\n")
                 package.writestr("configs/fixture.ini", module + " config\n")
                 if screen_variants:
-                    for screen in ("480x272", "320x240"):
+                    for screen in ("480x272", "320x240", "epaper-mono"):
                         package.writestr(f"views/{screen}/main.dmv", module + " " + screen)
                         package.writestr(f"views/{screen}/{screen}.dmvf", "font " + screen)
                 else:
@@ -53,7 +53,8 @@ def check_layout(dmf_get, explicit_manifest, screen_variants=False):
                     "license=./LICENSE => ${destination}/${module}/LICENSE",
                     "config=./configs => ${destination}/${module}/configs",
                     ("views=./views/480x272 => ${views_dir} [screen=480x272] [default=true]\n"
-                     "views=./views/320x240 => ${views_dir} [screen=320x240]" if screen_variants else
+                     "views=./views/320x240 => ${views_dir} [screen=320x240]\n"
+                     "views=./views/epaper-mono => ${views_dir} [screen=epaper-mono]" if screen_variants else
                      "views=./views => ${views_dir}"),
                 )))
             entries.append(f"{module} {archive}\n")
@@ -83,7 +84,7 @@ add_subdirectory(modules)
         wrapper.chmod(0o755)
         args = ["cmake", "-S", str(source), "-B", str(build), f"-DDMF_GET={wrapper}"]
         if screen_variants:
-            args.append("-DDMBOOT_SCREEN=320x240")
+            args.append("-DDMBOOT_SCREEN=epaper-mono")
         if explicit_manifest:
             args.append(f"-DDMBOOT_MANIFEST_URL={manifest}")
         run(*args, env=env)
@@ -106,7 +107,7 @@ add_subdirectory(modules)
             assert (license_dir / module / "LICENSE").read_text() == module + " license\n"
             assert (views_dir / module / "main.dmv").is_file()
             if screen_variants:
-                selected = "480x272" if kind == "sdcard" else "320x240"
+                selected = "480x272" if kind == "sdcard" else "epaper-mono"
                 assert (views_dir / module / "main.dmv").read_text() == module + " " + selected
                 assert {p.name for p in (views_dir / module).iterdir()} == {"main.dmv", selected + ".dmvf"}
             assert (config_dir / f"drivers/{module}/fixture.ini").is_file()
@@ -129,6 +130,7 @@ add_subdirectory(modules)
                 module = kind + "mod"
                 assert (views / module / "main.dmv").read_text() == module + " 480x272"
                 assert not (views / module / "320x240.dmvf").exists()
+                assert not (views / module / "epaper-mono.dmvf").exists()
         # Validation rejects stray resources, and migration never overwrites a backup.
         (build / "dmf/unexpected.txt").write_text("stray file")
         script = str(source / "scripts/module_output.cmake")

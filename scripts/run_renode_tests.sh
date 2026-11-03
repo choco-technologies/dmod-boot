@@ -91,8 +91,21 @@ echo ""
 echo "[1/10] Building firmware with emulation mode enabled..."
 # The card image has to exist when CMake writes the Renode script
 mkdir -p "$BUILD_DIR"
+# Use the checked-out SDK's installer, including its resource selector support.
+# An explicit DMF_GET can select an already prepared test environment.
+DMF_GET_TOOL="${DMF_GET:-}"
+if [ -z "$DMF_GET_TOOL" ]; then
+    HOST_TOOLS_BUILD="$BUILD_DIR/renode-host-tools"
+    cmake -S "$SOURCE_DIR/lib/dmod" -B "$HOST_TOOLS_BUILD" \
+          -DDMOD_MODE=DMOD_SYSTEM -DCMAKE_BUILD_TYPE=Release \
+          -DDMOD_BUILD_TOOLS=ON -DDMOD_BUILD_TESTS=OFF \
+          -DDMOD_BUILD_EXAMPLES=OFF -DDMOD_BUILD_TEMPLATES=OFF
+    cmake --build "$HOST_TOOLS_BUILD" --target dmf-get --parallel
+    DMF_GET_TOOL="$HOST_TOOLS_BUILD/bin/tools/dmf-get"
+fi
 python3 "$SDCARD_IMAGE_SCRIPT" "$SDCARD_IMAGE"
 cmake -DCMAKE_BUILD_TYPE=Debug \
+      -DDMF_GET="$DMF_GET_TOOL" \
       -DBOARD="$BOARD" \
       -DDMBOOT_EMULATION=ON \
       -DDMBOOT_RENODE_QSPI_IMAGE= \

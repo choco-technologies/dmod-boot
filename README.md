@@ -137,6 +137,8 @@ path remains `views/carhmi_view/carhmi.dmv`. STM32F746G-DISCO explicitly selects
 external-flash and SD-card modules, and a per-entry `@screen` takes precedence.
 Use an updated `dmf-get` that supports `--screen` and DMR screen attributes;
 configuration checks its capability when a board-wide screen is selected.
+Screen values are opaque, case-sensitive variant IDs, so named profiles such
+as `epaper` and `epaper-mono` work just like `480x272`; no dimensions are parsed.
 Changing `DMBOOT_SCREEN` invalidates module download markers so the selected
 assets are installed again.
 
