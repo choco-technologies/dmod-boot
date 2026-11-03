@@ -16,6 +16,7 @@ set_target_properties(dmboot_startup PROPERTIES LINKER_LANGUAGE C)
 # for (the same as the Cortex-M7 caches).
 add_library(dmboot_cpu OBJECT
     caches.c
+    flash.c
 )
 
 dmod_set_current_allocator(dmboot_cpu)
