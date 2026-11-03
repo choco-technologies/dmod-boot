@@ -101,7 +101,7 @@ if [ -z "$DMF_GET_TOOL" ]; then
           -DDMOD_BUILD_TOOLS=ON -DDMOD_BUILD_TESTS=OFF \
           -DDMOD_BUILD_EXAMPLES=OFF -DDMOD_BUILD_TEMPLATES=OFF
     cmake --build "$HOST_TOOLS_BUILD" --target dmf-get --parallel
-    DMF_GET_TOOL="$HOST_TOOLS_BUILD/bin/tools/dmf-get"
+    DMF_GET_TOOL="$(cd "$HOST_TOOLS_BUILD/bin/tools" && pwd)/dmf-get"
 fi
 python3 "$SDCARD_IMAGE_SCRIPT" "$SDCARD_IMAGE"
 cmake -DCMAKE_BUILD_TYPE=Debug \
