@@ -31,10 +31,17 @@ message(STATUS "Starting dmlog_monitor...")
 message(STATUS "Ring buffer address: ${DMLOG_RING_BUFFER_ADDR}")
 message(STATUS "Ring buffer size: ${DMLOG_RING_BUFFER_SIZE}")
 
+# Extra arguments (the ESP32-S3: --halt-target esp32s3.cpu0)
+set(DMLOG_MONITOR_EXTRA_ARGS "")
+if(DEFINED DMBOOT_MONITOR_ARGS AND NOT "${DMBOOT_MONITOR_ARGS}" STREQUAL "")
+    separate_arguments(DMLOG_MONITOR_EXTRA_ARGS UNIX_COMMAND "${DMBOOT_MONITOR_ARGS}")
+    message(STATUS "Extra arguments: ${DMBOOT_MONITOR_ARGS}")
+endif()
+
 # Run dmlog_monitor with the extracted address
 # Use execute_process without OUTPUT/ERROR capture so output goes directly to terminal
 execute_process(
-    COMMAND ${DMLOG_MONITOR_EXECUTABLE} --addr ${DMLOG_RING_BUFFER_ADDR}
+    COMMAND ${DMLOG_MONITOR_EXECUTABLE} --addr ${DMLOG_RING_BUFFER_ADDR} ${DMLOG_MONITOR_EXTRA_ARGS}
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     # Don't capture OUTPUT or ERROR - let them pass through to terminal
     INPUT_FILE /dev/stdin

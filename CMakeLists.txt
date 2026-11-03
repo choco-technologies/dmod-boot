@@ -428,6 +428,10 @@ add_custom_target(extract_ring_buffer_config
     DEPENDS ${CMAKE_BINARY_DIR}/dmlog_ring_buffer.cmake
 )
 
+# Extra arguments of dmlog_monitor (space separated): the ones of the architecture (DMBOOT_MONITOR_ARCH_ARGS, scripts/targets.cmake:
+# the ESP32-S3 has to be halted for the read) and the user's own
+set(DMBOOT_MONITOR_ARGS "" CACHE STRING "Extra arguments of dmlog_monitor (the monitor target)")
+
 # Custom target for monitoring logs via OpenOCD
 add_custom_target(monitor
     COMMAND ${CMAKE_COMMAND} -E echo "Starting dmlog monitor..."
@@ -435,6 +439,7 @@ add_custom_target(monitor
     COMMAND ${CMAKE_COMMAND} 
         -DPROJECT_BINARY_DIR=${CMAKE_BINARY_DIR}
         -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        "-DDMBOOT_MONITOR_ARGS=${DMBOOT_MONITOR_ARCH_ARGS} ${DMBOOT_MONITOR_ARGS}"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_monitor.cmake
     DEPENDS build_dmlog_monitor extract_ring_buffer_config
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

@@ -206,6 +206,26 @@ if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND DMBOOT_ARCH STREQUAL "xtensa")
     set(DMBOOT_ESP_STORE_SLOT 0x10000)  # the 64 kB page the store is in
     set(DMBOOT_ESPTOOL_WRITE ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep)
 
+    # The monitor (dmlog_monitor through OpenOCD) reads the ring buffer of the log. The Xtensa can be read through OpenOCD only
+    # halted, and OpenOCD's default target is the second, parked core: the monitor halts esp32s3.cpu0 around each access. (The
+    # STM32 is read while it runs: no arguments there; DMBOOT_MONITOR_ARGS adds the arguments you want.)
+    set(DMBOOT_MONITOR_ARCH_ARGS "--halt-target esp32s3.cpu0")
+
+    # The console on the USB connector (dmusbserial: the USB Serial/JTAG of the chip is a CDC-ACM serial port): a terminal program
+    # on DMBOOT_ESP_PORT - the same device esptool uses. Opening the port resets the board (the reset follows DTR / RTS): the
+    # boot runs with the terminal open and the prompt comes in a moment.
+    set(DMBOOT_CONSOLE_TERMINAL "" CACHE STRING "Terminal program of the console target: minicom, picocom, screen or miniterm (empty: the first one found)")
+    set(DMBOOT_CONSOLE_BAUD "115200" CACHE STRING "Baud rate for the terminal of the console target (a USB serial port ignores it)")
+    add_custom_target(console
+        COMMAND ${CMAKE_COMMAND}
+            -DDMBOOT_CONSOLE_PORT=${DMBOOT_ESP_PORT}
+            -DDMBOOT_CONSOLE_BAUD=${DMBOOT_CONSOLE_BAUD}
+            -DDMBOOT_CONSOLE_TERMINAL=${DMBOOT_CONSOLE_TERMINAL}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_console.cmake
+        USES_TERMINAL
+        COMMENT "Console of the board on ${DMBOOT_ESP_PORT} (leave: Ctrl-A then K in screen, Ctrl-A X in minicom, Ctrl-A Ctrl-X in picocom)"
+        VERBATIM)
+
     add_custom_command(TARGET ${MODULE_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -O binary ${MODULE_NAME}.elf ${MODULE_NAME}.code.bin
         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/selector/tools/dmsel_mkimage.py

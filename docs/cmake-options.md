@@ -193,3 +193,6 @@ cmake -DDMOD_MAX_MODULES=200 \
       -S . -B build
 cmake --build build
 ```
+| `DMBOOT_MONITOR_ARGS` | STRING | *(empty)* | Extra arguments of `dmlog_monitor` for the `monitor` target (the ESP32-S3 adds `--halt-target esp32s3.cpu0` by itself). |
+| `DMBOOT_CONSOLE_TERMINAL` | STRING | *(empty)* | ESP32-S3: terminal program of the `console` target (`minicom`, `picocom`, `screen`, `miniterm`); empty: the first one found, on `DMBOOT_ESP_PORT`. |
+| `DMBOOT_CONSOLE_BAUD` | STRING | `115200` | ESP32-S3: baud rate given to the terminal of the `console` target (a USB serial port ignores it). |

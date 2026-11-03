@@ -305,6 +305,25 @@ The log buffer is the first section of the RAM (`.logs`): on a Cortex-M7 it
 is made non-cacheable with an MPU region, so the monitor reads and writes it
 past the data cache.
 
+**ESP32-S3:** the Xtensa can be read through OpenOCD only when it is halted (and OpenOCD's default
+target there is the second, parked core), so for this architecture the target passes
+`--halt-target esp32s3.cpu0` to `dmlog_monitor`: it halts the core around each memory access (a few
+milliseconds each). The OpenOCD to start is the one of Espressif (`openocd-esp32`, `-f board/esp32s3-builtin.cfg`).
+`DMBOOT_MONITOR_ARGS` adds arguments of your own for any architecture.
+
+### `console` (ESP32-S3)
+The shell on the USB connector: the USB Serial/JTAG of the chip is a CDC-ACM serial port, served by
+[dmusbserial](https://github.com/choco-technologies/dmusbserial) with a tty (dmtty) on it. The target starts a terminal program
+(`minicom`, `picocom`, `screen` or `miniterm`, the first one found; `-DDMBOOT_CONSOLE_TERMINAL=` picks one) on `DMBOOT_ESP_PORT`:
+
+```bash
+cmake --build . --target console
+```
+
+It is an ordinary serial port, so any terminal works. **Opening it resets the board** (the reset of the USB Serial/JTAG
+follows DTR / RTS), so the boot runs with the terminal open and the prompt comes after it (about 45 s with all the modules).
+`scripts/serial_console.py` sends commands from a script.
+
 ### Caches (Cortex-M7)
 
 The instruction and data caches are enabled before `main()` runs
