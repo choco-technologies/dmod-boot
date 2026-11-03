@@ -1,5 +1,5 @@
 #
-# ESP32-S3 2.8" display board flash modules - the way to /ext
+# ESP32-S3 2.8" display board flash modules - the way to /ext, the I2C bus, the random generator
 #
 # /ext is the last 9 MB of the flash of the chip (0x700000, board.cmake). dmflash exports it as the block node
 # /dev/dmflashx/ext (the firmware does the erasing and programming from the internal RAM with the caches off: dmod-boot,
@@ -9,3 +9,8 @@
 dmflash driver=board/esp32s3-lcd28/flash.ini
 dmlittlefs
 mklittlefs
+#
+# The I2C bus of the board (SCL = GPIO10, SDA = GPIO11: the RTC PCF85063, the IMU QMI8658, the touch controller) and the random
+# generator of the chip (/dev/rng).
+dmi2c driver=board/esp32s3-lcd28/i2c.ini
+dmrng driver=board/esp32s3-lcd28/rng.ini
