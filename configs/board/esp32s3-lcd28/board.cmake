@@ -46,3 +46,10 @@ set(DMBOOT_BANK "A" CACHE STRING "Bank (A or B) that the image is linked for, st
 set(DMBOOT_BANK_IMAGE_WINDOW 0x43000000)
 set(DMBOOT_BANK_ONE_BUILD ON)
 set(DMBOOT_SELECTOR_TABLE_ADDRESS 0x3fcd9700u)
+
+# The external flash (/ext): the last 9 MB of the flash of the chip, a littlefs on the block node of dmflash (flash.dmd, services/ext.ini).
+# format-ext creates the file system, upload-ext sends build/ext over the console (YMODEM).
+set(DMBOOT_EXT_DEVICE "/dev/dmflashx/ext" CACHE STRING "Block device of the external flash; empty: the board has none (format-ext, upload-ext are not defined)")
+set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
+set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
+set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")

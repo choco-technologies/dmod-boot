@@ -274,7 +274,13 @@ add_custom_target(debug
 # They go to the SD card the script finds on the device (in /mnt, where
 # automount mounts it by its label or node name) - or to an absolute
 # DMBOOT_UPLOAD_DEST.
-set(DMBOOT_UPLOAD_PORT "/dev/ttyACM0" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
+# (the ESP32-S3: its USB port, which RESETS the board when it is opened - the upload waits for the boot, DMBOOT_UPLOAD_WAIT)
+if(DMBOOT_ESP_PORT)
+    set(DMBOOT_UPLOAD_PORT_DEFAULT "${DMBOOT_ESP_PORT}")
+else()
+    set(DMBOOT_UPLOAD_PORT_DEFAULT "/dev/ttyACM0")
+endif()
+set(DMBOOT_UPLOAD_PORT "${DMBOOT_UPLOAD_PORT_DEFAULT}" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
 set(DMBOOT_UPLOAD_BAUD "921600" CACHE STRING "Baud rate of DMBOOT_UPLOAD_PORT")
 set(DMBOOT_UPLOAD_DEST "" CACHE STRING "Directory the uploaded files go to (their paths under it): on the SD card (relative; empty: its root), or absolute")
 set(DMBOOT_UPLOAD_CARD "auto" CACHE STRING "The card a relative DMBOOT_UPLOAD_DEST is on: its name in /mnt, auto (the one the device has), none (the shell's directory)")
