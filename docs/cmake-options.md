@@ -42,6 +42,9 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `DMBOOT_RENODE_QSPI_IMAGE` | FILEPATH | *(empty)* | On the emulated STM32F746G-DISCO, a persistent 16 MiB N25Q128A image. A missing file is created filled with `0xFF`; an existing file must have exactly 16777216 bytes. Program/erase operations update the image. Empty gives a fresh erased chip per emulator process; machine reset preserves its contents. See [Renode QUADSPI](renode-qspi.md). |
 | `DMBOOT_RENODE_LCD_CAPTURE` | FILEPATH | *(empty)* | In emulation mode, file every frame the board's LCD controller (`DMBOOT_RENODE_LCD`, set by the board config, e.g. `sysbus.ltdc` for `stm32f746g-disco`) renders is written to whenever it changes: a header line `DMLCD <width> <height> <pixel format> <endianness>` followed by the raw pixels (see `configs/renode/lcd_capture.py.in`). Empty: frames are not captured. |
 | `DMBOOT_RENODE_AUDIO_CAPTURE` | FILEPATH | *(empty)* | In emulation mode, file the board's audio codec (`stm32f746g-disco`: WM8994 on I2C3, fed by SAI2) writes what it plays to, as raw stereo 16-bit little-endian samples at the codec's rate (48 kHz). Setting it loads `configs/renode/STM32F7_Audio.cs`, which adds the SAI and the codec and replaces DMA2 with a model that has circular mode and half-transfer interrupts (Renode's has neither; the SD host keeps working). Needs the audio modules from `flash.dmd`. Empty: the audio peripherals are not modelled and the codec does not respond. |
+| `DMBOOT_MONITOR_ARGS` | STRING | *(empty)* | Extra arguments of `dmlog_monitor` for the `monitor` target (the ESP32-S3 adds `--halt-target esp32s3.cpu0` by itself). |
+| `DMBOOT_CONSOLE_TERMINAL` | STRING | *(empty)* | ESP32-S3: terminal program of the `console` target (`minicom`, `picocom`, `screen`, `miniterm`); empty: the first one found, on `DMBOOT_ESP_PORT`. |
+| `DMBOOT_CONSOLE_BAUD` | STRING | `115200` | ESP32-S3: baud rate given to the terminal of the `console` target (a USB serial port ignores it). |
 
 ## VFS Options
 
@@ -193,6 +196,3 @@ cmake -DDMOD_MAX_MODULES=200 \
       -S . -B build
 cmake --build build
 ```
-| `DMBOOT_MONITOR_ARGS` | STRING | *(empty)* | Extra arguments of `dmlog_monitor` for the `monitor` target (the ESP32-S3 adds `--halt-target esp32s3.cpu0` by itself). |
-| `DMBOOT_CONSOLE_TERMINAL` | STRING | *(empty)* | ESP32-S3: terminal program of the `console` target (`minicom`, `picocom`, `screen`, `miniterm`); empty: the first one found, on `DMBOOT_ESP_PORT`. |
-| `DMBOOT_CONSOLE_BAUD` | STRING | `115200` | ESP32-S3: baud rate given to the terminal of the `console` target (a USB serial port ignores it). |
