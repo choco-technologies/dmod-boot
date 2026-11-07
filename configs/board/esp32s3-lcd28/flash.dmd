@@ -16,6 +16,12 @@ dmi2c driver=board/esp32s3-lcd28/i2c.ini
 dmrng driver=board/esp32s3-lcd28/rng.ini
 
 #
+# The external RAM: the 8 MB octal PSRAM of the chip (ESP32-S3R8 / FN16R8) behind the memory SPI (dmqspi), mapped into the address space and put
+# at the end of the default heaps (it needs the clock of dmclk: driver_order; and a dmod that runs modules from the external RAM)
+dmqspi
+dmpsram driver=board/esp32s3-lcd28.ini
+
+#
 # The display (the ST7789 on SPI2, its pixels go out by the DMA, with the splash logo of board.cmake) and its touch panel (the CST328
 # on an I2C bus of its own: GPIO1/3, reset GPIO2). Each is one friends_group of its ini file: the pins, the bus and the driver. Some boards
 # of the line have no touch panel (or another controller): the driver then logs that the chip does not answer, and the rest is not

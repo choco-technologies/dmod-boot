@@ -1,0 +1,17 @@
+#
+# LILYGO T-Deck Pro flash modules
+#
+# The external RAM: 8 MB QUAD PSRAM on the memory SPI of the chip (chip select 1) - the controller is dmqspi, the chip dmpsram (one
+# friends_group of board/t-deck-pro.ini). It is mapped into the address space and put at the end of the default heaps; it needs the clock
+# of dmclk (the mcu flash.dmd, driver_order).
+dmqspi
+dmpsram driver=board/t-deck-pro.ini
+
+#
+# The e-paper (GDEQ031T10, UC8253) on GP-SPI2: dmuc8253 is the driver, dmspi the bus (its transfers go by the DMA of dmdma), dmgpio the
+# D/C, BUSY and chip select lines. One friends_group of the ini file holds the display and everything it is wired to; the ini also holds
+# the chip selects of the SD card and the radio that share the bus. The logo of the splash screen is DMBOOT_SPLASH_LOGO of board.cmake.
+dmdma driver=mcu/esp32s3.ini
+dmgpio
+dmspi
+dmuc8253 driver=board/t-deck-pro/display.ini
