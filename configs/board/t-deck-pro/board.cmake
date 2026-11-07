@@ -34,3 +34,7 @@ set(DMBOOT_SELECTOR_TABLE_ADDRESS 0x3fcd9700u)
 
 # No external flash file system on this board yet (needs a dmflash configuration of the board)
 set(DMBOOT_EXT_DEVICE "" CACHE STRING "Block device of the external flash; empty: the board has none (format-ext, upload-ext are not defined)")
+
+# Splash logo the e-paper driver (dmuc8253) shows as soon as it is up: black on the white screen (an asset of assets/splash/, see
+# DMBOOT_SPLASH_LOGO). Built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.
+set(DMBOOT_SPLASH_LOGO "dmodos_logo_mono_200" CACHE STRING "Splash logo the display driver shows at start")

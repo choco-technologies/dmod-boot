@@ -25,6 +25,7 @@ is the display's `clear_color` (dmlcdtft's `lcd.ini`): for the dmodOS logo
 | `dmodos_logo_128` | 150x128 | 57 KiB |
 | `dmodos_logo_160` | 187x160 | 88 KiB |
 | `dmodos_logo_200` | 234x200 | 138 KiB |
+| `dmodos_logo_mono_200` | 234x200 | 138 KiB |
 
 All are `RGB565A8` `.dmvi` files (dmview's image format) made from
 `dmodos_logo.png` - the dmodOS mark with its wordmark, on a transparent
@@ -41,3 +42,6 @@ dmod_loader $DMOD_DMF_DIR/todmvi.dmf --args dmodos_logo.png -f rgb565a8 -s x128 
 
 `-s x<height>` scales it to that height, keeping the aspect. The driver draws
 `RGB565`, `RGB565A8` and `ARGB8888` images.
+
+`dmodos_logo_mono_200` is for the monochrome displays (the e-paper of the T-Deck Pro): the same size, every pixel black, the shape only in
+the alpha plane, so the driver draws a black logo on the white screen.
