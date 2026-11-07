@@ -149,6 +149,9 @@ chip is the plain ESP32-S3 with nothing inside, not the FN16R8: the pads GPIO33-
 `dmqspi` (the memory SPI of the chip) + `dmpsram` (the chip: quad mode) - `configs/board/t-deck-pro/flash.dmd`, `board/t-deck-pro.ini` of dmpsram.
 The firmware is the same as for the esp32s3-lcd28: the selector (offset 0), the image of the bank A (0x100000); the shell is on the USB port
 (`/dev/ttyACM*`).
+The e-paper (`dmuc8253`, with the logo of the splash screen) and the capacitive touch panel over it (`dmcst66xx`: a CST3530 on the I2C bus of
+the board, the node `/dev/dmcst66xx0` of the generic input interface) are in the same `flash.dmd`; their wiring is in `board/t-deck-pro/display.ini`
+and `board/t-deck-pro/touch.ini` of the drivers.
 
 **Prerequisites:**
 
