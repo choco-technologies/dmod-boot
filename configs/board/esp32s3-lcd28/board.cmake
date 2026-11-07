@@ -53,3 +53,8 @@ set(DMBOOT_EXT_DEVICE "/dev/dmflashx/ext" CACHE STRING "Block device of the exte
 set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
 set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
 set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
+
+# Splash logo the display driver (dmst7789) shows on the 240x320 panel as soon as it is up (an asset of assets/splash/, see
+# DMBOOT_SPLASH_LOGO). It is built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware. The
+# logo is 150x128 and takes 57 kB of the 3 MB of the bank.
+set(DMBOOT_SPLASH_LOGO "dmodos_logo_128" CACHE STRING "Splash logo the display driver shows at start")
