@@ -42,6 +42,10 @@ These options are defined in the top-level `CMakeLists.txt` and control the over
 | `DMBOOT_RENODE_QSPI_IMAGE` | FILEPATH | *(empty)* | On the emulated STM32F746G-DISCO, a persistent 16 MiB N25Q128A image. A missing file is created filled with `0xFF`; an existing file must have exactly 16777216 bytes. Program/erase operations update the image. Empty gives a fresh erased chip per emulator process; machine reset preserves its contents. See [Renode QUADSPI](renode-qspi.md). |
 | `DMBOOT_RENODE_LCD_CAPTURE` | FILEPATH | *(empty)* | In emulation mode, file every frame the board's LCD controller (`DMBOOT_RENODE_LCD`, set by the board config, e.g. `sysbus.ltdc` for `stm32f746g-disco`) renders is written to whenever it changes: a header line `DMLCD <width> <height> <pixel format> <endianness>` followed by the raw pixels (see `configs/renode/lcd_capture.py.in`). Empty: frames are not captured. |
 | `DMBOOT_RENODE_AUDIO_CAPTURE` | FILEPATH | *(empty)* | In emulation mode, file the board's audio codec (`stm32f746g-disco`: WM8994 on I2C3, fed by SAI2) writes what it plays to, as raw stereo 16-bit little-endian samples at the codec's rate (48 kHz). Setting it loads `configs/renode/STM32F7_Audio.cs`, which adds the SAI and the codec and replaces DMA2 with a model that has circular mode and half-transfer interrupts (Renode's has neither; the SD host keeps working). Needs the audio modules from `flash.dmd`. Empty: the audio peripherals are not modelled and the codec does not respond. |
+| `DMBOOT_MONITOR_ARGS` | STRING | *(empty)* | Extra arguments of `dmlog_monitor` for the `monitor` target (the ESP32-S3 adds `--halt-target esp32s3.cpu0` by itself). |
+| `DMBOOT_CONSOLE_PORT` | STRING | *(empty)* | Serial port of the `console` target; empty: `DMBOOT_ESP_PORT` on the ESP32-S3, else `DMBOOT_UPLOAD_PORT`. |
+| `DMBOOT_CONSOLE_BAUD` | STRING | *(empty)* | Baud rate of the `console` target; empty: 115200 on the ESP32-S3 (its USB port ignores it), else `DMBOOT_UPLOAD_BAUD`. |
+| `DMBOOT_CONSOLE_TERMINAL` | STRING | *(empty)* | Terminal program of the `console` target (`minicom`, `picocom`, `screen`, `miniterm`); empty: the first one found. |
 
 ## VFS Options
 
@@ -148,6 +152,25 @@ cmake --build build
 # Flash via the built-in USB JTAG using Espressif OpenOCD
 cmake --build build --target install-firmware
 ```
+
+### Build for the ESP32-S3 2.8" display board (`esp32s3-lcd28`)
+
+Needs ESP-IDF (`IDF_PATH`: only its headers and `libxt_hal.a` are used; 5.2 and older work, the headers that 5.2 renamed are
+forwarded by `lib/dmosi-freertos/config/arch/xtensa_esp32`), the `xtensa-esp-elf` toolchain and `esptool` (`pip install esptool`).
+The FreeRTOS port of the kernel needs the patch of `lib/dmosi-freertos/patches` on a fresh checkout (see the README there).
+
+```bash
+git -C lib/dmosi-freertos/lib/freertos apply ../../patches/freertos-xtensa-esp32.patch
+cmake -DBOARD=esp32s3-lcd28 -DCMAKE_BUILD_TYPE=MinSizeRel -DDMBOOT_ESP_PORT=/dev/ttyACM0 -S . -B build -G Ninja
+cmake --build build
+cmake --build build --target selector          # the selector (second stage bootloader), built by install-firmware as well
+cmake --build build --target install-firmware  # esptool: the selector at 0x0, the bank A, erases the store, resets the chip
+```
+
+The firmware has the modules. `-DDMBOOT_ESP32S3_MODULES=OFF` builds it without them. The Xtensa has no position independent
+code, so dmod relocates its modules by a table (`DMOD_USE_RELDYN`, see `lib/dmod/docs/reldyn.md`) and runs them from the alias of the
+RAM on the instruction bus; the packages must be built with it (the ones released before have no table and do not run). The ports of
+`dmclk` and `dmgpio` for the ESP32-S3 are not in `configs/mcu/esp32s3/*/flash.dmd` until they are released.
 
 ### Build for Renode emulation
 

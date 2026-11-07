@@ -115,3 +115,14 @@ For this board:
   system, so `dmf-get` does not pull them in as dependencies of it.
 - The module search path is a CMake cache entry: an existing build directory keeps its old `DMOD_REPO_PATHS` (and
   `DMBOOT_DMSECRETS_PATH`) - pass `-DDMOD_REPO_PATHS=...` / `-DDMBOOT_DMSECRETS_PATH=/ext/secrets.vault` to it.
+
+## ESP32-S3 2.8" display board
+
+The board has no extra flash chip: `/ext` is the last 9 MB of the 16 MB flash of the chip (0x700000, `configs/board/esp32s3-lcd28/board.cmake`),
+common to both banks of the firmware, a littlefs on the block node `/dev/dmflashx/ext` of dmflash (`flash.dmd`, `services/ext.ini`).
+The firmware erases and programs the flash from the internal RAM with the caches off (`src/arch/xtensa/lx7/flash.c`), in the handler
+of a software interrupt - the interrupts are off for the time of a sector (some tens of milliseconds).
+
+`format-ext` and `upload-ext` work as on the STM32 over the USB serial port of the chip (`DMBOOT_UPLOAD_PORT` defaults to `DMBOOT_ESP_PORT`);
+opening that port resets the board, so the upload waits for the boot (`DMBOOT_UPLOAD_WAIT`). A new flash has no file system: `format-ext`
+once (or `mklittlefs /dev/dmflashx/ext` in the shell), then reset - the `ext` service mounts it at boot.

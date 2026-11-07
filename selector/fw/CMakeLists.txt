@@ -7,21 +7,28 @@
 # on the platform is in selector/arch/<arch>, selector/mcu/<series>/<mcu>; dmboot passes the names of its target
 # (DMSEL_ARCH ...), the defaults are those of the default board.
 cmake_minimum_required(VERSION 3.16)
+set(DMSEL_BOARD "stm32f746g-disco" CACHE STRING "Board the selector is built for (configs/board of dmboot)")
+set(DMSEL_ARCH "armv7" CACHE STRING "Architecture (selector/arch, configs/arch)")
+set(DMSEL_ARCH_CORE "cortex-m7" CACHE STRING "Core")
+set(DMSEL_MCU_SERIES "stm32f7" CACHE STRING "Series of the microcontroller (selector/mcu)")
+set(DMSEL_MCU "stm32f746xg" CACHE STRING "Microcontroller")
+
+# The toolchain of the architecture (the compiler has to be known before project())
+if(DMSEL_ARCH STREQUAL "xtensa")
+    set(CMAKE_SYSTEM_PROCESSOR xtensa)
+    set(DMSEL_TOOLCHAIN_PREFIX xtensa-esp32s3-elf-)
+else()
+    set(CMAKE_SYSTEM_PROCESSOR arm)
+    set(DMSEL_TOOLCHAIN_PREFIX arm-none-eabi-)
+endif()
 set(CMAKE_SYSTEM_NAME Generic)
-set(CMAKE_SYSTEM_PROCESSOR arm)
-set(CMAKE_C_COMPILER arm-none-eabi-gcc)
+set(CMAKE_C_COMPILER ${DMSEL_TOOLCHAIN_PREFIX}gcc)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 project(dmsel_fw C)
 
 set(DMSEL_WATCHDOG_MS 0 CACHE STRING "Watchdog (ms) armed for an image on trial; the firmware has to feed it, 0: none")
 set(DMSEL_MAX_TRIES 3 CACHE STRING "Starts of an image on trial that does not confirm, before it is dropped")
 set(DMBOOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../..")
-
-set(DMSEL_BOARD "stm32f746g-disco" CACHE STRING "Board the selector is built for (configs/board of dmboot)")
-set(DMSEL_ARCH "armv7" CACHE STRING "Architecture (selector/arch, configs/arch)")
-set(DMSEL_ARCH_CORE "cortex-m7" CACHE STRING "Core")
-set(DMSEL_MCU_SERIES "stm32f7" CACHE STRING "Series of the microcontroller (selector/mcu)")
-set(DMSEL_MCU "stm32f746xg" CACHE STRING "Microcontroller")
 
 set(DMSEL_BOARD_FILE "${DMBOOT_DIR}/configs/board/${DMSEL_BOARD}/board.cmake")
 if(NOT EXISTS "${DMSEL_BOARD_FILE}")
@@ -83,13 +90,20 @@ set_source_files_properties(${DMBOOT_DIR}/lib/dmlog/src/dmlog.c PROPERTIES COMPI
 target_include_directories(dmsel.elf PRIVATE ../include ${DMSEL_MCU_INCLUDE_DIR}
     ${DMBOOT_DIR}/lib/dmlog/include ${DMBOOT_DIR}/lib/dmod/inc ${CMAKE_BINARY_DIR}/gen)
 target_compile_definitions(dmsel.elf PRIVATE DMOD_EXTERNAL_REGISTRATION DMOD_CURRENT_ALLOCATOR="dmsel")
+option(DMSEL_SELFTEST "Bring-up of a port: a counter of the starts kept in the store, logged (writes the flash at every start)" OFF)
+if(DMSEL_SELFTEST)
+    target_compile_definitions(dmsel.elf PRIVATE DMSEL_SELFTEST)
+endif()
 target_compile_options(dmsel.elf PRIVATE ${DMSEL_CPU_FLAGS} -Os -ffunction-sections -fdata-sections -ffreestanding
     -Wall -Wextra -std=gnu11)
-# (the order matters: the memory map first, the entry and the stack of the core use it, the sections last)
-set(DMSEL_LINKER_SCRIPTS
-    ${DMBOOT_DIR}/configs/mcu/${DMSEL_MCU_SERIES}/${DMSEL_MCU}/selector.ld
-    ${DMBOOT_DIR}/configs/arch/${DMSEL_ARCH}/selector.ld
-    ${CMAKE_CURRENT_LIST_DIR}/../linker/common.ld)
+# (the order matters: the memory map first, the entry and the stack of the core use it, the sections last; a chip whose
+#  selector is not in the flash it executes from - it runs from the RAM - sets its own list in mcu.cmake)
+if(NOT DMSEL_LINKER_SCRIPTS)
+    set(DMSEL_LINKER_SCRIPTS
+        ${DMBOOT_DIR}/configs/mcu/${DMSEL_MCU_SERIES}/${DMSEL_MCU}/selector.ld
+        ${DMBOOT_DIR}/configs/arch/${DMSEL_ARCH}/selector.ld
+        ${CMAKE_CURRENT_LIST_DIR}/../linker/common.ld)
+endif()
 set(DMSEL_LINK_SCRIPT_OPTIONS)
 foreach(script IN LISTS DMSEL_LINKER_SCRIPTS)
     list(APPEND DMSEL_LINK_SCRIPT_OPTIONS -T${script})
@@ -98,6 +112,11 @@ target_link_options(dmsel.elf PRIVATE ${DMSEL_CPU_FLAGS} -nostdlib -nostartfiles
     -Wl,--defsym=DMSEL_ROM_ORIGIN=${DMBOOT_SELECTOR_ORIGIN} -Wl,--defsym=DMSEL_ROM_LENGTH=${DMSEL_ROM_LENGTH}
     ${DMSEL_LINK_SCRIPT_OPTIONS} -Wl,-Map=${CMAKE_BINARY_DIR}/dmsel.map -lgcc)
 set_target_properties(dmsel.elf PROPERTIES LINK_DEPENDS "${DMSEL_LINKER_SCRIPTS}")
+# dmsel.bin: the bytes of the flash from the start of the selector; a chip whose ROM wants an image in a format of its own
+# (the header, the segments) sets DMSEL_IMAGE_COMMAND in mcu.cmake
+if(NOT DMSEL_IMAGE_COMMAND)
+    set(DMSEL_IMAGE_COMMAND ${DMSEL_TOOLCHAIN_PREFIX}objcopy -O binary dmsel.elf dmsel.bin)
+endif()
 add_custom_command(TARGET dmsel.elf POST_BUILD
-    COMMAND arm-none-eabi-objcopy -O binary dmsel.elf dmsel.bin
-    COMMAND arm-none-eabi-size dmsel.elf)
+    COMMAND ${DMSEL_IMAGE_COMMAND}
+    COMMAND ${DMSEL_TOOLCHAIN_PREFIX}size dmsel.elf)

@@ -21,12 +21,20 @@ find_program(CMAKE_OBJDUMP  ${_XTENSA_TOOLCHAIN_PREFIX}objdump REQUIRED)
 find_program(CMAKE_SIZE     ${_XTENSA_TOOLCHAIN_PREFIX}size    REQUIRED)
 
 # GDB binary – assigned to ARM_GDB to stay compatible with scripts/targets.cmake
-find_program(ARM_GDB ${_XTENSA_TOOLCHAIN_PREFIX}gdb REQUIRED)
+# (the Espressif toolchain installed here has none: the target "debug" needs one, the rest of the build does not)
+find_program(ARM_GDB ${_XTENSA_TOOLCHAIN_PREFIX}gdb)
 
-# Use call0 ABI (no register-window management) and long-call support
-set(CMAKE_C_FLAGS_INIT   "-mabi=call0 -mlongcalls" CACHE INTERNAL "")
-set(CMAKE_CXX_FLAGS_INIT "-mabi=call0 -mlongcalls" CACHE INTERNAL "")
-set(CMAKE_ASM_FLAGS_INIT "-mabi=call0 -mlongcalls" CACHE INTERNAL "")
+# The windowed ABI (the default of the toolchain): the ROM, the FreeRTOS port and the modules (dmod's tools-cfg of the esp32s3)
+# are windowed, call0 code cannot call them. Long calls: the code is in the flash window, the ROM is far away.
+# The architecture that the loader of dmod accepts modules for (dmod_arch_defs.h would say "XTENSA" without CONFIG_IDF_TARGET_*, the
+# modules of the ESP32-S3 say xtensa-esp32s3: the same names as the profile arch/xtensa/esp32s3 of dmod)
+set(DMOD_ARCH "xtensa-esp32s3" CACHE STRING "Target architecture")
+set(DMOD_CPU  "esp32s3"        CACHE STRING "Target CPU")
+set(_DMBOOT_ARCH_DEFINES "-DDMOD_ARCH=\\\"${DMOD_ARCH}\\\" -DDMOD_CPU=\\\"${DMOD_CPU}\\\"")
+
+set(CMAKE_C_FLAGS_INIT   "-mlongcalls -mtext-section-literals ${_DMBOOT_ARCH_DEFINES}" CACHE INTERNAL "")
+set(CMAKE_CXX_FLAGS_INIT "-mlongcalls -mtext-section-literals ${_DMBOOT_ARCH_DEFINES}" CACHE INTERNAL "")
+set(CMAKE_ASM_FLAGS_INIT "-mlongcalls" CACHE INTERNAL "")
 
 # Prevent CMake from testing the compiler with a simple executable
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE INTERNAL "")

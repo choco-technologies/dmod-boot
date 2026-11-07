@@ -639,6 +639,11 @@ int main(int argc, char** argv)
     }
     dmenv_set_root_context(dmenv_ctx);
 
+#ifdef __XTENSA__
+    // The interrupts of the CPU that nothing took go to the modules (Dmod_IrqAll), like the IRQs of the ARM ports
+    extern void dmboot_xtensa_irq_init(int count);
+    dmboot_xtensa_irq_init(DMBOOT_IRQ_COUNT);
+#endif
     if(!Dmod_Initialize(DMBOOT_IRQ_COUNT, DMBOOT_IRQ_MAX_HANDLERS_PER_IRQ))
     {
         DMOD_LOG_ERROR("DMOD initialization failed!\n");

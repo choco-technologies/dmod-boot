@@ -1,5 +1,14 @@
 #
 # ESP32-S3FN16R8 flash modules – MCU-specific modules for flash
 #
-dmclk
-dmgpio
+# dmclk brings the CPU to 240 MHz (the tick of the RTOS counts with DMOSI_CPU_CLOCK_HZ, so it is 12 times too slow without it).
+# dmpsram (choco-technologies/dmpsram) maps the 8 MB of the external RAM and puts it at the end of the default heaps; it needs
+# the clock of dmclk (driver_order) and a dmod that runs modules from the external RAM (choco-technologies/dmod#349). Until it is
+# released dmf-get has no package to download and the build of this MCU fails.
+# dmgpio has a port for the ESP32-S3 (choco-technologies/dmgpio#42): add it here with the configuration of the pins of the board.
+dmclk driver=board/esp32s3-lcd28.ini
+dmpsram driver=board/esp32s3-lcd28.ini
+#dmgpio
+# dmusbserial (choco-technologies/dmusbserial) serves the USB serial port of the chip (the USB connector: /dev/ttyACM* on the host)
+# and dmtty attaches a tty to it, so the shell runs there. Needs a release and an entry in dmod-registry.
+dmusbserial driver=board/esp32s3-lcd28.ini

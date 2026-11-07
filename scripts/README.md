@@ -130,3 +130,17 @@ The script tracks memory usage for:
 
 - **ROM (Flash)**: Contains code (.text) and constant data (.rodata)
 - **RAM**: Contains initialized data (.data), uninitialized data (.bss), stack, log buffer, and heap
+
+
+## serial_console.py
+
+Talks to the console of a board on a serial port: waits for the prompt, sends the commands, prints the answers. For the boards whose
+console is a USB serial port (dmusbserial on the ESP32-S3: `/dev/ttyACM*`):
+
+```bash
+scripts/serial_console.py --port /dev/ttyACM1 "ls /" "echo hello"
+```
+
+Opening the USB serial port of the ESP32-S3 **resets the board** (the reset of the USB Serial/JTAG follows DTR / RTS, also when
+they are set low before the open), so the script opens the port, waits for the boot to reach the prompt (`--boot-wait`, 90 s) and
+then sends the commands; what is sent earlier is lost. Needs `pyserial`.

@@ -7,5 +7,5 @@ set(DMBOOT_OBJCOPY_BINARY_ARCH   "xtensa"          CACHE STRING "objcopy binary 
 # ======================================================================
 #               IRQ configuration
 # ======================================================================
-set(DMBOOT_IRQ_COUNT 0 CACHE STRING "Number of external IRQ lines supported by the target")
+set(DMBOOT_IRQ_COUNT 32 CACHE STRING "Number of external IRQ lines supported by the target (the interrupts of the CPU)")
 set(DMBOOT_IRQ_MAX_HANDLERS_PER_IRQ 4 CACHE STRING "Maximum number of handlers registered per IRQ line")

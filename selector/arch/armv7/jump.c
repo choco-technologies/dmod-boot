@@ -24,3 +24,8 @@ void dmsel_arch_jump( void* user, uint32_t vector_address )
     __asm volatile ( "dsb\n isb\n msr msp, %0\n cpsie i\n bx %1" :: "r"(sp), "r"(reset) : "memory" );
     for( ;; ) {}
 }
+
+void dmsel_arch_idle( void )
+{
+    __asm volatile ( "wfi" );
+}

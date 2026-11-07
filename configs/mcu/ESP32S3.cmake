@@ -19,7 +19,7 @@ if(NOT DMBOOT_EMULATION)
     find_program(OPENOCD openocd REQUIRED)
 endif()
 # ESP32-S3 has a built-in USB JTAG interface (no external probe required)
-set(OPENOCD_INTERFACE "interface/esp_usb_jtag.cfg" CACHE STRING "OpenOCD interface configuration file")
+set(OPENOCD_INTERFACE "${CMAKE_SOURCE_DIR}/configs/mcu/esp32s3/esp_usb_jtag.cfg" CACHE STRING "OpenOCD interface configuration file")
 set(OPENOCD_TARGET    "target/esp32s3.cfg"         CACHE STRING "OpenOCD target configuration file")
 
 # ======================================================================

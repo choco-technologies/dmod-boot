@@ -147,7 +147,7 @@ else()
 endif()
 
 # Linked for a bank: the image gets the header of the selector, and the board is programmed with the selector as well
-if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND NOT DMBOOT_ARCH STREQUAL "xtensa")
     set(DMBOOT_BANK_IMAGE ${CMAKE_BINARY_DIR}/${MODULE_NAME}_bank_${DMBOOT_BANK}.bin)
     set(DMBOOT_SELECTOR_BUILD_DIR ${CMAKE_BINARY_DIR}/selector)
     set(DMBOOT_SELECTOR_BIN ${DMBOOT_SELECTOR_BUILD_DIR}/dmsel.bin)
@@ -185,6 +185,54 @@ if(DMBOOT_BANK AND NOT DMBOOT_EMULATION)
             -c "reset run" -c "shutdown"
         DEPENDS ${MODULE_NAME}.elf
         COMMENT "Writing the bank ${DMBOOT_BANK} only (the selector and its store stay)...")
+endif()
+
+# The ESP32-S3: the flash is written through the ROM's download mode (esptool), not through the debug probe. The selector is the
+# second stage bootloader (offset 0), the image of the bank is linked for the window the selector maps it into; the store is erased
+# after the write (the state is rebuilt from the banks: the newest good image starts) - and esptool resets the chip after its last
+# command, so the erase must be the last one.
+if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND DMBOOT_ARCH STREQUAL "xtensa")
+    find_program(DMBOOT_ESPTOOL NAMES esptool esptool.py DOC "esptool (pip install esptool)")
+    if(NOT DMBOOT_ESPTOOL)
+        message(WARNING "esptool not found: install-firmware and the selector need it (pip install esptool, or -DDMBOOT_ESPTOOL=<path>)")
+    endif()
+    set(DMBOOT_ESP_PORT "/dev/ttyACM0" CACHE STRING "Serial port of the ESP32-S3 (its USB-Serial/JTAG) for esptool")
+    set(DMBOOT_BANK_IMAGE ${CMAKE_BINARY_DIR}/${MODULE_NAME}_bank_${DMBOOT_BANK}.bin)
+    set(DMBOOT_SELECTOR_BUILD_DIR ${CMAKE_BINARY_DIR}/selector)
+    set(DMBOOT_SELECTOR_BIN ${DMBOOT_SELECTOR_BUILD_DIR}/dmsel.bin)
+    set(DMBOOT_BANK_VERSION "auto" CACHE STRING "Version in the header of the image: a number, or auto - the time of the build (the bigger the newer)")
+    math(EXPR DMBOOT_ESP_BANK_OFFSET "${DMBOOT_BANK_${DMBOOT_BANK}_ORIGIN} - ${DMBOOT_SELECTOR_ORIGIN}" OUTPUT_FORMAT HEXADECIMAL)
+    math(EXPR DMBOOT_ESP_STORE_OFFSET "${DMBOOT_SELECTOR_STORE} - ${DMBOOT_SELECTOR_ORIGIN}" OUTPUT_FORMAT HEXADECIMAL)
+    set(DMBOOT_ESP_STORE_SLOT 0x10000)  # the 64 kB page the store is in
+    set(DMBOOT_ESPTOOL_WRITE ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after no-reset write-flash --flash-mode keep --flash-freq keep --flash-size keep)
+
+    # The monitor (dmlog_monitor through OpenOCD) reads the ring buffer of the log. The Xtensa can be read through OpenOCD only
+    # halted, and OpenOCD's default target is the second, parked core: the monitor halts esp32s3.cpu0 around each access. (The
+    # STM32 is read while it runs: no arguments there; DMBOOT_MONITOR_ARGS adds the arguments you want.)
+    set(DMBOOT_MONITOR_ARCH_ARGS "--halt-target esp32s3.cpu0")
+
+    add_custom_command(TARGET ${MODULE_NAME}.elf POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary ${MODULE_NAME}.elf ${MODULE_NAME}.code.bin
+        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/selector/tools/dmsel_mkimage.py
+                ${MODULE_NAME}.code.bin ${DMBOOT_BANK_IMAGE} --version ${DMBOOT_BANK_VERSION}
+                --capacity ${DMBOOT_BANK_${DMBOOT_BANK}_SIZE}
+        COMMENT "Image of the bank ${DMBOOT_BANK}: ${DMBOOT_BANK_IMAGE}"
+        VERBATIM)
+
+    add_custom_target(selector
+        COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/selector/fw -B ${DMBOOT_SELECTOR_BUILD_DIR} -DDMSEL_BOARD=${BOARD} -DDMSEL_ARCH=${DMBOOT_ARCH} -DDMSEL_ARCH_CORE=${DMBOOT_ARCH_FAMILY} -DDMSEL_MCU_SERIES=${DMBOOT_MCU_SERIES} -DDMSEL_MCU=${DMBOOT_MCU_NAME} -DDMSEL_ESPTOOL=${DMBOOT_ESPTOOL}
+        COMMAND ${CMAKE_COMMAND} --build ${DMBOOT_SELECTOR_BUILD_DIR}
+        BYPRODUCTS ${DMBOOT_SELECTOR_BIN}
+        COMMENT "Building the selector...")
+
+    set(INSTALL_FIRMWARE_COMMAND ${DMBOOT_ESPTOOL_WRITE} 0x0 ${DMBOOT_SELECTOR_BIN} ${DMBOOT_ESP_BANK_OFFSET} ${DMBOOT_BANK_IMAGE}
+        COMMAND ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after hard-reset erase-region ${DMBOOT_ESP_STORE_OFFSET} ${DMBOOT_ESP_STORE_SLOT})
+    set(INSTALL_FIRMWARE_COMMENT "Installing the selector and the bank ${DMBOOT_BANK} on ${TARGET}...")
+    add_custom_target(install-bank
+        COMMAND ${DMBOOT_ESPTOOL_WRITE} ${DMBOOT_ESP_BANK_OFFSET} ${DMBOOT_BANK_IMAGE}
+        COMMAND ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after hard-reset erase-region ${DMBOOT_ESP_STORE_OFFSET} ${DMBOOT_ESP_STORE_SLOT}
+        DEPENDS ${MODULE_NAME}.elf
+        COMMENT "Writing the bank ${DMBOOT_BANK} only (the selector stays)...")
 endif()
 
 # Define install-firmware target
@@ -226,13 +274,61 @@ add_custom_target(debug
 # They go to the SD card the script finds on the device (in /mnt, where
 # automount mounts it by its label or node name) - or to an absolute
 # DMBOOT_UPLOAD_DEST.
-set(DMBOOT_UPLOAD_PORT "/dev/ttyACM0" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
+# (the ESP32-S3: its USB port, which RESETS the board when it is opened - the upload waits for the boot, DMBOOT_UPLOAD_WAIT)
+if(DMBOOT_ESP_PORT)
+    set(DMBOOT_UPLOAD_PORT_DEFAULT "${DMBOOT_ESP_PORT}")
+else()
+    set(DMBOOT_UPLOAD_PORT_DEFAULT "/dev/ttyACM0")
+endif()
+set(DMBOOT_UPLOAD_PORT "${DMBOOT_UPLOAD_PORT_DEFAULT}" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
 set(DMBOOT_UPLOAD_BAUD "921600" CACHE STRING "Baud rate of DMBOOT_UPLOAD_PORT")
 set(DMBOOT_UPLOAD_DEST "" CACHE STRING "Directory the uploaded files go to (their paths under it): on the SD card (relative; empty: its root), or absolute")
 set(DMBOOT_UPLOAD_CARD "auto" CACHE STRING "The card a relative DMBOOT_UPLOAD_DEST is on: its name in /mnt, auto (the one the device has), none (the shell's directory)")
 set(DMBOOT_UPLOAD_SOURCES "${CMAKE_BINARY_DIR}/sdcard" CACHE STRING "Files and directories uploaded (semicolon-separated; SRC=NAME puts SRC as NAME); default: build/sdcard")
 set(DMBOOT_UPLOAD_BLOCK "1024" CACHE STRING "YMODEM block size, 128 or 1024")
 set(DMBOOT_UPLOAD_WAIT "60" CACHE STRING "install-all: seconds the device may take to start before it receives the files")
+
+# ======================================================================
+#               Console (a terminal on the serial port of the board)
+# ======================================================================
+# The shell of the board in a terminal program (minicom, picocom, screen or miniterm: the first one found). The port is a USB
+# serial port in both cases:
+#   ESP32-S3   the USB connector of the chip (dmusbserial; the USB Serial/JTAG is a CDC-ACM port), DMBOOT_ESP_PORT. Opening it
+#              RESETS the board (the reset follows DTR / RTS): the boot runs with the terminal open.
+#   others     the console UART behind the ST-Link's virtual COM port, DMBOOT_UPLOAD_PORT / DMBOOT_UPLOAD_BAUD (921600 on the
+#              STM32F746G-DISCO). Opening it does not reset the MCU.
+# DMBOOT_CONSOLE_PORT and DMBOOT_CONSOLE_BAUD override these.
+if(NOT DMBOOT_EMULATION)
+    set(DMBOOT_CONSOLE_PORT "" CACHE STRING "Serial port of the console target (empty: DMBOOT_ESP_PORT on the ESP32-S3, else DMBOOT_UPLOAD_PORT)")
+    set(DMBOOT_CONSOLE_BAUD "" CACHE STRING "Baud rate of the console target (empty: 115200 on the ESP32-S3, whose USB port ignores it; else DMBOOT_UPLOAD_BAUD)")
+    set(DMBOOT_CONSOLE_TERMINAL "" CACHE STRING "Terminal program of the console target: minicom, picocom, screen or miniterm (empty: the first one found)")
+    if(DMBOOT_ARCH STREQUAL "xtensa")
+        set(DMBOOT_CONSOLE_PORT_DEFAULT "${DMBOOT_ESP_PORT}")
+        set(DMBOOT_CONSOLE_BAUD_DEFAULT "115200")
+    else()
+        set(DMBOOT_CONSOLE_PORT_DEFAULT "${DMBOOT_UPLOAD_PORT}")
+        set(DMBOOT_CONSOLE_BAUD_DEFAULT "${DMBOOT_UPLOAD_BAUD}")
+    endif()
+    if(NOT "${DMBOOT_CONSOLE_PORT}" STREQUAL "")
+        set(DMBOOT_CONSOLE_PORT_USED "${DMBOOT_CONSOLE_PORT}")
+    else()
+        set(DMBOOT_CONSOLE_PORT_USED "${DMBOOT_CONSOLE_PORT_DEFAULT}")
+    endif()
+    if(NOT "${DMBOOT_CONSOLE_BAUD}" STREQUAL "")
+        set(DMBOOT_CONSOLE_BAUD_USED "${DMBOOT_CONSOLE_BAUD}")
+    else()
+        set(DMBOOT_CONSOLE_BAUD_USED "${DMBOOT_CONSOLE_BAUD_DEFAULT}")
+    endif()
+    add_custom_target(console
+        COMMAND ${CMAKE_COMMAND}
+            -DDMBOOT_CONSOLE_PORT=${DMBOOT_CONSOLE_PORT_USED}
+            -DDMBOOT_CONSOLE_BAUD=${DMBOOT_CONSOLE_BAUD_USED}
+            -DDMBOOT_CONSOLE_TERMINAL=${DMBOOT_CONSOLE_TERMINAL}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_console.cmake
+        USES_TERMINAL
+        COMMENT "Console of the board on ${DMBOOT_CONSOLE_PORT_USED} at ${DMBOOT_CONSOLE_BAUD_USED} (leave: Ctrl-A then K in screen, Ctrl-A X in minicom, Ctrl-A Ctrl-X in picocom)"
+        VERBATIM)
+endif()
 
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
