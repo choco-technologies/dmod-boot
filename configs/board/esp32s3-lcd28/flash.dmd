@@ -1,5 +1,5 @@
 #
-# ESP32-S3 2.8" display board flash modules - the way to /ext, the I2C bus, the random generator
+# ESP32-S3 2.8" display board flash modules - the way to /ext, the I2C bus, the random generator, the display and its touch panel
 #
 # /ext is the last 9 MB of the flash of the chip (0x700000, board.cmake). dmflash exports it as the block node
 # /dev/dmflashx/ext (the firmware does the erasing and programming from the internal RAM with the caches off: dmod-boot,
@@ -10,7 +10,18 @@ dmflash driver=board/esp32s3-lcd28/flash.ini
 dmlittlefs
 mklittlefs
 #
-# The I2C bus of the board (SCL = GPIO10, SDA = GPIO11: the RTC PCF85063, the IMU QMI8658, the touch controller) and the random
-# generator of the chip (/dev/rng).
+# The I2C bus of the board (SCL = GPIO10, SDA = GPIO11: the RTC PCF85063, the IMU QMI8658) and the random generator of the chip
+# (/dev/rng).
 dmi2c driver=board/esp32s3-lcd28/i2c.ini
 dmrng driver=board/esp32s3-lcd28/rng.ini
+
+#
+# The display (the ST7789 on SPI2, its pixels go out by the DMA, with the splash logo of board.cmake) and its touch panel (the CST328
+# on an I2C bus of its own: GPIO1/3, reset GPIO2). Each is one friends_group of its ini file: the pins, the bus and the driver. Some boards
+# of the line have no touch panel (or another controller): the driver then logs that the chip does not answer, and the rest is not
+# affected. dmdma, dmgpio and dmspi are what the display is built on.
+dmdma driver=mcu/esp32s3.ini
+dmgpio
+dmspi
+dmst7789 driver=board/esp32s3-lcd28/display.ini
+dmcst328 driver=board/esp32s3-lcd28/touch.ini
