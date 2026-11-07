@@ -15,3 +15,9 @@ dmdma driver=mcu/esp32s3.ini
 dmgpio
 dmspi
 dmuc8253 driver=board/t-deck-pro/display.ini
+
+#
+# The touch panel over the e-paper (CST3530, a CST66xx, at 0x1A on the I2C bus of the board: SDA GPIO13, SCL GPIO14, reset GPIO38). dmi2c is the bus,
+# dmgpio the reset line (already loaded above), dmcst66xx the driver: one friends_group of the ini file.
+dmi2c
+dmcst66xx driver=board/t-deck-pro/touch.ini
