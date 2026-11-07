@@ -1,6 +1,7 @@
 # Board configuration for LILYGO T-Deck Pro
 # MCU: ESP32-S3 (QFN56, Xtensa LX7 dual-core, 240 MHz) with a 16 MB quad flash, USB = the USB-Serial/JTAG of the chip. The 8 MB of
-# the board's external RAM are NOT the octal PSRAM of the ESP32-S3FN16R8 (its pads GPIO33-37 are the pins of the e-paper SPI)
+# the board's external RAM are NOT the octal PSRAM of the ESP32-S3FN16R8 (its pads GPIO33-37 are the pins of the e-paper SPI): it is a
+# quad chip on the memory SPI (configs/board/t-deck-pro/flash.dmd)
 set(TARGET "ESP32S3" CACHE STRING "Target microcontroller" FORCE)
 
 # Layout of the flash and the selector: the same as on esp32s3-lcd28 (see its board.cmake for the description): both boards have a

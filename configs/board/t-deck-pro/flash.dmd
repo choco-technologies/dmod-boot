@@ -1,0 +1,8 @@
+#
+# LILYGO T-Deck Pro flash modules
+#
+# The external RAM: 8 MB QUAD PSRAM on the memory SPI of the chip (chip select 1) - the controller is dmqspi, the chip dmpsram (one
+# friends_group of board/t-deck-pro.ini). It is mapped into the address space and put at the end of the default heaps; it needs the clock
+# of dmclk (the mcu flash.dmd, driver_order).
+dmqspi
+dmpsram driver=board/t-deck-pro.ini

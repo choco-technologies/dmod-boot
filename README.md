@@ -144,7 +144,11 @@ assets are installed again.
 
 ### Building for LILYGO T-Deck Pro
 
-The T-Deck Pro is based on the **ESP32-S3FN16R8** (Xtensa LX7 dual-core, 240 MHz, 16 MB flash, 8 MB PSRAM).
+The T-Deck Pro is based on the **ESP32-S3** (Xtensa LX7 dual-core, 240 MHz, 16 MB quad flash) with an external **8 MB quad PSRAM** (the
+chip is the plain ESP32-S3 with nothing inside, not the FN16R8: the pads GPIO33-37 are the SPI of the e-paper). The RAM is
+`dmqspi` (the memory SPI of the chip) + `dmpsram` (the chip: quad mode) - `configs/board/t-deck-pro/flash.dmd`, `board/t-deck-pro.ini` of dmpsram.
+The firmware is the same as for the esp32s3-lcd28: the selector (offset 0), the image of the bank A (0x100000); the shell is on the USB port
+(`/dev/ttyACM*`).
 
 **Prerequisites:**
 
