@@ -21,3 +21,18 @@ dmuc8253 driver=board/t-deck-pro/display.ini
 # dmgpio the reset line (already loaded above), dmcst66xx the driver: one friends_group of the ini file.
 dmi2c
 dmcst66xx driver=board/t-deck-pro/touch.ini
+
+#
+# The graphical interface: dmview is the display service (dmdevfs reports the e-paper, dmview.rules starts a dmview@<name> for it, which shows
+# what the applications claim for it and takes the input of the display's friends group from libinput), phoneui the application
+# that claims the display for its view, phoneui_view the views - the bundle of this board's screen (epaper-240x320) is built into the firmware
+# (/eviews/phoneui_view/phoneui.dmv). See the phoneui repository.
+dmview
+dmview service=dmview@.ini
+dmview rules=dmview.rules
+# The input: dmdevfs reports the touch panel as an input, inputd.rules starts an inputd for it, which gives what it reports to libinput
+# (where dmview reads the touches of its display from).
+inputd service=inputd@.ini
+inputd rules=inputd.rules
+phoneui service=phoneui.ini
+phoneui_view @screen epaper-240x320
