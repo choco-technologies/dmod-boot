@@ -148,6 +148,14 @@ dmview
 dmview service=dmview@.ini
 dmview rules=dmview.rules
 #
+# The inputs: dmdevfs reports every input node (the touch panel) to libsystemd, inputd.rules starts an
+# inputd for each, and it hands what the device reports to libinput, where dmview reads the events of the
+# inputs of its display (the same friends_group) from.
+#
+inputd
+inputd service=inputd@.ini
+inputd rules=inputd.rules
+#
 # The car HMI demo (carhmi) and what it needs - the image decoders, the MP3 decoder - are on the SD card, see
 # sdcard.dmd: it is loaded from /mnt/<label>/bin once automount has mounted the card.
 #
