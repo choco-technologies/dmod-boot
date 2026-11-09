@@ -152,6 +152,9 @@ The firmware is the same as for the esp32s3-lcd28: the selector (offset 0), the 
 The e-paper (`dmuc8253`, with the logo of the splash screen) and the capacitive touch panel over it (`dmcst66xx`: a CST3530 on the I2C bus of
 the board, the node `/dev/dmcst66xx0` of the generic input interface) are in the same `flash.dmd`; their wiring is in `board/t-deck-pro/display.ini`
 and `board/t-deck-pro/touch.ini` of the drivers.
+The interface on top of them is [phoneui](https://github.com/choco-technologies/phoneui): `dmview` (the display service, which takes the touches
+from the touch panel in the display's `friends_group`), `phoneui` (the application) and `phoneui_view` (the views; the bundle of this board is
+`epaper-240x320`, built into the firmware).
 
 **Prerequisites:**
 
