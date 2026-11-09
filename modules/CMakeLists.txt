@@ -188,12 +188,13 @@ set(DMBOOT_SDCARD_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/sdcard")
 set(DMBOOT_MODULE_OUTPUT_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/module_output.cmake")
 
 # Units and rules of the board itself (configs/board/<BOARD>/services, configs/board/<BOARD>/rules) - e.g. what is
-# mounted where. The ones of the modules come with their packages (service= / rules= above). They land next to those
-# (services/board/, rules/board/); configure_file() copies them again whenever one changes and the list is a
+# mounted where - and its keymaps (configs/board/<BOARD>/keymaps: the layers of its keyboard for libinput). The ones of
+# the modules come with their packages (service= / rules= above). They land next to those
+# (services/board/, rules/board/, keymaps/board/); configure_file() copies them again whenever one changes and the list is a
 # dependency of the config filesystem image (see scripts/romfs.cmake).
 set(DMBOOT_BOARD_CONFIG_FILES "")
 if(BOARD)
-    foreach(_kind IN ITEMS services rules)
+    foreach(_kind IN ITEMS services rules keymaps)
         file(GLOB _board_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/configs/board/${BOARD}/${_kind}/*")
         foreach(_board_file IN LISTS _board_files)
             get_filename_component(_board_name "${_board_file}" NAME)
