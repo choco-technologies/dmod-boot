@@ -37,5 +37,7 @@ dmview rules=dmview.rules
 # (where dmview reads the touches of its display from).
 inputd service=inputd@.ini
 inputd rules=inputd.rules
+# The Polish keymap for LANG=pl_PL.UTF-8 (it lands in /cfg/keymaps/libinput/pl.ini); without LANG the built in English one is used.
+libinput keymap=pl.ini
 phoneui service=phoneui.ini
 phoneui_view @screen epaper-240x320
