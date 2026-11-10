@@ -74,6 +74,9 @@ set(DMBOOT_MAIN_HEAP_TAGS "main" CACHE STRING "Tags of the main heap (linker reg
 set(DMBOOT_SPLASH_LOGO "" CACHE STRING "Splash logo the display driver shows at start: name of an asset in assets/splash/ (e.g. dmodos_logo_128) or a path to a .dmvi file; empty: no logo")
 set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target, passed to the display driver in the SPLASH_LOGO environment variable; empty: not set")
 
+# The language of the system: the environment variable LANG (e.g. libinput takes the keymap of the language from it); empty: not set
+set(DMBOOT_LANGUAGE "pl_PL.UTF-8" CACHE STRING "Language of the system, set in the LANG environment variable (pl_PL.UTF-8, en_US.UTF-8, ...); empty: not set")
+
 # The device secret: the root of what the system keeps encrypted at rest (dmsecrets). dmod-boot hands
 # it to dmdevfs in the mount string ("/cfg/drivers,<secret>"); dmdevfs serves it as the read-only
 # node /dev/devkey. It is whatever is given here (1..64 bytes of text), else the content of the
@@ -283,6 +286,7 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_SHELL_STRING="${DMBOOT_SHELL}"
         DMBOOT_MAIN_MODULE_ARGS_STRING="${DMBOOT_MAIN_MODULE_ARGS}"
         DMBOOT_SPLASH_LOGO_PATH_STRING="${DMBOOT_SPLASH_LOGO_PATH}"
+        DMBOOT_LANGUAGE_STRING="${DMBOOT_LANGUAGE}"
         DMBOOT_DMSECRETS_PATH_STRING="${DMBOOT_DMSECRETS_PATH}"
         DMBOOT_DMA_HEAP_TAGS_STRING="${DMBOOT_DMA_HEAP_TAGS}"
         DMBOOT_MAIN_HEAP_TAGS_STRING="${DMBOOT_MAIN_HEAP_TAGS}"

@@ -678,6 +678,12 @@ int main(int argc, char** argv)
         dmenv_set(dmenv_ctx, "SPLASH_LOGO", DMBOOT_SPLASH_LOGO_PATH_STRING);
     }
     
+    if(DMBOOT_LANGUAGE_STRING[0] != '\0')
+    {
+        // The language of the system (the keymap of libinput, ...); user_data below may change it
+        dmenv_set(dmenv_ctx, "LANG", DMBOOT_LANGUAGE_STRING);
+    }
+
     // Set user_data environment variables if embedded in ROM
     setup_embedded_user_data(dmenv_ctx);
     
