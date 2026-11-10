@@ -38,10 +38,11 @@ dmview rules=dmview.rules
 inputd service=inputd@.ini
 inputd rules=inputd.rules
 # The keymaps of libinput: the languages (/cfg/keymaps/libinput/<language>.ini; the one of LANG - DMBOOT_LANGUAGE, Polish by default - is used at
-# start, a screen can change it with libinput_keymap_set_language(); English is built in, its file is the entry on the list) and the layouts of
-# keyboards (/cfg/layouts/libinput/<layout>.ini: the keyboard names its layout in its info - compact for the one of the T-Deck Pro).
+# start, a screen can change it with libinput_keymap_set_language(); English is built in, its file is the entry on the list).
 libinput keymap=keymaps/en.ini
 libinput keymap=keymaps/pl.ini
-libinput layout=layouts/compact.ini
+# The layout of the keyboard (sticky shift/alt/sym, the sym layer): the keyboard names it in its info, libinput finds the file among those of
+# the driver (/cfg/layouts/dmtca8418/t-deck-pro.ini).
+dmtca8418 layout=layouts/t-deck-pro.ini
 phoneui service=phoneui.ini
 phoneui_view @screen epaper-240x320
