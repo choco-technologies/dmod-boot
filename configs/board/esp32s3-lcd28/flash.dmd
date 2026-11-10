@@ -31,3 +31,35 @@ dmgpio
 dmspi
 dmst7789 driver=board/esp32s3-lcd28/display.ini
 dmcst328 driver=board/esp32s3-lcd28/touch.ini
+#
+# Network: wlan0 on the Wi-Fi of the chip itself. dmespwifi starts the radio (the libraries of Espressif run from the image in the flash
+# at 0x020000, see board.cmake) and registers the interface with dmnetif; networkd.rules and dhcp.rules then start networkd@wlan0 (RX pump)
+# and dhcp@wlan0 (lease) for it. "wifi" is dmnet's tool (scan, connect, save a network).
+#
+dmnetbridge
+dmnetif
+dmarp
+dmroute
+dmip
+dmicmp service=icmp.ini
+ifconfig
+ip
+ping
+networkd service=networkd@.ini
+networkd rules=networkd.rules
+dmudp
+dhcpc service=dhcp@.ini
+dhcpc rules=dhcp.rules
+dmespwifi driver=board/esp32s3-lcd28/wifi.ini
+wifi
+#
+# The networks to connect to by themselves are saved in the "wifi" vault of dmsecrets (wifi save SSID / wifi connect SSID -s): dmcrypto does
+# the cryptography and takes its random bytes from /dev/rng (dmrng); the vault is opened with the key of the device secret (/dev/devkey), so
+# nobody types a passphrase. wifid connects to the saved networks (it needs /ext, where the vault is).
+#
+dmcrypto driver=board/stm32f746g-disco/crypto.ini
+crypto
+dmsecrets
+secrets
+wifid service=wifid@.ini
+wifid rules=wifid.rules
