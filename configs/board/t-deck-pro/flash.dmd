@@ -24,6 +24,9 @@ dmcst66xx driver=board/t-deck-pro/touch.ini
 # The keyboard (TCA8418 at 0x34 on the same bus; the keys' light is GPIO42): it joins the friends_group of the e-paper (keyboard.ini of dmtca8418),
 # takes the bus of the touch panel from it, and inputd.rules (below) starts an inputd for it, which gives its keys to libinput.
 dmtca8418 driver=board/t-deck-pro/keyboard.ini
+# ... and its layout (sticky shift/alt/sym, the sym layer): the keyboard names it in its info (layout= of keyboard.ini), libinput finds the file
+# among those of the driver (/cfg/layouts/dmtca8418/t-deck-pro.ini). Another keyboard driver: replace both lines.
+dmtca8418 layout=layouts/t-deck-pro.ini
 
 #
 # The graphical interface: dmview is the display service (dmdevfs reports the e-paper, dmview.rules starts a dmview@<name> for it, which shows
@@ -41,8 +44,5 @@ inputd rules=inputd.rules
 # start, a screen can change it with libinput_keymap_set_language(); English is built in, its file is the entry on the list).
 libinput keymap=keymaps/en.ini
 libinput keymap=keymaps/pl.ini
-# The layout of the keyboard (sticky shift/alt/sym, the sym layer): the keyboard names it in its info, libinput finds the file among those of
-# the driver (/cfg/layouts/dmtca8418/t-deck-pro.ini).
-dmtca8418 layout=layouts/t-deck-pro.ini
 phoneui service=phoneui.ini
 phoneui_view @screen epaper-240x320
