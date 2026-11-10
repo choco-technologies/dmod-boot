@@ -159,13 +159,13 @@ if(NOT EXISTS "${_SCREEN_STAMP}" OR NOT "${_OLD_SCREEN}" STREQUAL "${DMBOOT_SCRE
     file(WRITE "${_SCREEN_STAMP}" "${DMBOOT_SCREEN}")
 endif()
 
-# Routes tagged configuration entries in *.dmd files ("driver=", "rules=", "service=")
+# Routes tagged configuration entries in *.dmd files ("driver=", "rules=", "service=", "keymap=")
 # to their own subdirectory of a configuration directory, instead of all landing together.
 # The ';' separators must be escaped: an unescaped ';' makes CMake treat this
 # as a 3-element list, which add_custom_command() then expands into 3 separate
 # command-line arguments instead of a single "--config-map <value>" pair.
 function(dmboot_config_map config_dir out_var)
-    set(${out_var} "driver:${config_dir}/drivers\;rules:${config_dir}/rules\;service:${config_dir}/services" PARENT_SCOPE)
+    set(${out_var} "driver:${config_dir}/drivers\;rules:${config_dir}/rules\;service:${config_dir}/services\;keymap:${config_dir}/keymaps" PARENT_SCOPE)
 endfunction()
 
 # Every module's configuration goes where the module is: the flash modules' to DMBOOT_CONFIG_DIR (embedded, /cfg),

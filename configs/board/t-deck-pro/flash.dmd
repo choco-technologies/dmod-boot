@@ -21,6 +21,9 @@ dmuc8253 driver=board/t-deck-pro/display.ini
 # dmgpio the reset line (already loaded above), dmcst66xx the driver: one friends_group of the ini file.
 dmi2c
 dmcst66xx driver=board/t-deck-pro/touch.ini
+# The keyboard (TCA8418 at 0x34 on the same bus; the keys' light is GPIO42): it joins the friends_group of the e-paper (keyboard.ini of dmtca8418),
+# takes the bus of the touch panel from it, and inputd.rules (below) starts an inputd for it, which gives its keys to libinput.
+dmtca8418 driver=board/t-deck-pro/keyboard.ini
 
 #
 # The graphical interface: dmview is the display service (dmdevfs reports the e-paper, dmview.rules starts a dmview@<name> for it, which shows
@@ -34,5 +37,7 @@ dmview rules=dmview.rules
 # (where dmview reads the touches of its display from).
 inputd service=inputd@.ini
 inputd rules=inputd.rules
+# The Polish keymap for LANG=pl_PL.UTF-8 (it lands in /cfg/keymaps/libinput/pl.ini); without LANG the built in English one is used.
+libinput keymap=pl.ini
 phoneui service=phoneui.ini
 phoneui_view @screen epaper-240x320
