@@ -19,6 +19,11 @@ a file system the files then go to - and --ensure-dir DIR fails unless DIR is th
 
     ymodem_send.py --run "-umount /ext" --run "mklittlefs /dev/dmspiflashx/flash" --run "mount ... /ext"
 
+--port auto looks for the serial port of the board: every /dev/ttyACM* and /dev/ttyUSB* is asked for the DMBOOT_BOARD and
+DMBOOT_BUILD_ID the firmware sets in its environment (`echo`), and the one whose board is --board (and, when there are
+several, whose build is --build-id) is used. --require-build waits for exactly that build (after a flash). Ports of a USB
+vendor can be left out (--skip-vendor) or the only ones asked (--only-vendor): opening the port of an ESP32-S3 (303a) resets it.
+
 A FILE is sent by its name, a DIR with everything in it (names relative
 to it), SRC=NAME as NAME (a directory: under NAME). Only the standard
 library (termios): no pyserial needed.
@@ -26,6 +31,7 @@ library (termios): no pyserial needed.
 
 import argparse
 import fcntl
+import glob
 import os
 import re
 import select
@@ -378,6 +384,89 @@ def files_of(sources):
     return out
 
 
+PROBE = re.compile(r'DMBOOT:([\w.+-]*):([0-9A-Za-z]*)')
+
+
+def usb_vendor(port):
+    """The USB vendor id (hex, lower case) of a tty, '' when unknown"""
+    try:
+        path = os.path.realpath(f'/sys/class/tty/{os.path.basename(port)}/device')
+        while path not in ('/', '/sys'):
+            vendor = os.path.join(path, 'idVendor')
+            if os.path.exists(vendor):
+                with open(vendor) as f:
+                    return f.read().strip().lower()
+            path = os.path.dirname(path)
+    except OSError:
+        pass
+    return ''
+
+
+def candidate_ports(args):
+    ports = sorted(glob.glob('/dev/ttyACM*')) + sorted(glob.glob('/dev/ttyUSB*'))
+    out = []
+    for port in ports:
+        vendor = usb_vendor(port)
+        if args.only_vendor and vendor != args.only_vendor.lower():
+            continue
+        if args.skip_vendor and vendor == args.skip_vendor.lower():
+            continue
+        out.append(port)
+    return out
+
+
+def identify(port, baud):
+    """(board, build id) the firmware on `port` tells about itself, None when no dmell answers there"""
+    try:
+        link = Link(port, baud)
+    except (Failure, OSError):
+        return None                     # (open in another program, no access, gone)
+    try:
+        wait_shell(link, 2.5)
+        said = run_command(link, 'echo DMBOOT:$DMBOOT_BOARD:$DMBOOT_BUILD_ID', 5.0)
+        m = PROBE.search(said)
+        return (m.group(1), m.group(2)) if m else ('', '')       # (a shell, but a firmware without the variables)
+    except (Failure, OSError):
+        return None
+    finally:
+        link.close()
+
+
+def find_port(args, log):
+    """The port of the board args.board (the build args.build_id), looked for again for args.wait seconds"""
+    if not args.board:
+        raise Failure('--port auto needs --board (the name of the board the firmware tells about itself)')
+    until = time.monotonic() + max(args.wait, 3.0)
+    while True:
+        found = {}
+        for port in candidate_ports(args):
+            who = identify(port, args.baud)
+            if who is not None:
+                found[port] = who
+        boards = [p for p, (b, _) in found.items() if b == args.board]
+        exact = [p for p in boards if args.build_id and found[p][1] == args.build_id]
+        if exact:
+            log(f'  {args.board} (build {args.build_id}) is on {exact[0]}')
+            return exact[0]
+        if boards and not args.require_build:
+            if len(boards) == 1:
+                port = boards[0]
+                if args.build_id and found[port][1] != args.build_id:
+                    log(f'  {args.board} is on {port}, but it runs build {found[port][1] or "?"}, not {args.build_id}')
+                else:
+                    log(f'  {args.board} is on {port}')
+                return port
+            if time.monotonic() >= until:
+                raise Failure(f'more than one {args.board} is connected ({", ".join(f"{p}: build {found[p][1]}" for p in boards)}) '
+                              'and none runs this build: pick the port with --port')
+        if time.monotonic() >= until:
+            seen = ', '.join(f'{p}: {b or "?"}/{i or "?"}' for p, (b, i) in found.items()) or 'no console answered'
+            what = f'{args.board}, build {args.build_id}' if args.require_build else args.board
+            raise Failure(f'no port of {what} found ({seen}); give the port with --port /dev/ttyACMx (DMBOOT_UPLOAD_PORT)')
+        log('  looking for the board ...')
+        time.sleep(1.0)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
     ap.add_argument('sources', nargs='*', help='FILE, DIR or SRC=NAME')
@@ -385,8 +474,14 @@ def main():
                     help='a shell command to run first (repeatable); a leading "-" lets it fail')
     ap.add_argument('--ensure-dir', metavar='DIR', help='fail unless DIR exists on the device (it is listed)')
     ap.add_argument('--timeout', type=float, default=60.0, metavar='SECONDS', help='a --run command may take this long')
-    ap.add_argument('--port', default='/dev/ttyACM0', help='the device console (default /dev/ttyACM0)')
+    ap.add_argument('--port', default='/dev/ttyACM0', help='the device console (default /dev/ttyACM0; auto: the port of --board)')
     ap.add_argument('--baud', type=int, default=921600)
+    ap.add_argument('--board', default='', help='--port auto: the DMBOOT_BOARD of the board looked for')
+    ap.add_argument('--build-id', default='', help='--port auto: its DMBOOT_BUILD_ID (preferred when several boards match)')
+    ap.add_argument('--require-build', action='store_true', help='--port auto: only the --build-id one (wait for it)')
+    ap.add_argument('--only-vendor', default='', metavar='HEX', help='--port auto: ask only ports of this USB vendor id')
+    ap.add_argument('--skip-vendor', default='', metavar='HEX', help='--port auto: leave out ports of this USB vendor id (303a: ESP32-S3, reset by opening)')
+    ap.add_argument('--print-port', action='store_true', help='print the port --port auto finds and exit')
     ap.add_argument('--dest', default='', help='the directory on the device the names are under: absolute, '
                     'or on the SD card (default: the card\'s root)')
     ap.add_argument('--card', default='auto', metavar='NAME',
@@ -409,6 +504,11 @@ def main():
             print(f'\r  {name}: {sent * 100 // max(size, 1)}%', end='', file=sys.stderr, flush=True)
 
     try:
+        if args.port == 'auto' and not args.stdio:
+            args.port = find_port(args, log)
+        if args.print_port:
+            print(args.port)
+            return 0
         link = Link(None if args.stdio else args.port, args.baud)
     except Failure as e:
         print(f'ymodem_send: {e}', file=sys.stderr)
