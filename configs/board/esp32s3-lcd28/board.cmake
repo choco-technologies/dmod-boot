@@ -26,9 +26,10 @@ set(DMBOOT_BANK_B_FS_ORIGIN 0x3C6F0000)
 set(DMBOOT_BANK_B_FS_SIZE   0x00010000)
 set(DMBOOT_EXT_ORIGIN       0x3C700000)
 set(DMBOOT_EXT_SIZE         0x00900000)
-# The Wi-Fi of the chip (dmespwifi): the libraries of Espressif are a library of the system, linked into the firmware (the driver itself is a
-# module). The buffers of the radio are in the RAM that the selector needs only for its start (selector.ld: BOOT)
-set(DMBOOT_BUILTIN_MODULES "dmespwifi" CACHE STRING "Packages whose static library is linked into the firmware (dmod_link_builtin)" FORCE)
+# The Wi-Fi of the chip (dmespwifi): the driver and its port (dmespwifi_port) are modules; the libraries of Espressif that the port
+# calls are a library of the system that the package of the port carries, linked into the firmware. The buffers of the radio are in the
+# RAM that the selector needs only for its start (selector.ld: BOOT)
+set(DMBOOT_BUILTIN_MODULES "dmespwifi_port" CACHE STRING "Packages whose static library is linked into the firmware (dmod_link_builtin)" FORCE)
 set(DMBOOT_SELECTOR_ORIGIN 0x3C000000)
 set(DMBOOT_SELECTOR_STORE  0x3C010000)
 set(DMBOOT_SELECTOR_STORE_SIZE 0x00008000)

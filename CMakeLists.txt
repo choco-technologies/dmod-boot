@@ -365,7 +365,7 @@ if(TARGET dmboot_port_shim)
 endif()
 
 # Libraries of the system that come as packages (the "lib" resource: a static library and its Built-in API), linked into the firmware. The board
-# lists them (the ESP32-S3: the libraries of the radio, dmespwifi)
+# lists them (the ESP32-S3: the libraries of the radio, which the port of dmespwifi carries: dmespwifi_port)
 set(DMBOOT_BUILTIN_MODULES "" CACHE STRING "Packages whose static library is linked into the firmware (dmod_link_builtin)")
 if(DMBOOT_BUILTIN_MODULES)
     if(DMBOOT_MANIFEST_URL)
