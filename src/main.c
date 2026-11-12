@@ -660,6 +660,8 @@ int main(int argc, char** argv)
     dmenv_set(dmenv_ctx, "DMOD_VERSION", DMOD_VERSION_STRING);
     dmenv_set(dmenv_ctx, "DMBOOT_MCU_NAME", DMBOOT_MCU_NAME_STRING);
     dmenv_set(dmenv_ctx, "DMBOOT_MCU_SERIES", DMBOOT_MCU_SERIES_STRING);
+    dmenv_set(dmenv_ctx, "DMBOOT_BOARD", DMBOOT_BOARD_STRING);          // (the host scripts find the serial port of the board by these)
+    dmenv_set(dmenv_ctx, "DMBOOT_BUILD_ID", DMBOOT_BUILD_ID_STRING);
     dmenv_seti(dmenv_ctx, "DMBOOT_MAX_MOUNT_POINTS", DMBOOT_MAX_MOUNT_POINTS);
     dmenv_set(dmenv_ctx, "DMOD_REPO_DIR", DMOD_REPO_DIR);
     dmenv_set(dmenv_ctx, "DMOD_REPO_PATHS", DMOD_REPO_PATHS);

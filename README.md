@@ -333,7 +333,7 @@ cmake --build . --target console
 | Board | Port | Notes |
 |-------|------|-------|
 | ESP32-S3 | `DMBOOT_ESP_PORT` - the USB connector of the chip: the USB Serial/JTAG is a CDC-ACM port, served by [dmusbserial](https://github.com/choco-technologies/dmusbserial) with a tty (dmtty) on it | **Opening it resets the board** (the reset follows DTR / RTS): the boot runs with the terminal open, the prompt comes after about 45 s. 115200 (the USB port ignores it) |
-| STM32 | `DMBOOT_UPLOAD_PORT` (`/dev/ttyACM0`) - the ST-Link's virtual COM port, the console UART | `DMBOOT_UPLOAD_BAUD` (921600 on the STM32F746G-DISCO). Does not reset the MCU |
+| STM32 | `DMBOOT_UPLOAD_PORT` (`auto`: the port whose firmware says `DMBOOT_BOARD` of this build; or e.g. `/dev/ttyACM1`) - the ST-Link's virtual COM port, the console UART | `DMBOOT_UPLOAD_BAUD` (921600 on the STM32F746G-DISCO). Does not reset the MCU |
 
 `DMBOOT_CONSOLE_PORT` / `DMBOOT_CONSOLE_BAUD` override the port and the baud rate. Not available with emulation.
 `scripts/serial_console.py` sends commands from a script.
@@ -456,7 +456,7 @@ cmake --build . --target upload-files
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DMBOOT_UPLOAD_PORT` | `/dev/ttyACM0` | The device's console |
+| `DMBOOT_UPLOAD_PORT` | `auto` (ESP32-S3: `DMBOOT_ESP_PORT`) | The device's console. `auto`: every `/dev/ttyACM*` / `ttyUSB*` is asked for the `DMBOOT_BOARD` and `DMBOOT_BUILD_ID` the firmware sets in its environment (`echo $DMBOOT_BOARD`); `install-all` waits for exactly the build it flashed |
 | `DMBOOT_UPLOAD_BAUD` | `921600` | Its baud rate |
 | `DMBOOT_UPLOAD_DEST` | empty | Directory on the card (relative, empty: its root), or an absolute one |
 | `DMBOOT_UPLOAD_CARD` | `auto` | The card: its name in `/mnt`, `auto` (the one there is), `none` (the shell's directory) |

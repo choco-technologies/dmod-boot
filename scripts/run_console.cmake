@@ -1,9 +1,18 @@
 # CMake script of the 'console' target: a terminal program on the serial port of the board
 #
-# Inputs: DMBOOT_CONSOLE_PORT, DMBOOT_CONSOLE_BAUD, DMBOOT_CONSOLE_TERMINAL (minicom, picocom, screen, miniterm; empty: the first found)
+# Inputs: DMBOOT_CONSOLE_PORT (auto: found with DMBOOT_CONSOLE_FIND), DMBOOT_CONSOLE_BAUD, DMBOOT_CONSOLE_TERMINAL (minicom, picocom, screen, miniterm; empty: the first found)
 
 if(NOT DEFINED DMBOOT_CONSOLE_PORT OR "${DMBOOT_CONSOLE_PORT}" STREQUAL "")
     message(FATAL_ERROR "DMBOOT_CONSOLE_PORT not defined")
+endif()
+# auto: the port of the board, found by what its firmware tells (scripts/ymodem_send.py --print-port)
+if("${DMBOOT_CONSOLE_PORT}" STREQUAL "auto")
+    execute_process(COMMAND ${DMBOOT_CONSOLE_FIND} --port auto OUTPUT_VARIABLE found RESULT_VARIABLE found_result
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT found_result EQUAL 0 OR "${found}" STREQUAL "")
+        message(FATAL_ERROR "The port of the board was not found: give it with -DDMBOOT_CONSOLE_PORT=/dev/ttyACMx")
+    endif()
+    set(DMBOOT_CONSOLE_PORT "${found}")
 endif()
 if(NOT EXISTS "${DMBOOT_CONSOLE_PORT}")
     message(FATAL_ERROR "${DMBOOT_CONSOLE_PORT} does not exist: the board is not connected, or the port has another number (-DDMBOOT_ESP_PORT=...)")

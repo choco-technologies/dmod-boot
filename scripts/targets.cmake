@@ -278,9 +278,16 @@ add_custom_target(debug
 if(DMBOOT_ESP_PORT)
     set(DMBOOT_UPLOAD_PORT_DEFAULT "${DMBOOT_ESP_PORT}")
 else()
-    set(DMBOOT_UPLOAD_PORT_DEFAULT "/dev/ttyACM0")
+    set(DMBOOT_UPLOAD_PORT_DEFAULT "auto")
 endif()
-set(DMBOOT_UPLOAD_PORT "${DMBOOT_UPLOAD_PORT_DEFAULT}" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files)")
+set(DMBOOT_UPLOAD_PORT "${DMBOOT_UPLOAD_PORT_DEFAULT}" CACHE STRING "Serial port of the device's dmell console the files are sent over (upload-files); auto: the port of the board, found by the DMBOOT_BOARD / DMBOOT_BUILD_ID its firmware tells in the environment")
+# (auto: opening the port of an ESP32-S3 resets it - the ports of other boards are not asked for a board that is not one)
+set(DMBOOT_UPLOAD_FIND_ARGS --board ${DMBOOT_BOARD_NAME} --build-id ${DMBOOT_BUILD_ID})
+if(DMBOOT_ARCH STREQUAL "xtensa")
+    list(APPEND DMBOOT_UPLOAD_FIND_ARGS --only-vendor 303a)
+else()
+    list(APPEND DMBOOT_UPLOAD_FIND_ARGS --skip-vendor 303a)
+endif()
 set(DMBOOT_UPLOAD_BAUD "921600" CACHE STRING "Baud rate of DMBOOT_UPLOAD_PORT")
 set(DMBOOT_UPLOAD_DEST "" CACHE STRING "Directory the uploaded files go to (their paths under it): on the SD card (relative; empty: its root), or absolute")
 set(DMBOOT_UPLOAD_CARD "auto" CACHE STRING "The card a relative DMBOOT_UPLOAD_DEST is on: its name in /mnt, auto (the one the device has), none (the shell's directory)")
@@ -324,6 +331,7 @@ if(NOT DMBOOT_EMULATION)
             -DDMBOOT_CONSOLE_PORT=${DMBOOT_CONSOLE_PORT_USED}
             -DDMBOOT_CONSOLE_BAUD=${DMBOOT_CONSOLE_BAUD_USED}
             -DDMBOOT_CONSOLE_TERMINAL=${DMBOOT_CONSOLE_TERMINAL}
+            "-DDMBOOT_CONSOLE_FIND=${Python3_EXECUTABLE};${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py;--baud;${DMBOOT_CONSOLE_BAUD_USED};${DMBOOT_UPLOAD_FIND_ARGS};--print-port"
             -P ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_console.cmake
         USES_TERMINAL
         COMMENT "Console of the board on ${DMBOOT_CONSOLE_PORT_USED} at ${DMBOOT_CONSOLE_BAUD_USED} (leave: Ctrl-A then K in screen, Ctrl-A X in minicom, Ctrl-A Ctrl-X in picocom)"
@@ -333,7 +341,7 @@ endif()
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     set(DMBOOT_UPLOAD_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py
-        --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --card ${DMBOOT_UPLOAD_CARD} --block ${DMBOOT_UPLOAD_BLOCK})
+        --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} ${DMBOOT_UPLOAD_FIND_ARGS} --card ${DMBOOT_UPLOAD_CARD} --block ${DMBOOT_UPLOAD_BLOCK})
     if(NOT "${DMBOOT_UPLOAD_DEST}" STREQUAL "")
         list(APPEND DMBOOT_UPLOAD_COMMAND --dest ${DMBOOT_UPLOAD_DEST})
     endif()
@@ -363,7 +371,7 @@ if(Python3_Interpreter_FOUND)
     #   upload-ext   the modules of ext.dmd (build/ext: bin/, views/) to the mounted file system
     if(DMBOOT_EXT_DEVICE)
         set(DMBOOT_EXT_CONSOLE_COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/ymodem_send.py
-            --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} --block ${DMBOOT_UPLOAD_BLOCK})
+            --port ${DMBOOT_UPLOAD_PORT} --baud ${DMBOOT_UPLOAD_BAUD} ${DMBOOT_UPLOAD_FIND_ARGS} --block ${DMBOOT_UPLOAD_BLOCK})
         add_custom_target(format-ext
             COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5
                 "--run=-umount ${DMBOOT_EXT_MOUNT}"
@@ -389,14 +397,14 @@ if(Python3_Interpreter_FOUND)
             add_dependencies(install-all splash_logo_ext)
         endif()
         add_custom_command(TARGET install-all POST_BUILD
-            COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT}
+            COMMAND ${DMBOOT_EXT_UPLOAD_COMMAND} --require-build --wait ${DMBOOT_UPLOAD_WAIT}
             COMMAND ${DMBOOT_EXT_CONSOLE_COMMAND} --wait 5 "--run=-reboot"
             COMMENT "Uploading build/ext to ${DMBOOT_EXT_MOUNT} over ${DMBOOT_UPLOAD_PORT} (YMODEM), then restarting to start its modules..."
         )
     endif()
 
     add_custom_command(TARGET install-all POST_BUILD
-        COMMAND ${DMBOOT_UPLOAD_COMMAND} --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
+        COMMAND ${DMBOOT_UPLOAD_COMMAND} --require-build --wait ${DMBOOT_UPLOAD_WAIT} ${DMBOOT_UPLOAD_SOURCES}
         COMMENT "Uploading files to ${DMBOOT_UPLOAD_WHERE} once ${TARGET} has started..."
     )
 else()

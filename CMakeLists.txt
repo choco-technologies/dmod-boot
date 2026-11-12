@@ -272,12 +272,29 @@ endif()
 
 dmod_set_current_allocator(${MODULE_NAME}.elf)
 
+# What the firmware tells about itself in the environment (DMBOOT_BOARD, DMBOOT_BUILD_ID): scripts/ymodem_send.py looks for
+# the serial port of the board it is to talk to by them. The id is a hash of the board, the source revision and the build directory
+# (the same until one of them changes: no rebuild of main.c at every configure), so it names the build the firmware was flashed from.
+if(BOARD)
+    set(DMBOOT_BOARD_NAME "${BOARD}")
+else()
+    set(DMBOOT_BOARD_NAME "${DMBOOT_MCU_NAME}")
+endif()
+execute_process(COMMAND git describe --always --dirty --abbrev=12
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} OUTPUT_VARIABLE DMBOOT_GIT_REVISION ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+string(SHA1 DMBOOT_BUILD_ID_FULL "${DMBOOT_BOARD_NAME}|${DMBOOT_GIT_REVISION}|${CMAKE_BINARY_DIR}")
+string(SUBSTRING "${DMBOOT_BUILD_ID_FULL}" 0 8 DMBOOT_BUILD_ID)
+set(DMBOOT_BUILD_ID "${DMBOOT_BUILD_ID}" CACHE INTERNAL "Id of the firmware of this configure (DMBOOT_BUILD_ID in the device's environment)")
+set(DMBOOT_BOARD_NAME "${DMBOOT_BOARD_NAME}" CACHE INTERNAL "Board name (DMBOOT_BOARD in the device's environment)")
+
 target_compile_definitions(${MODULE_NAME}.elf
     PRIVATE 
         DMBOOT_MCU_SERIES=${DMBOOT_MCU_SERIES}
         DMBOOT_MCU_SERIES_STRING="${DMBOOT_MCU_SERIES}"
         DMBOOT_MCU_NAME=${DMBOOT_MCU_NAME}
         DMBOOT_MCU_NAME_STRING="${DMBOOT_MCU_NAME}"
+        DMBOOT_BOARD_STRING="${DMBOOT_BOARD_NAME}"
+        DMBOOT_BUILD_ID_STRING="${DMBOOT_BUILD_ID}"
         DMBOOT_MAX_MOUNT_POINTS=${DMBOOT_MAX_MOUNT_POINTS}
         DMBOOT_MAX_OPEN_FILES=${DMBOOT_MAX_OPEN_FILES}
         DMBOOT_IRQ_COUNT=${DMBOOT_IRQ_COUNT}
