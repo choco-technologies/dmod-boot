@@ -32,8 +32,8 @@ dmspi
 dmst7789 driver=board/esp32s3-lcd28/display.ini
 dmcst328 driver=board/esp32s3-lcd28/touch.ini
 #
-# Network: wlan0 on the Wi-Fi of the chip itself. dmespwifi starts the radio (the libraries of Espressif are linked into the firmware,
-# DMBOOT_BUILTIN_MODULES of board.cmake) and registers the interface with dmnetif; networkd.rules and dhcp.rules then start networkd@wlan0 (RX pump)
+# Network: wlan0 on the Wi-Fi of the chip itself. dmespwifi starts the radio (the libraries of Espressif are linked into the firmware: its
+# port requires them as @builtin) and registers the interface with dmnetif; networkd.rules and dhcp.rules then start networkd@wlan0 (RX pump)
 # and dhcp@wlan0 (lease) for it. "wifi" is dmnet's tool (scan, connect, save a network).
 #
 dmnetbridge
