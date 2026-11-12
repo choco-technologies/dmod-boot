@@ -295,9 +295,6 @@ target_compile_definitions(${MODULE_NAME}.elf
 # The image can be linked for a bank of the flash, to be started by the selector (selector/): the ROM is the bank without the
 # 512 bytes of the header; the whole flash otherwise
 set(DMBOOT_BANK "" CACHE STRING "Bank (A or B) that the image is linked for, started by the selector; empty: the whole flash, no selector")
-# RAM that the firmware leaves, at the end of its own, to code that is linked for fixed addresses (the board sets it; the ESP32-S3: the data of the image of
-# the Wi-Fi libraries, dmespwifi)
-set(DMBOOT_RESERVED_RAM 0 CACHE STRING "Bytes at the end of the RAM that the firmware does not use")
 set(DMBOOT_ROM_ORIGIN 0x08000000)
 set(DMBOOT_ROM_LENGTH 0x100000)
 if(DMBOOT_BANK)
@@ -341,7 +338,6 @@ target_link_options(${MODULE_NAME}.elf
     PRIVATE 
         -Wl,--defsym=DMBOOT_ROM_ORIGIN=${DMBOOT_ROM_ORIGIN}
         -Wl,--defsym=DMBOOT_ROM_LENGTH=${DMBOOT_ROM_LENGTH}
-        -Wl,--defsym=DMBOOT_RESERVED_RAM=${DMBOOT_RESERVED_RAM}
         -L${DMOD_DIR}/scripts
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/arch.ld
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/mcu.ld
@@ -366,6 +362,20 @@ target_link_libraries(${MODULE_NAME}.elf
 # What the port of the architecture needs besides (see configs/arch/<arch>/<family>/freertos.cmake)
 if(TARGET dmboot_port_shim)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_port_shim)
+endif()
+
+# Libraries of the system that come as packages (the "lib" resource: a static library and its Built-in API), linked into the firmware. The board
+# lists them (the ESP32-S3: the libraries of the radio, dmespwifi)
+set(DMBOOT_BUILTIN_MODULES "" CACHE STRING "Packages whose static library is linked into the firmware (dmod_link_builtin)")
+if(DMBOOT_BUILTIN_MODULES)
+    if(DMBOOT_MANIFEST_URL)
+        set(DMOD_DMM_URL "${DMBOOT_MANIFEST_URL}")
+    endif()
+    # (DMOD_DMF_DIR is where the modules are on the target: the packages of the build go to the build directory)
+    set(DMBOOT_TARGET_DMF_DIR "${DMOD_DMF_DIR}")
+    set(DMOD_DMF_DIR "${CMAKE_BINARY_DIR}/builtin")
+    dmod_link_builtin(${MODULE_NAME}.elf PRIVATE ${DMBOOT_BUILTIN_MODULES})
+    set(DMOD_DMF_DIR "${DMBOOT_TARGET_DMF_DIR}")
 endif()
 
 if(TARGET dmboot_power)

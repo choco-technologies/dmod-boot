@@ -9,7 +9,6 @@ set(TARGET "ESP32S3" CACHE STRING "Target microcontroller" FORCE)
 #
 #   0x000000  64 kB    the selector (the image with its header)
 #   0x010000  64 kB    its store (32 kB of it used: the state of the banks, the persistent items)
-#   0x020000  896 kB   the image of the Wi-Fi libraries (dmespwifi: 260 kB, executed in place), written by install-firmware
 #   0x100000  3 MB     slot of the bank A: the image 0x2F0000, then the file system of the bank (/) 64 kB
 #   0x400000  3 MB     slot of the bank B, the same
 #   0x700000  9 MB     /ext (littlefs, common to both banks)
@@ -27,11 +26,9 @@ set(DMBOOT_BANK_B_FS_ORIGIN 0x3C6F0000)
 set(DMBOOT_BANK_B_FS_SIZE   0x00010000)
 set(DMBOOT_EXT_ORIGIN       0x3C700000)
 set(DMBOOT_EXT_SIZE         0x00900000)
-# The Wi-Fi of the chip (dmespwifi): the image of the Espressif libraries is linked for fixed addresses - its code in the flash from 0x020000, its
-# .data/.bss in the last 16 kB of the RAM, which the firmware leaves alone (mcu.ld). The buffers of the radio are in the RAM that the selector
-# needs only for its start (selector.ld: BOOT)
-set(DMBOOT_RESERVED_RAM 0x4000 CACHE STRING "Bytes at the end of the RAM that the firmware does not use" FORCE)
-set(DMBOOT_ESP_WIFI_IMAGE_OFFSET 0x020000 CACHE STRING "Offset in the flash of the image of the Wi-Fi libraries (dmespwifi); empty: none" FORCE)
+# The Wi-Fi of the chip (dmespwifi): the libraries of Espressif are a library of the system, linked into the firmware (the driver itself is a
+# module). The buffers of the radio are in the RAM that the selector needs only for its start (selector.ld: BOOT)
+set(DMBOOT_BUILTIN_MODULES "dmespwifi" CACHE STRING "Packages whose static library is linked into the firmware (dmod_link_builtin)" FORCE)
 set(DMBOOT_SELECTOR_ORIGIN 0x3C000000)
 set(DMBOOT_SELECTOR_STORE  0x3C010000)
 set(DMBOOT_SELECTOR_STORE_SIZE 0x00008000)

@@ -47,6 +47,11 @@ SECTIONS
       KEEP(*(.vectors))                         /* Reset_Handler: the entry of the image */
       KEEP(*(.startup.literal .startup.text))
       *(.literal .literal.* .text .text.* .gnu.linkonce.t.* .gnu.linkonce.literal.*)
+      /* The libraries of Espressif (dmespwifi, linked in by dmod_link_builtin) keep their code in sections of their own: what ESP-IDF puts
+       * in the RAM ("IRAM") is executed from the flash here, like everything else - the cache is never off while the radio works */
+      *libdmespwifi.a:(.iram1 .iram1.*)
+      *(.wifi0iram .wifi0iram.* .wifirxiram .wifirxiram.* .wifislpiram .wifislpiram.* .wifislprxiram .wifislprxiram.*)
+      *(.wifiextrairam .wifiextrairam.* .wifiorslpiram .wifiorslpiram.* .phyiram .phyiram.* .coexiram .coexiram.*)
       . = ALIGN(4);
       KEEP(*(.init.literal .init))
       KEEP(*(.fini.literal .fini))
@@ -61,6 +66,8 @@ SECTIONS
       __rodata_start__ = .;
       _flash_rodata_start = .;
       *(.rodata .rodata.* .gnu.linkonce.r.*)
+      *(.rodata_wlog_error .rodata_wlog_error.* .rodata_wlog_warning .rodata_wlog_warning.* .rodata_wlog_info .rodata_wlog_info.*)   /* the logs of the Espressif libraries */
+      *(.rodata_wlog_debug .rodata_wlog_debug.* .rodata_wlog_verbose .rodata_wlog_verbose.* .rodata_wlog .rodata_wlog.*)
       *(.srodata .srodata.*)
 
       /* (crtbegin.o refers to the frame tables; nothing unwinds the stack here) */
@@ -196,6 +203,7 @@ SECTIONS
       PROVIDE(__data_start__ = __data_start__);
 
       *(.data .data.* .gnu.linkonce.d.*)
+      *(.dram1 .dram1.*)                        /* the data of the Espressif libraries ("DRAM") */
       *(.sdata .sdata.*)
 
       /* dmod-system.ld of dmod: the input and output tables of the system */

@@ -42,3 +42,27 @@ libinput keymap=keymaps/en.ini
 libinput keymap=keymaps/pl.ini
 phoneui service=phoneui.ini
 phoneui_view @screen epaper-240x320
+
+#
+# The Wi-Fi of the chip (dmespwifi): wlan0, started by the driver; networkd.rules and dhcp.rules start networkd@wlan0 and dhcp@wlan0 for it.
+# The networks are set from the shell (wifi scan, wifi connect SSID PASSWORD); this board has no /ext yet, so no vault and no wifid.
+dmnetbridge
+dmnetif
+dmarp
+dmroute
+dmip
+dmicmp service=icmp.ini
+ifconfig
+ip
+ping
+networkd service=networkd@.ini
+networkd rules=networkd.rules
+dmudp
+dhcpc service=dhcp@.ini
+dhcpc rules=dhcp.rules
+dmespwifi driver=board/t-deck-pro/wifi.ini
+wifi
+dmcrypto driver=board/stm32f746g-disco/crypto.ini
+crypto
+dmsecrets
+secrets

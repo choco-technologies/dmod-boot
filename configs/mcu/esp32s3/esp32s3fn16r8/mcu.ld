@@ -8,7 +8,7 @@
  * to the IRAM by the start. The RAM stays below the RAM of the selector (0x3fcd1700 and up: its code, its data and its table).
  *
  *   IRAM 0x40378000 .. 0x40380000   vectors, code of the interrupts (the data bus sees it at 0x3fc88000)
- *   RAM  0x3fc90000 .. 0x3fcc8000   the log, the data, the stack, the heap (the end of it, DMBOOT_RESERVED_RAM bytes, is not the firmware's)
+ *   RAM  0x3fc90000 .. 0x3fcc8000   the log, the data, the stack, the heap
  *   DMA  0x3fcc8000 .. 0x3fcd0000   the heap of the DMA
  *   (0x3fcda000 .. 0x3fce9700: what the selector used only for its start; the buffers of the radio are there - dmespwifi)
  */
@@ -16,7 +16,7 @@ MEMORY
 {
     rom     (rx)  : ORIGIN = DMBOOT_ROM_ORIGIN, LENGTH = DMBOOT_ROM_LENGTH
     iram    (rx)  : ORIGIN = 0x40378000, LENGTH = 0x8000
-    ram     (rwx) : ORIGIN = 0x3fc90000, LENGTH = 0x38000 - DMBOOT_RESERVED_RAM     /* (DMBOOT_RESERVED_RAM: the end of it is kept for the image of the Wi-Fi libraries) */
+    ram     (rwx) : ORIGIN = 0x3fc90000, LENGTH = 0x38000
     dma     (rwx) : ORIGIN = 0x3fcc8000, LENGTH = 0x8000
     ext     (rwx) : ORIGIN = 0x3f800000, LENGTH = 0          /* the PSRAM: not used yet */
 }

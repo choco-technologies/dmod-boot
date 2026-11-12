@@ -225,14 +225,7 @@ if(DMBOOT_BANK AND NOT DMBOOT_EMULATION AND DMBOOT_ARCH STREQUAL "xtensa")
         BYPRODUCTS ${DMBOOT_SELECTOR_BIN}
         COMMENT "Building the selector...")
 
-    # The image of the Wi-Fi libraries (the package of dmespwifi brings it): another region of the flash, written with the selector
-    set(DMBOOT_ESP_WIFI_IMAGE "${CMAKE_BINARY_DIR}/packages/flash/dmespwifi/dmespwifi_image.bin" CACHE FILEPATH "The image of the Wi-Fi libraries to write at DMBOOT_ESP_WIFI_IMAGE_OFFSET")
-    set(DMBOOT_ESP_WIFI_IMAGE_ARGS "")
-    if(DMBOOT_ESP_WIFI_IMAGE_OFFSET)
-        set(DMBOOT_ESP_WIFI_IMAGE_ARGS ${DMBOOT_ESP_WIFI_IMAGE_OFFSET} ${DMBOOT_ESP_WIFI_IMAGE})
-    endif()
-
-    set(INSTALL_FIRMWARE_COMMAND ${DMBOOT_ESPTOOL_WRITE} 0x0 ${DMBOOT_SELECTOR_BIN} ${DMBOOT_ESP_BANK_OFFSET} ${DMBOOT_BANK_IMAGE} ${DMBOOT_ESP_WIFI_IMAGE_ARGS}
+    set(INSTALL_FIRMWARE_COMMAND ${DMBOOT_ESPTOOL_WRITE} 0x0 ${DMBOOT_SELECTOR_BIN} ${DMBOOT_ESP_BANK_OFFSET} ${DMBOOT_BANK_IMAGE}
         COMMAND ${DMBOOT_ESPTOOL} --port ${DMBOOT_ESP_PORT} --after hard-reset erase-region ${DMBOOT_ESP_STORE_OFFSET} ${DMBOOT_ESP_STORE_SLOT})
     set(INSTALL_FIRMWARE_COMMENT "Installing the selector and the bank ${DMBOOT_BANK} on ${TARGET}...")
     add_custom_target(install-bank

@@ -27,6 +27,10 @@ else()
     set(DMBOOT_NO_FLASH_MODULES ON CACHE BOOL "No modules in the firmware" FORCE)
 endif()
 
+# The Wi-Fi of the chip (dmespwifi): the libraries of Espressif are a library of the system, linked into the firmware (the driver itself is a
+# module; see esp32s3-lcd28)
+set(DMBOOT_BUILTIN_MODULES "dmespwifi" CACHE STRING "Packages whose static library is linked into the firmware (dmod_link_builtin)" FORCE)
+
 set(DMBOOT_BANK "A" CACHE STRING "Bank (A or B) that the image is linked for, started by the selector; empty: the whole flash, no selector")
 set(DMBOOT_BANK_IMAGE_WINDOW 0x43000000)
 set(DMBOOT_BANK_ONE_BUILD ON)
