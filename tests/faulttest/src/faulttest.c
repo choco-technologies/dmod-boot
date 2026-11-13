@@ -30,6 +30,27 @@ static uint32_t __attribute__(( noinline )) exhaust_stack( uint32_t depth )
 }
 
 /**
+ * @brief Recurse forever, calling into the firmware at every level
+ *
+ * The firmware runs on the stack of the caller: with the allocator and the log called at every level, the
+ * stack runs out while it is in use by the firmware as well as by the code of the application, and the process
+ * is taken down with the heap and the log in whatever state that left them.
+ *
+ * @param depth Current depth of the recursion
+ * @return uint32_t A value nobody is ever going to see
+ */
+static uint32_t __attribute__(( noinline )) exhaust_stack_in_firmware( uint32_t depth )
+{
+    volatile uint8_t frame[ 16 + ( RECURSION_FRAME_SIZE * ( depth % 3 ) ) / 8 ];
+
+    frame[ 0 ] = (uint8_t)depth;
+    void* memory = Dmod_Malloc( 16 );
+    Dmod_Free( memory );
+    Dmod_Printf( "" );
+    return exhaust_stack_in_firmware( depth + 1 ) + frame[ 0 ];
+}
+
+/**
  * @brief Execute an instruction the CPU does not have
  */
 static void execute_undefined_instruction( void )
@@ -62,7 +83,7 @@ static void jump_to_arm_state( void )
 
 static void print_usage( void )
 {
-    Dmod_Printf( "Usage: faulttest undef|state|access|stack|ok\n" );
+    Dmod_Printf( "Usage: faulttest undef|state|access|stack|stackfw|ok\n" );
 }
 
 int main( int argc, char* argv[] )
@@ -92,6 +113,11 @@ int main( int argc, char* argv[] )
     {
         Dmod_Printf( "Exhausting the stack...\n" );
         Dmod_Printf( "Recursion returned %lu\n", (unsigned long)exhaust_stack( 0 ) );
+    }
+    else if( strcmp( argv[ 1 ], "stackfw" ) == 0 )
+    {
+        Dmod_Printf( "Exhausting the stack in the firmware...\n" );
+        Dmod_Printf( "Recursion returned %lu\n", (unsigned long)exhaust_stack_in_firmware( 0 ) );
     }
     else if( strcmp( argv[ 1 ], "ok" ) != 0 )
     {

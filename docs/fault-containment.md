@@ -34,7 +34,8 @@ knows. Nothing in a layer reaches into another one.
    -> dmosi_thread_fault(): contained?  no -> halt, the fault in the kernel log
                                         yes -> recovery = { entry, arg, empty stack }
    -> the exception returns to recovery.entry, on the stack of the faulting thread, rewound to the top
-   -> entry: dmosi_process_fault(process, fault)
+   -> entry: hands the thread over to the fault supervisor (a thread of the system with a stack of its own) and waits
+   -> supervisor: dmosi_process_fault(process, fault)
         report on stdout of the process, kill the process
         -> its threads are killed, the module it ran is unloaded (exit callback of the process)
 ```
@@ -42,6 +43,12 @@ knows. Nothing in a layer reaches into another one.
 The exception return is the only way out of the code that faulted: the thread is not unwound, it is resumed as if it
 had just been created. Nothing it held is released - memory a module allocated is freed with the module, but a lock
 it took stays taken.
+
+The report and the termination are not done by the faulting thread. Its stack is the one of the application, sized
+for what the application does; printing through the terminal and the driver underneath, running the exit callbacks
+and unloading the module needs more than that (on the STM32F746G-DISCO it overran the 3 KiB stack of a process that
+had just crashed, and the second fault of the same thread halted the system). The same supervisor handles a stack
+overflow the kernel finds in a context switch, where nothing can be printed or killed at all.
 
 A fault is **not** contained - the system halts, as it always did - when
 - it happened in an interrupt handler, or in a thread with interrupts masked (a critical section protects a state that
