@@ -77,6 +77,24 @@ has to fault at the first byte:
   left: a stack overflow it finds is handled the same way, by a supervisor thread, but whatever the overflow wrote
   over is lost.
 
+### The Xtensa LX7 (ESP32-S3)
+
+`src/arch/xtensa/lx7/fault.c` is what `src/arch/armv7/fault.c` is, on the same Fault API.
+
+- The general exceptions the port of FreeRTOS does not take for itself (illegal instruction, a load, store or fetch that
+  faults, ...) are taken over in its exception table. The handler runs on the stack of the thread, with the frame the
+  vector saved; to contain the fault it **rewrites that frame** (pc, a1 = top of the stack, the argument and the entry) so
+  that the return from the exception continues in the entry the OS chose. The way there goes through a trampoline
+  (`fault_asm.S`) that first forgets the register windows of the abandoned code: WINDOWSTART would otherwise have the
+  core spill them over the frames of the entry.
+- The stack guard are the two **data breakpoints** of the core (64 bytes each, on stores), moved to the thread that is
+  switched to. They sit above 512 bytes of room, which is where the exception frame and the handler fit when the guard is
+  hit. The debug exception arrives at the debug level, where nothing of the OS can run: `xt_debugexception` saves what is
+  needed, and returns onto a stack of its own where the same question is asked of the OS. Not containable (an
+  interrupt handler, interrupts masked, a second fault of the thread, no supervisor): the system halts with a message.
+- The data breakpoints are what a debugger uses for watchpoints: a watchpoint set from OpenOCD takes them over.
+- `faulttest undef|access|stack|stackfw` were run on an ESP32-S3 board; 40 stack overflows in a row leave the shell as it was.
+
 ## Testing
 
 - `scripts/test_renode_fault.py` (step 5b of `scripts/run_renode_tests.sh`): the board in Renode runs `tests/faulttest`,

@@ -42,3 +42,11 @@ add_library(dmboot_port_shim OBJECT
     ${DMBOOT_IDF_DIR}/components/xtensa/xtensa_intr_asm.S)
 target_link_libraries(dmboot_port_shim PRIVATE freertos_kernel freertos_config dmboot_idf_headers)
 dmod_set_current_allocator(dmboot_port_shim)
+
+# The handlers of the exceptions of the core (the part of the Fault API of dmosi that is the architecture's): they take over
+# the table of xtensa_intr_asm.S, and rewrite the frame of the thread that faulted, so they use the structures of the port
+add_library(dmboot_fault OBJECT
+    ${CMAKE_SOURCE_DIR}/src/arch/xtensa/lx7/fault.c
+    ${CMAKE_SOURCE_DIR}/src/arch/xtensa/lx7/fault_asm.S)
+target_link_libraries(dmboot_fault PRIVATE dmod dmosi freertos_kernel freertos_config dmboot_idf_headers)
+dmod_set_current_allocator(dmboot_fault)

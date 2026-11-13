@@ -7,8 +7,9 @@ process is terminated and the shell keeps working.
 
 ```
 faulttest undef     execute an undefined instruction
-faulttest state     jump to an address without the Thumb bit
-faulttest access    read from an address nothing is mapped at (the emulator answers it, a board faults)
+faulttest state     jump to an address without the Thumb bit (an unmapped one on an Xtensa)
+faulttest access [hex address]   read from an address nothing is mapped at (the emulator answers it, a Cortex-M and
+                    an ESP32-S3 fault)
 faulttest stack     recurse until the stack is exhausted
 faulttest stackfw   the same, calling the allocator and the log at every level, so the firmware runs on a stack
                     that is almost exhausted (and the termination of the process has to cope with what it left)
