@@ -244,6 +244,12 @@ All parameters are optional. If not specified, the build will proceed with defau
 
 For a full list of all available CMake options (including DMOD library and VFS configuration), see [docs/cmake-options.md](docs/cmake-options.md).
 
+## A crashing application does not stop the system
+
+An application that runs out of stack or crashes (invalid memory access, undefined instruction) is reported on the standard output
+it was working on and terminated, and the shell keeps running. How this is split between the layers, and what is not covered, is in
+[docs/fault-containment.md](docs/fault-containment.md).
+
 
 ### Configuration of a mount point
 

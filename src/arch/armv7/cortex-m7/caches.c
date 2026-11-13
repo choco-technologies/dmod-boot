@@ -34,9 +34,10 @@
 #define MPU_RBAR        (*(volatile uint32_t *)0xE000ED9CUL)
 #define MPU_RASR        (*(volatile uint32_t *)0xE000EDA0UL)
 
-/* MPU region of the log buffer - dmfmc uses region 6 for the SDRAM; a
- * higher number wins where regions overlap, and these do not */
-#define LOGS_MPU_REGION 7U
+/* MPU region of the log buffer - dmfmc uses region 6 for the SDRAM and fault.c region 7 for the guard of the stack (which
+ * has to win over the SDRAM, where the stacks are: a higher number wins where regions overlap, and the log buffer does
+ * not overlap any) */
+#define LOGS_MPU_REGION 5U
 
 #define CACHE_LINE      32U
 
