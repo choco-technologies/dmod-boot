@@ -3,12 +3,15 @@
    buses are 0x6f0000 apart.
    The place is the one of the ESP-IDF bootloader (components/bootloader/subproject/main/ld/esp32s3/bootloader.ld): the top of
    the RAM, below the buffers of the ROM (0x3fce9700), so that an application loaded into the low RAM does not overwrite it.
-     DRAM 0x3fcd9700 .. 0x3fce9700   the table, the data, the bss and the stack (64 kB)
+     DRAM 0x3fcd9700 .. 0x3fcda000   the table, the data and the bss that the calls of the firmware (the table) still use
+     BOOT 0x3fcda000 .. 0x3fce9700   what the selector needs only until it starts the bank: the scratch of the store, its log, the stack
+                                     (61 kB). The firmware may use it once it has read the log (the Wi-Fi does: dmespwifi)
      IRAM 0x403c1700 .. 0x403c9700   the code (32 kB; the data bus sees it at 0x3fcd1700, just below the DRAM) */
 MEMORY
 {
     IRAM (rx)   : ORIGIN = 0x403c1700, LENGTH = 0x8000
-    DRAM (rw)   : ORIGIN = 0x3fcd9700, LENGTH = 0x10000
+    DRAM (rw)   : ORIGIN = 0x3fcd9700, LENGTH = 0x900
+    BOOT (rw)   : ORIGIN = 0x3fcda000, LENGTH = 0xF700
 }
 
 /* Functions of the ROM that the selector calls (components/esp_rom/esp32s3/ld/esp32s3.rom.ld of ESP-IDF); the ROM is

@@ -461,3 +461,12 @@ endif()
 add_custom_target(prepare_modules_dmp ALL
     DEPENDS "${DMBOOT_MODULES_DMP}"
 )
+
+# The .dmd files of all the modules of the board (/, /ext, the SD card): the firmware links the libraries of the system that they need
+# ("@builtin" entries, see the top CMakeLists.txt)
+set(DMBOOT_BOARD_DMD_FILES "")
+if(EXISTS "${DMBOOT_COMBINED_FLASH_DMD}" AND (DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL))
+    list(APPEND DMBOOT_BOARD_DMD_FILES "${DMBOOT_COMBINED_FLASH_DMD}")
+endif()
+list(APPEND DMBOOT_BOARD_DMD_FILES ${DMBOOT_EXT_DMD_FILES} ${DMBOOT_SDCARD_DMD_FILES})
+set(DMBOOT_BOARD_DMD_FILES "${DMBOOT_BOARD_DMD_FILES}" PARENT_SCOPE)
