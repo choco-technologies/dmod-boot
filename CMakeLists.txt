@@ -385,6 +385,11 @@ if(TARGET dmboot_power)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_power)
 endif()
 
+# The handlers of the fault exceptions of the architecture (they replace the weak defaults of the startup code)
+if(TARGET dmboot_fault)
+    target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_fault)
+endif()
+
 # Core-specific code that replaces weak defaults (e.g. the Cortex-M7 caches)
 if(TARGET dmboot_cpu)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_cpu)

@@ -19,3 +19,9 @@ add_subdirectory(${DMBOOT_ARCH_FAMILY})
 add_library(dmboot_power OBJECT dmod_reboot.c)
 dmod_set_current_allocator(dmboot_power)
 target_link_libraries(dmboot_power PRIVATE dmod)
+
+# The handlers of the fault exceptions: they replace the weak defaults of
+# startup.s, so they are an object library for the same reason.
+add_library(dmboot_fault OBJECT fault.c)
+dmod_set_current_allocator(dmboot_fault)
+target_link_libraries(dmboot_fault PRIVATE dmod dmosi)

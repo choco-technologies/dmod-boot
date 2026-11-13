@@ -41,17 +41,6 @@ void delay(int cycles)
     for(volatile int i = 0; i < cycles; i++);
 }
 
-void HardFault_Handler(void)
-{
-    // A hard fault means system state is already suspect, and the normal Dmod_Printf
-    // path (Dmod_LockStdio -> dmosi_process_current() -> ...) can itself hard-fault a
-    // second time if whatever corrupted state caused the original fault also affects
-    // that lookup. Force raw kernel writes first so DMOD_ASSERT_MSG below stays safe
-    // without changing how/where it logs.
-    Dmod_SetForceKernelWrite(true);
-    DMOD_ASSERT_MSG(false, "A hard fault occurred. System halted.");
-}
-
 static void load_embedded_startup_dmp(void)
 {
     void* startup_dmp_start = &__startup_dmp_start;
