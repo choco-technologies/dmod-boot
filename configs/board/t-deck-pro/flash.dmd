@@ -70,6 +70,14 @@ dhcpc rules=dhcp.rules
 dmespwifi driver=board/t-deck-pro/wifi.ini
 wifi
 #
+# The time: there is no RTC chip on the board, dmrtc keeps the calendar with the RTC timer of the ESP32-S3 (it survives the resets, not the loss of the
+# power; rtc.ini). dmdevfs reports the rtc node, dmutc.rules (tools.dmd) starts dmutc for it; dmntp (loaded at boot by the ntp unit) is one of dmutc's
+# external UTC sources: dmutc sets the RTC from it as soon as the network is up (every minute until it succeeds), then once a day.
+# `rtc` shows or sets the calendar by hand.
+dmrtc driver=board/t-deck-pro/rtc.ini
+rtc
+dmntp service=ntp.ini
+#
 # The external flash: /ext is the last 9 MB of the flash of the chip (0x700000, board.cmake), the same chip and layout as on esp32s3-lcd28, so its
 # dmflash configuration is used. dmflash exports it as the block node /dev/dmflashx/ext (the firmware does the erasing and programming from the internal
 # RAM with the caches off), dmlittlefs keeps a littlefs on it, which the "ext" service (services/ext.ini) mounts at /ext. A new flash has no file system:
