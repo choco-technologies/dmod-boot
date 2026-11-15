@@ -100,3 +100,9 @@ wifid rules=wifid.rules
 # The battery: the gauge (BQ27220 at 0x55 on the I2C bus of the board) is read by dmbq27220; its node (/dev/dmbq270) is the battery interface of dmdrvi
 # (cat /dev/dmbq270). It joins the friends_group of the e-paper and takes the bus of the touch panel from it (battery.ini of dmbq27220).
 dmbq27220 driver=board/t-deck-pro/battery.ini
+
+#
+# The LoRa radio (SX1262): dmsx126x, the node /dev/lora (the LoRa interface of dmdrvi). It joins the friends_group of the e-paper (lora.ini of dmsx126x):
+# the bus is shared with the display and the SD card, the power, the chip select and the reset of the radio are the lora_* sections of display.ini.
+dmsx126x driver=board/t-deck-pro/lora.ini
+lora
