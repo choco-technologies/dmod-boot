@@ -32,8 +32,14 @@ set(DMBOOT_BANK_IMAGE_WINDOW 0x43000000)
 set(DMBOOT_BANK_ONE_BUILD ON)
 set(DMBOOT_SELECTOR_TABLE_ADDRESS 0x3fcd9700u)
 
-# No external flash file system on this board yet (needs a dmflash configuration of the board)
-set(DMBOOT_EXT_DEVICE "" CACHE STRING "Block device of the external flash; empty: the board has none (format-ext, upload-ext are not defined)")
+# The external flash (/ext): the last 9 MB of the flash of the chip, a littlefs on the block node of dmflash (flash.dmd, services/ext.ini) - the same
+# as on esp32s3-lcd28 (the chip and the layout are the same). format-ext creates the file system, upload-ext sends build/ext over the console.
+set(DMBOOT_EXT_DEVICE "/dev/dmflashx/ext" CACHE STRING "Block device of the external flash; empty: the board has none (format-ext, upload-ext are not defined)")
+# The default vault of dmsecrets (wifid waits for the file to appear)
+set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
+set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
+set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
+set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
 
 # Splash logo the e-paper driver (dmuc8253) shows as soon as it is up: black on the white screen (an asset of assets/splash/, see
 # DMBOOT_SPLASH_LOGO). Built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.

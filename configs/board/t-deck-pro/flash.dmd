@@ -31,7 +31,7 @@ dmtca8418 layout=layouts/t-deck-pro.ini
 # what the applications claim for it and takes the input of the display's friends group from libinput), phoneui the application
 # that claims the display for its view, phoneui_view the views - the bundle of this board's screen (epaper-240x320) is built into the firmware
 # (/eviews/phoneui_view/phoneui.dmv). See the phoneui repository.
-dmview
+dmview @screen epaper-240x320
 dmview service=dmview@.ini
 dmview rules=dmview.rules
 # The input: dmdevfs reports the touch panel as an input, inputd.rules starts an inputd for it, which gives what it reports to libinput
@@ -42,10 +42,17 @@ libinput keymap=keymaps/en.ini
 libinput keymap=keymaps/pl.ini
 phoneui service=phoneui.ini
 phoneui_view @screen epaper-240x320
+#
+# hello - a small application of the launcher (it has an icon, so phoneui lists it; it lives in a rent of the screen): a test of the screen
+# rent and of the icons. Its icon for this board's screen (epaper-240x320) goes to /eviews/icons/hello.dmvi.
+hello @screen epaper-240x320
+calculator @screen epaper-240x320
+settings @screen epaper-240x320
 
 #
 # The Wi-Fi of the chip (dmespwifi): wlan0, started by the driver; networkd.rules and dhcp.rules start networkd@wlan0 and dhcp@wlan0 for it.
-# The networks are set from the shell (wifi scan, wifi connect SSID PASSWORD); this board has no /ext yet, so no vault and no wifid.
+# The networks are set from the shell (wifi scan, wifi connect SSID PASSWORD) or in Settings; the saved ones (the "wifi" vault of dmsecrets on /ext)
+# are connected to by wifid.
 dmnetbridge
 dmnetif
 dmarp
@@ -62,7 +69,26 @@ dhcpc service=dhcp@.ini
 dhcpc rules=dhcp.rules
 dmespwifi driver=board/t-deck-pro/wifi.ini
 wifi
+#
+# The external flash: /ext is the last 9 MB of the flash of the chip (0x700000, board.cmake), the same chip and layout as on esp32s3-lcd28, so its
+# dmflash configuration is used. dmflash exports it as the block node /dev/dmflashx/ext (the firmware does the erasing and programming from the internal
+# RAM with the caches off), dmlittlefs keeps a littlefs on it, which the "ext" service (services/ext.ini) mounts at /ext. A new flash has no file system:
+# create it once with `mklittlefs /dev/dmflashx/ext` (ALL DATA IN IT IS LOST). The vault of the networks is /ext/secrets.vault.
+dmflash driver=board/esp32s3-lcd28/flash.ini
+dmlittlefs
+mklittlefs
+#
+# The vault: dmcrypto does the cryptography and takes its random bytes from /dev/rng (dmrng, the generator of the chip); the vault is opened with the
+# key of the device secret (/dev/devkey), so nobody types a passphrase. wifid connects to the saved networks (it needs /ext, where the vault is).
+dmrng driver=board/esp32s3-lcd28/rng.ini
 dmcrypto driver=board/stm32f746g-disco/crypto.ini
 crypto
 dmsecrets
 secrets
+wifid service=wifid@.ini
+wifid rules=wifid.rules
+
+#
+# The battery: the gauge (BQ27220 at 0x55 on the I2C bus of the board) is read by dmbq27220; its node (/dev/dmbq270) is the battery interface of dmdrvi
+# (cat /dev/dmbq270). It joins the friends_group of the e-paper and takes the bus of the touch panel from it (battery.ini of dmbq27220).
+dmbq27220 driver=board/t-deck-pro/battery.ini
