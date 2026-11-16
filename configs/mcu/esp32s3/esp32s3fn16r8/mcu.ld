@@ -10,6 +10,7 @@
  *   IRAM 0x40378000 .. 0x40380000   vectors, code of the interrupts (the data bus sees it at 0x3fc88000)
  *   RAM  0x3fc90000 .. 0x3fcc8000   the log, the data, the stack, the heap
  *   DMA  0x3fcc8000 .. 0x3fcd0000   the heap of the DMA
+ *   (0x3fcda000 .. 0x3fce9700: what the selector used only for its start; the buffers of the radio are there - dmespwifi)
  */
 MEMORY
 {

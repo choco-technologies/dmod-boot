@@ -67,9 +67,38 @@ __attribute__(( section( ".iram1" ) )) void xt_unhandled_interrupt( void * arg )
     _xt_panic();
 }
 
+/*
+ * What the last unhandled exception was, for a debugger (the stack of a task may be in the external RAM, which JTAG does not read; this is in
+ * the internal one): [0] the cause, [1] the address, [2] the PC, [3] the PS, [4] a0, [5] a1, [6..] the callers (the return addresses of the
+ * windowed frames, as the stack keeps them). Read it with the address of the symbol from the ELF.
+ */
+#define DMBOOT_EXCEPTION_WORDS  16
+volatile uint32_t dmboot_last_exception[ DMBOOT_EXCEPTION_WORDS ];
+
 __attribute__(( section( ".iram1" ) )) void xt_unhandled_exception( void * frame )
 {
-    ( void ) frame;
+    /* XtExcFrame: exit, pc, ps, a0, a1, a2.. a15, sar, exccause, excvaddr */
+    const uint32_t * f = frame;
+    uint32_t sp = f[ 4 ];
+
+    dmboot_last_exception[ 0 ] = f[ 20 ];
+    dmboot_last_exception[ 1 ] = f[ 21 ];
+    dmboot_last_exception[ 2 ] = f[ 1 ];
+    dmboot_last_exception[ 3 ] = f[ 2 ];
+    dmboot_last_exception[ 4 ] = f[ 3 ];
+    dmboot_last_exception[ 5 ] = f[ 4 ];
+
+    uint32_t pc = ( f[ 3 ] & 0x3fffffffu ) | 0x40000000u;
+    for( int i = 6; i < DMBOOT_EXCEPTION_WORDS; i++ )
+    {
+        dmboot_last_exception[ i ] = pc;
+        if( sp < 0x3c000000u || sp > 0x3fffffffu || ( sp & 3u ) != 0u )
+        {
+            break;
+        }
+        pc = ( *( const uint32_t * ) ( sp - 16u ) & 0x3fffffffu ) | 0x40000000u;
+        sp = *( const uint32_t * ) ( sp - 12u );
+    }
     _xt_panic();
 }
 

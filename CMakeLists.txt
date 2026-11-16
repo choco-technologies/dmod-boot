@@ -381,6 +381,22 @@ if(TARGET dmboot_port_shim)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_port_shim)
 endif()
 
+# The libraries of the system that the modules of the board need - the "@builtin" entries of their .dmd files, e.g. the port of dmespwifi
+# requires its library of the radio - are linked into the firmware: it is the system of all of them (/, /ext, the SD card). dmf-get
+# resolves them from the packages of the modules (dmod_link_builtin DEPENDENCIES)
+function(dmboot_link_builtin targetName)
+    if(NOT DMBOOT_BOARD_DMD_FILES)
+        return()
+    endif()
+    set(DMOD_CPU_FAMILY "${DMBOOT_MCU_SERIES}")
+    set(_BUILTIN_ARGS DEPENDENCIES ${DMBOOT_BOARD_DMD_FILES})
+    if(DMBOOT_MANIFEST_URL)
+        list(APPEND _BUILTIN_ARGS MANIFEST "${DMBOOT_MANIFEST_URL}")
+    endif()
+    dmod_link_builtin(${targetName} PRIVATE ${_BUILTIN_ARGS})
+endfunction()
+dmboot_link_builtin(${MODULE_NAME}.elf)
+
 if(TARGET dmboot_power)
     target_link_libraries(${MODULE_NAME}.elf PRIVATE dmboot_power)
 endif()

@@ -9,7 +9,6 @@ set(TARGET "ESP32S3" CACHE STRING "Target microcontroller" FORCE)
 #
 #   0x000000  64 kB    the selector (the image with its header)
 #   0x010000  64 kB    its store (32 kB of it used: the state of the banks, the persistent items)
-#   0x020000  896 kB   free
 #   0x100000  3 MB     slot of the bank A: the image 0x2F0000, then the file system of the bank (/) 64 kB
 #   0x400000  3 MB     slot of the bank B, the same
 #   0x700000  9 MB     /ext (littlefs, common to both banks)
@@ -27,6 +26,7 @@ set(DMBOOT_BANK_B_FS_ORIGIN 0x3C6F0000)
 set(DMBOOT_BANK_B_FS_SIZE   0x00010000)
 set(DMBOOT_EXT_ORIGIN       0x3C700000)
 set(DMBOOT_EXT_SIZE         0x00900000)
+# The Wi-Fi of the chip (dmespwifi): the buffers of the radio are in the RAM that the selector needs only for its start (selector.ld: BOOT)
 set(DMBOOT_SELECTOR_ORIGIN 0x3C000000)
 set(DMBOOT_SELECTOR_STORE  0x3C010000)
 set(DMBOOT_SELECTOR_STORE_SIZE 0x00008000)
@@ -50,6 +50,8 @@ set(DMBOOT_SELECTOR_TABLE_ADDRESS 0x3fcd9700u)
 # The external flash (/ext): the last 9 MB of the flash of the chip, a littlefs on the block node of dmflash (flash.dmd, services/ext.ini).
 # format-ext creates the file system, upload-ext sends build/ext over the console (YMODEM).
 set(DMBOOT_EXT_DEVICE "/dev/dmflashx/ext" CACHE STRING "Block device of the external flash; empty: the board has none (format-ext, upload-ext are not defined)")
+# The default vault of dmsecrets (wifid waits for the file to appear)
+set(DMBOOT_DMSECRETS_PATH "/ext/secrets.vault" CACHE STRING "Path of the default dmsecrets vault (DMSECRETS_PATH at boot); empty: not set")
 set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
 set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
 set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")

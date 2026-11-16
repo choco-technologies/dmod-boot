@@ -134,8 +134,8 @@ endif()
 
 execute_process(COMMAND "${DMF_GET}" --help
     RESULT_VARIABLE _DMF_GET_RESULT OUTPUT_VARIABLE _DMF_GET_HELP ERROR_VARIABLE _DMF_GET_ERROR)
-if(NOT _DMF_GET_RESULT EQUAL 0 OR NOT _DMF_GET_HELP MATCHES "--package-dir" OR NOT _DMF_GET_HELP MATCHES "--license-dir")
-    message(FATAL_ERROR "dmf-get must support --package-dir and --license-dir. Build/install the tools from lib/dmod, then set DMF_GET to the updated executable. Selected: ${DMF_GET}")
+if(NOT _DMF_GET_RESULT EQUAL 0 OR NOT _DMF_GET_HELP MATCHES "--package-dir" OR NOT _DMF_GET_HELP MATCHES "--license-dir" OR NOT _DMF_GET_HELP MATCHES "--icons-dir")
+    message(FATAL_ERROR "dmf-get must support --package-dir, --license-dir and --icons-dir. Build/install the tools from lib/dmod, then set DMF_GET to the updated executable. Selected: ${DMF_GET}")
 endif()
 
 set(DMBOOT_SCREEN_ARGS "")
@@ -179,7 +179,10 @@ dmboot_config_map("${DMBOOT_CONFIG_DIR}" DMBOOT_CONFIG_MAP)
 # dmf-get installs them into <views dir>/<module>: views of the flash modules go to
 # DMBOOT_EVIEWS_DIR (embedded and mounted as /eviews/, see scripts/romfs.cmake),
 # views of the sdcard modules stay on the sdcard, in DMBOOT_SDCARD_VIEWS_DIR.
-file(MAKE_DIRECTORY "${DMBOOT_EVIEWS_DIR}" "${DMBOOT_LICENSE_DIR}")
+# The icons of the modules (the "icon" resource of the .dmr: a launcher lists the modules that have one) go with them: the flash modules'
+# to /eviews/icons/<module>.dmvi (<variant>/<module>.dmvi), the sdcard modules' and the ext modules' stay on their card, in icons/ next to views/.
+set(DMBOOT_EICONS_DIR "${DMBOOT_EVIEWS_DIR}/icons")
+file(MAKE_DIRECTORY "${DMBOOT_EVIEWS_DIR}" "${DMBOOT_EICONS_DIR}" "${DMBOOT_LICENSE_DIR}")
 
 # Package contents stay on the host, outside the directories embedded as binaries
 # or uploaded to the card. Download markers must not pollute binary directories.
@@ -249,12 +252,12 @@ if(DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL)
     if(DMBOOT_MANIFEST_URL)
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules (manifest: ${DMBOOT_MANIFEST_URL})..."
-            COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
+            COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${DMBOOT_COMBINED_FLASH_DMD}" -m "${DMBOOT_MANIFEST_URL}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --icons-dir "${DMBOOT_EICONS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
         )
     else()
         list(APPEND _FLASH_DOWNLOAD_COMMANDS
             COMMAND ${CMAKE_COMMAND} -E echo "Downloading flash modules..."
-            COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
+            COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${DMBOOT_COMBINED_FLASH_DMD}" -o "${DMBOOT_MODULES_OUT_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_CONFIG_DIR}" --config-map "${DMBOOT_CONFIG_MAP}" --views-dir "${DMBOOT_EVIEWS_DIR}" --icons-dir "${DMBOOT_EICONS_DIR}" --package-dir "${DMBOOT_FLASH_PACKAGE_DIR}" --license-dir "${DMBOOT_LICENSE_DIR}"
         )
     endif()
     if(DMBOOT_EMULATION)
@@ -304,6 +307,7 @@ set(DMBOOT_SDCARD_OUT_DIR "${CMAKE_BINARY_DIR}/sdcard")
 set(DMBOOT_SDCARD_BIN_DIR "${DMBOOT_SDCARD_OUT_DIR}/bin")
 set(DMBOOT_SDCARD_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/sdcard.download_complete")
 set(DMBOOT_SDCARD_VIEWS_DIR "${DMBOOT_SDCARD_OUT_DIR}/views")
+set(DMBOOT_SDCARD_ICONS_DIR "${DMBOOT_SDCARD_OUT_DIR}/icons")
 set(DMBOOT_SDCARD_LICENSE_DIR "${DMBOOT_SDCARD_OUT_DIR}/lic")
 set(DMBOOT_SDCARD_CONFIG_DIR "${DMBOOT_SDCARD_OUT_DIR}/cfg")
 dmboot_config_map("${DMBOOT_SDCARD_CONFIG_DIR}" DMBOOT_SDCARD_CONFIG_MAP)
@@ -318,12 +322,12 @@ if(DMBOOT_SDCARD_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --icons-dir "${DMBOOT_SDCARD_ICONS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
             )
         else()
             list(APPEND _SDCARD_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading sdcard modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -o "${DMBOOT_SDCARD_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_SDCARD_CONFIG_DIR}" --config-map "${DMBOOT_SDCARD_CONFIG_MAP}" --views-dir "${DMBOOT_SDCARD_VIEWS_DIR}" --icons-dir "${DMBOOT_SDCARD_ICONS_DIR}" --package-dir "${DMBOOT_SDCARD_PACKAGE_DIR}" --license-dir "${DMBOOT_SDCARD_LICENSE_DIR}"
             )
         endif()
     endforeach()
@@ -359,6 +363,7 @@ set(DMBOOT_EXT_BIN_DIR "${DMBOOT_EXT_OUT_DIR}/bin")
 set(DMBOOT_EXT_PACKAGE_DIR "${CMAKE_BINARY_DIR}/packages/ext")
 set(DMBOOT_EXT_MARKER_FILE "${CMAKE_CURRENT_BINARY_DIR}/ext.download_complete")
 set(DMBOOT_EXT_VIEWS_DIR "${DMBOOT_EXT_OUT_DIR}/views")
+set(DMBOOT_EXT_ICONS_DIR "${DMBOOT_EXT_OUT_DIR}/icons")
 set(DMBOOT_EXT_LICENSE_DIR "${DMBOOT_EXT_OUT_DIR}/lic")
 set(DMBOOT_EXT_CONFIG_DIR "${DMBOOT_EXT_OUT_DIR}/cfg")
 dmboot_config_map("${DMBOOT_EXT_CONFIG_DIR}" DMBOOT_EXT_CONFIG_MAP)
@@ -373,12 +378,12 @@ if(DMBOOT_EXT_DMD_FILES)
         if(_EFFECTIVE_MANIFEST)
             list(APPEND _EXT_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading ext modules from ${_DMD_FILE} (manifest: ${_EFFECTIVE_MANIFEST})..."
-                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -m "${_EFFECTIVE_MANIFEST}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --icons-dir "${DMBOOT_EXT_ICONS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
             )
         else()
             list(APPEND _EXT_DOWNLOAD_COMMANDS
                 COMMAND ${CMAKE_COMMAND} -E echo "Downloading ext modules from ${_DMD_FILE}..."
-                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
+                COMMAND ${DMF_GET} ${DMBOOT_SCREEN_ARGS} -d "${_DMD_FILE}" -o "${DMBOOT_EXT_BIN_DIR}" -t "${DMOD_TOOLS_NAME}" --cpu-family "${DMBOOT_MCU_SERIES}" -y --type "${DMBOOT_MODULE_TYPE}" --config-dir "${DMBOOT_EXT_CONFIG_DIR}" --config-map "${DMBOOT_EXT_CONFIG_MAP}" --views-dir "${DMBOOT_EXT_VIEWS_DIR}" --icons-dir "${DMBOOT_EXT_ICONS_DIR}" --package-dir "${DMBOOT_EXT_PACKAGE_DIR}" --license-dir "${DMBOOT_EXT_LICENSE_DIR}"
             )
         endif()
     endforeach()
@@ -461,3 +466,12 @@ endif()
 add_custom_target(prepare_modules_dmp ALL
     DEPENDS "${DMBOOT_MODULES_DMP}"
 )
+
+# The .dmd files of all the modules of the board (/, /ext, the SD card): the firmware links the libraries of the system that they need
+# ("@builtin" entries, see the top CMakeLists.txt)
+set(DMBOOT_BOARD_DMD_FILES "")
+if(EXISTS "${DMBOOT_COMBINED_FLASH_DMD}" AND (DMBOOT_FLASH_DMD_FILES OR DMBOOT_MAIN_MODULE OR DMBOOT_SHELL))
+    list(APPEND DMBOOT_BOARD_DMD_FILES "${DMBOOT_COMBINED_FLASH_DMD}")
+endif()
+list(APPEND DMBOOT_BOARD_DMD_FILES ${DMBOOT_EXT_DMD_FILES} ${DMBOOT_SDCARD_DMD_FILES})
+set(DMBOOT_BOARD_DMD_FILES "${DMBOOT_BOARD_DMD_FILES}" PARENT_SCOPE)
