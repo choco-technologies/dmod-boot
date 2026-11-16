@@ -5,6 +5,8 @@
  * One core, nothing of the heap, the watchdogs, the cache or the second core of the IDF: the replacements are what the port
  * needs to link, and no more than that.
  */
+#include "dmod.h"
+#include "dmosi.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -138,4 +140,85 @@ void dmboot_xtensa_irq_init( int count )
             _xt_interrupt_table[ line ].arg = ( void * ) ( uintptr_t ) line;
         }
     }
+}
+
+/* A fault that cannot be contained to a process (src/arch/xtensa/lx7/fault.c): what is known goes where _xt_panic keeps it, and the system resets */
+void dmboot_reboot_on_fault( uint32_t cause, uint32_t address, uint32_t pc, uint32_t ps, uint32_t a0, uint32_t sp )
+{
+    dmboot_last_exception[ 0 ] = cause;
+    dmboot_last_exception[ 1 ] = address;
+    dmboot_last_exception[ 2 ] = pc;
+    dmboot_last_exception[ 3 ] = ps;
+    dmboot_last_exception[ 4 ] = a0;
+    dmboot_last_exception[ 5 ] = sp;
+    for( int i = 6; i < DMBOOT_EXCEPTION_WORDS; i++ )
+    {
+        dmboot_last_exception[ i ] = 0u;
+    }
+    _xt_panic();
+    for( ;; )
+    {
+    }
+}
+
+/*
+ * What the last run left when it ended in _xt_panic (panic.S): printed once, at the start that follows. The record is in the RTC slow memory,
+ * which a reset does not clear: [0] the mark, [1..16] dmboot_last_exception, [17..21] EXCCAUSE, EXCVADDR, EPC1, EPC2, DEPC.
+ */
+void dmboot_report_last_crash( void )
+{
+    volatile uint32_t * r = ( volatile uint32_t * ) 0x50001F40u;
+
+    if( r[ 0 ] != 0xC4A5E0D1u )
+    {
+        return;
+    }
+    r[ 0 ] = 0xC4A5E0D2u;                   /* reported (the record stays: a debugger can still read it) */
+    DMOD_LOG_ERROR( "dmboot: the last run ended in a crash - cause %u at 0x%08x, pc 0x%08x, ps 0x%08x, a0 0x%08x, sp 0x%08x\n",
+                 ( unsigned ) r[ 1 ], ( unsigned ) r[ 2 ], ( unsigned ) r[ 3 ], ( unsigned ) r[ 4 ], ( unsigned ) r[ 5 ], ( unsigned ) r[ 6 ] );
+    DMOD_LOG_ERROR( "dmboot: callers 0x%08x 0x%08x 0x%08x 0x%08x; at the panic: exccause %u excvaddr 0x%08x epc1 0x%08x epc2 0x%08x depc 0x%08x\n",
+                 ( unsigned ) r[ 7 ], ( unsigned ) r[ 8 ], ( unsigned ) r[ 9 ], ( unsigned ) r[ 10 ],
+                 ( unsigned ) r[ 17 ], ( unsigned ) r[ 18 ], ( unsigned ) r[ 19 ], ( unsigned ) r[ 20 ], ( unsigned ) r[ 21 ] );
+}
+
+/*
+ * The way out of a hang that is no exception (a deadlock with the interrupts off, a task that never lets go of the CPU): the RTC watchdog resets
+ * the system unless a task of the lowest priority feeds it - a task that is starved (or a tick that does not come) is a system that is hung.
+ * The exceptions do not wait for it: _xt_panic resets at once.
+ */
+#define RTC_WDT_CONFIG0     ( *( volatile uint32_t * ) 0x60008098u )
+#define RTC_WDT_CONFIG1     ( *( volatile uint32_t * ) 0x6000809Cu )
+#define RTC_WDT_FEED        ( *( volatile uint32_t * ) 0x600080ACu )
+#define RTC_WDT_PROTECT     ( *( volatile uint32_t * ) 0x600080B0u )
+#define RTC_WDT_KEY         0x50D83AA1u
+#define WATCHDOG_TICKS      3000000u        /* of the slow clock of the RTC (about 136 kHz): about 22 s */
+#define WATCHDOG_FEED_MS    1000u
+
+static void watchdog_feeder( void * arg )
+{
+    ( void ) arg;
+    for( ;; )
+    {
+        RTC_WDT_PROTECT = RTC_WDT_KEY;
+        RTC_WDT_FEED = 0x80000000u;               /* RTC_CNTL_WDT_FEED is bit 31 */
+        RTC_WDT_PROTECT = 0u;
+        dmosi_thread_sleep( WATCHDOG_FEED_MS );
+    }
+}
+
+void dmboot_start_watchdog( void )
+{
+    dmosi_thread_t feeder = dmosi_thread_create( watchdog_feeder, NULL, 1, 2048, "watchdog", NULL );
+    if( feeder == NULL )
+    {
+        DMOD_LOG_ERROR( "dmboot: no thread for the watchdog - the system runs without it\n" );
+        return;                             /* no feeder, no watchdog: it must never be on without one */
+    }
+    RTC_WDT_PROTECT = RTC_WDT_KEY;
+    RTC_WDT_CONFIG1 = WATCHDOG_TICKS;
+    /* enabled; the first stage resets the system; reset signals of the longest length; the CPUs are reset too */
+    RTC_WDT_CONFIG0 = ( 1u << 31 ) | ( 3u << 28 ) | ( 7u << 16 ) | ( 7u << 13 ) | ( 1u << 11 ) | ( 1u << 10 );
+    RTC_WDT_FEED = 0x80000000u;               /* RTC_CNTL_WDT_FEED is bit 31 */
+    RTC_WDT_PROTECT = 0u;
+    DMOD_LOG_INFO( "dmboot: the watchdog is on (a reset after %u ticks of the RTC clock without a feed)\n", ( unsigned ) WATCHDOG_TICKS );
 }

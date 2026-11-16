@@ -9,8 +9,8 @@
  * If the OS can contain the fault to the process of the thread that was interrupted, the code that faulted is abandoned:
  * the exception frame the vector saved on the stack of the thread is rewritten so that the return from the exception
  * continues in the entry the OS chose, on the thread's own stack rewound to the top, as if the thread had just been
- * started there. Otherwise nothing can vouch for the state of the system any more, and it halts with the fault in the
- * kernel log.
+ * started there. Otherwise nothing can vouch for the state of the system any more, and it restarts the system (what is known of
+ * the fault is kept in the RTC memory for the next start).
  *
  * What makes a stack overflow fault at the moment it happens is the data breakpoints of the core: the stack guard of the
  * thread that runs (dmosi_stack_guard_select()) is the lowest part of its stack above a stretch of room to handle the
@@ -28,6 +28,9 @@
 #include "xtensa/corebits.h"
 #include "xtensa/config/core.h"
 #include "xtensa_context.h"
+
+/* port_shim.c: keeps what is known of the fault where the next start can print it (the RTC memory) and resets the system; does not return */
+extern void dmboot_reboot_on_fault( uint32_t cause, uint32_t address, uint32_t pc, uint32_t ps, uint32_t a0, uint32_t sp ) __attribute__(( noreturn ));
 
 /* The table of the handlers of the exceptions of xtensa_intr_asm.S, and the one it starts with */
 typedef void ( * exception_handler_t )( XtExcFrame * );
@@ -145,12 +148,12 @@ static void resume_thread( XtExcFrame* frame, const dmosi_fault_recovery_t* reco
 }
 
 /**
- * @brief Halt the system on a fault that cannot be contained
+ * @brief Reboot the system on a fault that cannot be contained
  *
  * @param fault Description of the fault
  * @param frame Frame the vector saved on the stack of the thread
  */
-static void halt_system( const dmosi_fault_t* fault, const XtExcFrame* frame )
+static void halt_system( const dmosi_fault_t* fault, const XtExcFrame* frame )   /* (it does not return: the system restarts) */
 {
     /* System state is suspect, and the normal Dmod_Printf path (Dmod_LockStdio ->
      * dmosi_process_current() -> ...) can fault a second time on it: raw kernel writes only */
@@ -158,10 +161,8 @@ static void halt_system( const dmosi_fault_t* fault, const XtExcFrame* frame )
     DMOD_LOG_ERROR( "Fatal fault: pc=0x%08lX a0=0x%08lX sp=0x%08lX exccause=%lu excvaddr=0x%08lX ps=0x%08lX\n",
                     (unsigned long)frame->pc, (unsigned long)frame->a0, (unsigned long)frame->a1,
                     (unsigned long)frame->exccause, (unsigned long)fault->address, (unsigned long)frame->ps );
-    DMOD_ASSERT_MSG( false, "A fault that cannot be contained to a process occurred. System halted." );
-    for( ;; )
-    {
-    }
+    dmboot_reboot_on_fault( (uint32_t)frame->exccause, (uint32_t)fault->address, (uint32_t)frame->pc, (uint32_t)frame->ps,
+                            (uint32_t)frame->a0, (uint32_t)frame->a1 );
 }
 
 /**
@@ -289,8 +290,5 @@ void dmboot_xtensa_guard_fault( void )
     Dmod_SetForceKernelWrite( true );
     DMOD_LOG_ERROR( "Fatal stack overflow: pc=0x%08lX sp=0x%08lX ps=0x%08lX\n", (unsigned long)dmboot_guard_hit.pc,
                     (unsigned long)dmboot_guard_hit.sp, (unsigned long)dmboot_guard_hit.ps );
-    DMOD_ASSERT_MSG( false, "A fault that cannot be contained to a process occurred. System halted." );
-    for( ;; )
-    {
-    }
+    dmboot_reboot_on_fault( 0xFFFFFFFFu, 0u, (uint32_t)dmboot_guard_hit.pc, (uint32_t)dmboot_guard_hit.ps, 0u, (uint32_t)dmboot_guard_hit.sp );
 }

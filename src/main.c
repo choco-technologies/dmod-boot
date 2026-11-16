@@ -593,9 +593,21 @@ static dmheap_context_t* init_heap(void* start, void* end, const char* name, boo
 static Dmod_Context_t* startup_module;
 static dmosi_thread_t startup_thread;
 
+/* What the last run left when it crashed (the targets that keep it have it) */
+extern void dmboot_report_last_crash(void) __attribute__((weak));
+extern void dmboot_start_watchdog(void) __attribute__((weak));       /* (the targets that have a watchdog for a hang with no exception) */
+
 static void startup_devices(void* arg)
 {
     (void)arg;
+    if(dmboot_report_last_crash != NULL)
+    {
+        dmboot_report_last_crash();                 /* (first: what a crash left is not lost if this start does not get far) */
+    }
+    if(dmboot_start_watchdog != NULL)
+    {
+        dmboot_start_watchdog();
+    }
     mount_embedded_filesystems();
     load_embedded_startup_dmp();
     start_main_module(startup_module);

@@ -31,7 +31,7 @@ knows. Nothing in a layer reaches into another one.
 ```
  CPU exception (MemManage / BusFault / UsageFault / HardFault)
    -> dmboot_fault_handler: describes the fault
-   -> dmosi_thread_fault(): contained?  no -> halt, the fault in the kernel log
+   -> dmosi_thread_fault(): contained?  no -> the system restarts (what is known of the fault is kept)
                                         yes -> recovery = { entry, arg, empty stack }
    -> the exception returns to recovery.entry, on the stack of the faulting thread, rewound to the top
    -> entry: hands the thread over to the fault supervisor (a thread of the system with a stack of its own) and waits
@@ -50,7 +50,7 @@ and unloading the module needs more than that (on the STM32F746G-DISCO it overra
 had just crashed, and the second fault of the same thread halted the system). The same supervisor handles a stack
 overflow the kernel finds in a context switch, where nothing can be printed or killed at all.
 
-A fault is **not** contained - the system halts, as it always did - when
+A fault is **not** contained - the system **restarts** (it used to halt: a device that stops with nothing on the screen is of no use, and a board that cannot be power-cycled is worse) - when
 - it happened in an interrupt handler, or in a thread with interrupts masked (a critical section protects a state that
   would be left half-updated),
 - the scheduler is not running yet,
@@ -91,9 +91,26 @@ has to fault at the first byte:
   switched to. They sit above 512 bytes of room, which is where the exception frame and the handler fit when the guard is
   hit. The debug exception arrives at the debug level, where nothing of the OS can run: `xt_debugexception` saves what is
   needed, and returns onto a stack of its own where the same question is asked of the OS. Not containable (an
-  interrupt handler, interrupts masked, a second fault of the thread, no supervisor): the system halts with a message.
+  interrupt handler, interrupts masked, a second fault of the thread, no supervisor): the system restarts.
 - The data breakpoints are what a debugger uses for watchpoints: a watchpoint set from OpenOCD takes them over.
 - `faulttest undef|access|stack|stackfw` were run on an ESP32-S3 board; 40 stack overflows in a row leave the shell as it was.
+
+## When it cannot be contained: the system restarts
+
+Where the fault cannot be contained (the list above) the system does not stop: it restarts.
+
+- **Xtensa (ESP32-S3)**: `dmboot_reboot_on_fault()` (`shim/port_shim.c`) and `_xt_panic` (`shim/panic.S`, which also takes an exception no
+  handler took and a double exception) keep what is known - the cause, the address, pc, ps, a0, sp, the callers, and the registers of the
+  panic - in the RTC slow memory (0x50001F40, which a reset does not clear) and reset the system (`RTC_CNTL_SW_SYS_RST`). `_xt_panic` uses no
+  stack: after a double exception the stack may be what is wrong. The next start prints the record once (`dmboot_report_last_crash()`:
+  "the last run ended in a crash"; the record stays in the memory for a debugger, with its mark changed to "reported").
+- **A hang that is no exception** (a deadlock with the interrupts off, a task that never lets go of the CPU): the RTC watchdog
+  (`dmboot_start_watchdog()`) resets the system after about 22 s unless a thread of the lowest priority feeds it every second - so a feeder that
+  is starved, or a tick that does not come, is a hang. Only on the targets that define it (the Xtensa one).
+- **ARMv7-M**: the fault is logged, and `SYSRESETREQ` resets the core. (The log is a ring in the RAM that the next start clears: what was
+  logged is lost with it. A record that survives the reset is not there yet.) Not tried on a board.
+
+A debugger that wants the core to stay where it faulted sets a breakpoint at `_xt_panic` (Xtensa) before the reset.
 
 ## Testing
 

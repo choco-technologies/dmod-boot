@@ -13,7 +13,7 @@
  * system keeps running.
  *
  * Otherwise nothing can vouch for the state of the system any more, and it
- * halts with the fault in the kernel log.
+ * restarts the system (the fault in the kernel log).
  *
  * A stack overflow is made to fault at the moment it happens: the thread
  * backend tells the architecture the stack of every thread it switches to
@@ -29,6 +29,7 @@
 /* System Control Block: fault status and address registers */
 #define SCB_CFSR                (*(volatile uint32_t*)0xE000ED28UL)
 #define SCB_HFSR                (*(volatile uint32_t*)0xE000ED2CUL)
+#define SCB_AIRCR               (*(volatile uint32_t*)0xE000ED0CUL)
 #define SCB_MMFAR               (*(volatile uint32_t*)0xE000ED34UL)
 #define SCB_BFAR                (*(volatile uint32_t*)0xE000ED38UL)
 /* Memory Protection Unit */
@@ -304,7 +305,7 @@ static uint32_t resume_thread( const dmosi_fault_recovery_t* recovery )
 }
 
 /**
- * @brief Halt the system on a fault that cannot be contained
+ * @brief Restart the system on a fault that cannot be contained
  *
  * @param fault Description of the fault
  * @param frame Frame the CPU stacked on exception entry
@@ -318,7 +319,13 @@ static void halt_system( const dmosi_fault_t* fault, const exception_frame_t* fr
     DMOD_LOG_ERROR( "Fatal fault: pc=0x%08lX lr=0x%08lX sp=0x%08lX cfsr=0x%08lX hfsr=0x%08lX address=0x%08lX\n",
                     (unsigned long)fault->pc, (unsigned long)( fault->pc ? frame->lr : 0 ), (unsigned long)fault->sp,
                     (unsigned long)cfsr, (unsigned long)SCB_HFSR, (unsigned long)fault->address );
-    DMOD_ASSERT_MSG( false, "A fault that cannot be contained to a process occurred. System halted." );
+    /* No way to go on: the system restarts (a device that stops is of no use to anybody; the fault is in the log of the run that crashed
+     * only as long as the log lives - it is a ring in the RAM that the next start clears) */
+    for( volatile uint32_t wait = 0; wait < 100000u; wait++ )
+    {
+    }
+    SCB_AIRCR = ( 0x5FAu << 16 ) | ( 1u << 2 );     /* SYSRESETREQ */
+    __asm volatile ( "dsb" );
     for( ;; )
     {
     }
