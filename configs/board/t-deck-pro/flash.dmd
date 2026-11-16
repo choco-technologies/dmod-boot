@@ -106,3 +106,12 @@ dmbq27220 driver=board/t-deck-pro/battery.ini
 # the bus is shared with the display and the SD card, the power, the chip select and the reset of the radio are the lora_* sections of display.ini.
 dmsx126x driver=board/t-deck-pro/lora.ini
 lora
+
+#
+# MeshCore: libmeshcore is the mesh (everything but the screen). dmdevfs reports the radio (/dev/lora) as a device of the class lora, libmeshcore.rules
+# starts libmeshcore@<name> for it (a library service: it listens on the radio and keeps what it hears); meshcore is the application of the launcher (its
+# screen, with an icon), mesh the command line.
+libmeshcore service=libmeshcore@.ini
+libmeshcore rules=libmeshcore.rules
+mesh
+meshcore @screen epaper-240x320
