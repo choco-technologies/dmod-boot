@@ -35,6 +35,8 @@ BUILD_DIR="${2:-$SOURCE_DIR/build}"
 
 BOARD="stm32f746g-disco"
 UART_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_uart.py"
+FAULT_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_fault.py"
+FAULTTEST_DIR="$SOURCE_DIR/tests/faulttest"
 UART_PORT=3456
 SDCARD_IMAGE_SCRIPT="$SOURCE_DIR/scripts/make_sdcard_image.py"
 SDCARD_TEST_SCRIPT="$SOURCE_DIR/scripts/test_renode_sdcard.py"
@@ -118,6 +120,14 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DDMBOOT_EXTRA_FLASH_DMD_FILES="$TEST_MODULES_DMD" \
       -S "$SOURCE_DIR" \
       -B "$BUILD_DIR"
+cmake --build "$BUILD_DIR" --config Debug
+# The application that crashes on purpose (step 5b) is part of no release: build it, put it into the firmware
+TOOLS_NAME=$(sed -n 's/^DMOD_TOOLS_NAME:[A-Z]*=//p' "$BUILD_DIR/CMakeCache.txt")
+cmake -S "$FAULTTEST_DIR" -B "$BUILD_DIR/faulttest" -DDMOD_TOOLS_NAME="$TOOLS_NAME" -DCMAKE_BUILD_TYPE=Debug
+cmake --build "$BUILD_DIR/faulttest"
+cp "$BUILD_DIR/faulttest/dmf/faulttest.dmf" "$BUILD_DIR/dmf/"
+# (the package is only made again when it is gone, and the .dmf has to be the one in it)
+rm -f "$BUILD_DIR/modules.dmp" "$BUILD_DIR/__modules_dmp.o"
 cmake --build "$BUILD_DIR" --config Debug
 # Build the monitor before starting Renode. The machine waits for GDB to attach
 # (DMBOOT_RENODE_WAIT_FOR_GDB), so the monitor can follow boot from the start.
@@ -239,6 +249,18 @@ python3 "$UART_TEST_SCRIPT" --port "$UART_PORT" --timeout "$UART_TIMEOUT" || UAR
 echo ""
 
 # -------------------------------------------------------
+# Step 5b – Check that a crash of an application is contained to its process
+# -------------------------------------------------------
+echo "[5b] Checking that a crashing application takes only its own process down..."
+FAULT_STATUS=0
+if [ "$UART_STATUS" -ne 0 ]; then
+    echo "Skipped: the shell on the console UART does not work"
+else
+    python3 "$FAULT_TEST_SCRIPT" --port "$UART_PORT" --timeout "$UART_TIMEOUT" || FAULT_STATUS=$?
+fi
+echo ""
+
+# -------------------------------------------------------
 # Step 6 – Check the SD card: read, write, remount
 # -------------------------------------------------------
 echo "[6/10] Checking the SD card..."
@@ -301,7 +323,7 @@ else
 fi
 pkill -f dmlog_monitor 2>/dev/null || true
 
-TEST_STATUS=$((UART_STATUS | SDCARD_STATUS | LCD_STATUS | TOUCH_STATUS | NETWORK_STATUS | EXT_STATUS))
+TEST_STATUS=$((UART_STATUS | FAULT_STATUS | SDCARD_STATUS | LCD_STATUS | TOUCH_STATUS | NETWORK_STATUS | EXT_STATUS))
 echo ""
 echo "=============================================="
 if [ "$TEST_STATUS" -eq 0 ]; then

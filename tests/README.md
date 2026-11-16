@@ -76,3 +76,10 @@ Checks binary-only flash/SD directories, per-module licenses, views, tagged
 configuration copying, metadata placement, default/explicit manifests, and
 preservation of legacy resources without overwriting backups. No board or
 network access is required.
+
+## Fault containment
+
+- `faulttest/` - an application that crashes on purpose (`faulttest undef|state|access|stack|ok`)
+- `fault_mpu/` - the stack guard and the fault handlers of the ARMv7-M port on an emulated Cortex-M7 (`fault_mpu/run.sh`, needs QEMU)
+
+See `docs/fault-containment.md`.

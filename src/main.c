@@ -41,17 +41,6 @@ void delay(int cycles)
     for(volatile int i = 0; i < cycles; i++);
 }
 
-void HardFault_Handler(void)
-{
-    // A hard fault means system state is already suspect, and the normal Dmod_Printf
-    // path (Dmod_LockStdio -> dmosi_process_current() -> ...) can itself hard-fault a
-    // second time if whatever corrupted state caused the original fault also affects
-    // that lookup. Force raw kernel writes first so DMOD_ASSERT_MSG below stays safe
-    // without changing how/where it logs.
-    Dmod_SetForceKernelWrite(true);
-    DMOD_ASSERT_MSG(false, "A hard fault occurred. System halted.");
-}
-
 static void load_embedded_startup_dmp(void)
 {
     void* startup_dmp_start = &__startup_dmp_start;
@@ -604,9 +593,21 @@ static dmheap_context_t* init_heap(void* start, void* end, const char* name, boo
 static Dmod_Context_t* startup_module;
 static dmosi_thread_t startup_thread;
 
+/* What the last run left when it crashed (the targets that keep it have it) */
+extern void dmboot_report_last_crash(void) __attribute__((weak));
+extern void dmboot_start_watchdog(void) __attribute__((weak));       /* (the targets that have a watchdog for a hang with no exception) */
+
 static void startup_devices(void* arg)
 {
     (void)arg;
+    if(dmboot_report_last_crash != NULL)
+    {
+        dmboot_report_last_crash();                 /* (first: what a crash left is not lost if this start does not get far) */
+    }
+    if(dmboot_start_watchdog != NULL)
+    {
+        dmboot_start_watchdog();
+    }
     mount_embedded_filesystems();
     load_embedded_startup_dmp();
     start_main_module(startup_module);
@@ -643,6 +644,9 @@ int main(int argc, char** argv)
     // The interrupts of the CPU that nothing took go to the modules (Dmod_IrqAll), like the IRQs of the ARM ports
     extern void dmboot_xtensa_irq_init(int count);
     dmboot_xtensa_irq_init(DMBOOT_IRQ_COUNT);
+    // The exceptions of the core: a crash of a process is contained to it (the Cortex-M's vectors do it by themselves)
+    extern void dmboot_xtensa_fault_init(void);
+    dmboot_xtensa_fault_init();
 #endif
     if(!Dmod_Initialize(DMBOOT_IRQ_COUNT, DMBOOT_IRQ_MAX_HANDLERS_PER_IRQ))
     {
