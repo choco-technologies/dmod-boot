@@ -108,6 +108,19 @@ dmsx126x driver=board/t-deck-pro/lora.ini
 lora
 
 #
+# The microSD card, in its SPI mode (dmsdio, bus=spi: sdspi.ini of dmsdio): it joins the friends_group of the e-paper like the radio does - the bus is
+# the dmspi of the display, the chip select is the sd_cs section of display.ini. dmsdio reports the card as a block device (/dev/dmsdio0/0, a node that
+# appears when a card is found: there is no detect line, dmdevmon looks for it every second).
+# automount (dmblock) mounts every FAT/exFAT volume dmdevfs reports as a block device at /mnt/<label> (or /mnt/<node name>) and unmounts it when the card
+# is gone; dmfatfs is the file system. A new card has none: create it once with `mkfatfs -t fat32 /dev/dmsdio0/0` (ALL DATA ON THE CARD IS LOST);
+# the volume is then /mnt/dmsdio0_0p1.
+dmsdio driver=board/t-deck-pro/sdspi.ini
+dmfatfs
+mkfatfs
+automount service=automount@.ini
+automount rules=automount.rules
+
+#
 # MeshCore: libmeshcore is the mesh (everything but the screen). dmdevfs reports the radio (/dev/lora) as a device of the class lora, libmeshcore.rules
 # starts libmeshcore@<name> for it (a library service: it listens on the radio and keeps what it hears); meshcore is the application of the launcher (its
 # screen, with an icon), mesh the command line.
