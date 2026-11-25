@@ -13,3 +13,13 @@ dmuart driver=mcu/esp32s3.ini
 # ini of dmpsram is used: nothing in it is board specific).
 dmqspi
 dmpsram driver=board/esp32s3-lcd28.ini
+
+#
+# /ext is the last 1.9 MB of the 4 MB flash of the module (0x220000, board.cmake). dmflash exports it as the block node
+# /dev/dmflashx/ext (the firmware does the erasing and programming from the internal RAM with the caches off: dmod-boot,
+# src/arch/xtensa/lx7/flash.c), dmlittlefs keeps a littlefs on it, which the "ext" service (services/ext.ini) mounts at /ext.
+# A new flash has no file system: create it once with `mklittlefs /dev/dmflashx/ext` (ALL DATA IN IT IS LOST), or with
+# `cmake --build <dir> --target format-ext`.
+dmflash driver=board/elecrow-dis08070h/flash.ini
+dmlittlefs
+mklittlefs
