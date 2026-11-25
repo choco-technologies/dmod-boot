@@ -235,6 +235,10 @@ jobs:
     - name: Set up Git safe directories
       run: git config --global --add safe.directory '*'
 
+    - name: Patch the Xtensa port of FreeRTOS
+      # the upstream FreeRTOS-Kernel does not build for the ESP32-S3 without it (lib/dmosi-freertos/patches/README.md)
+      run: git -C lib/dmosi-freertos/lib/freertos apply ../../patches/freertos-xtensa-esp32.patch
+
     - name: Build the firmware of the Elecrow DIS08070H
       run: |
         cmake -S . -B build-elecrow -G Ninja -Wno-dev -DBOARD=elecrow-dis08070h -DCMAKE_BUILD_TYPE=MinSizeRel
