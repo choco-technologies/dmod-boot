@@ -44,7 +44,12 @@ class Machine:
             except OSError:
                 time.sleep(0.1)
         else:
-            raise RuntimeError("cannot connect to the serial of QEMU")
+            err = b""
+            if self.proc.poll() is not None:
+                err = self.proc.stderr.read()
+            self.proc.kill()
+            raise RuntimeError("cannot connect to the serial of QEMU (exit code %s): %s" %
+                               (self.proc.poll(), err.decode("latin1")[-2000:]))
         self.sock.settimeout(0.2)
         self.log = b""
         self.wait_prompt(BOOT_TIMEOUT)
