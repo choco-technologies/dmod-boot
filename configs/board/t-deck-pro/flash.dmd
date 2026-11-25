@@ -102,6 +102,12 @@ wifid rules=wifid.rules
 dmbq27220 driver=board/t-deck-pro/battery.ini
 
 #
+# The notifications: dmnotify, the node /dev/notify (notify.ini of dmnotify). A module that has something to tell the user notifies there (libmeshcore:
+# a text heard on a channel), phoneui subscribes to it and shows the notifications on its home screen. `echo "Tea is ready" > /dev/notify` notifies from
+# a shell, `cat /dev/notify` lists what is active. Who may read the notifications and who may only send them is a matter of the access rights of the node.
+dmnotify driver=notify.ini
+
+#
 # The LoRa radio (SX1262): dmsx126x, the node /dev/lora (the LoRa interface of dmdrvi). It joins the friends_group of the e-paper (lora.ini of dmsx126x):
 # the bus is shared with the display and the SD card, the power, the chip select and the reset of the radio are the lora_* sections of display.ini.
 dmsx126x driver=board/t-deck-pro/lora.ini
