@@ -3,9 +3,9 @@
 #
 # The clock (dmclk) is the one of the mcu (configs/mcu/esp32s3/esp32s3fn16r8/flash.dmd).
 #
-# The console: UART0 on the pads of the ROM's console (GPIO43 TX, GPIO44 RX) that the USB-UART bridge of the board is wired to, 115200 8N1
-# (mcu/esp32s3.ini of dmuart); dmtty attaches a tty to it, so the shell runs there. /dev/ttyUSB0 on the host.
-dmuart driver=mcu/esp32s3.ini
+# The console: UART0 on the pads of the ROM's console (GPIO43 TX, GPIO44 RX) that the USB-UART bridge of the board is wired to, 921600 8N1
+# (board/elecrow-dis08070h/uart0.ini of dmuart); dmtty attaches a tty to it, so the shell runs there. /dev/ttyUSB0 on the host.
+dmuart driver=board/elecrow-dis08070h/uart0.ini
 
 #
 # The external RAM: the 8 MB octal PSRAM of the module (WROOM-1-N4R8) behind the memory SPI (dmqspi), mapped into the address space and put
