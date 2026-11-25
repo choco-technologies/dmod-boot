@@ -10,7 +10,7 @@ set(DMSEL_LINKER_SCRIPTS
     ${CMAKE_CURRENT_LIST_DIR}/../../../linker/ram.ld)
 
 # What the ROM boots is an image of ESP-IDF's format (the header, the segments with their load addresses, the checksum, the
-# digest) at the offset 0 of the flash: esptool makes it from the ELF. The flash is 16 MB, DIO at 40 MHz needs no tuning of
+# digest) at the offset 0 of the flash: esptool makes it from the ELF. The flash is 16 MB or less (the board says), DIO at 40 MHz needs no tuning of
 # the flash timing (that the ROM does not do for a 2nd stage that is not ESP-IDF's).
 #   -DDMSEL_ESPTOOL=<path>   esptool (pip install esptool); by default the one in the PATH
 if(NOT DMSEL_ESPTOOL)
@@ -19,5 +19,10 @@ endif()
 if(NOT DMSEL_ESPTOOL)
     message(FATAL_ERROR "esptool not found (pip install esptool, or -DDMSEL_ESPTOOL=<path>)")
 endif()
-set(DMSEL_IMAGE_COMMAND ${DMSEL_ESPTOOL} --chip esp32s3 elf2image --flash-mode dio --flash-freq 40m --flash-size 16MB
+# (the size in the header of the image is the one the ROM configures its SPI driver with: DMBOOT_FLASH_SIZE of the board, 16 MB by default)
+set(DMSEL_FLASH_SIZE_MB 16)
+if(DMBOOT_FLASH_SIZE)
+    math(EXPR DMSEL_FLASH_SIZE_MB "${DMBOOT_FLASH_SIZE} / 0x100000")
+endif()
+set(DMSEL_IMAGE_COMMAND ${DMSEL_ESPTOOL} --chip esp32s3 elf2image --flash-mode dio --flash-freq 40m --flash-size ${DMSEL_FLASH_SIZE_MB}MB
     -o dmsel.bin dmsel.elf)

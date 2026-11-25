@@ -7,6 +7,4 @@
 # dmgpio has a port for the ESP32-S3 (choco-technologies/dmgpio#42): add it here with the configuration of the pins of the board.
 dmclk driver=board/esp32s3-lcd28.ini
 #dmgpio
-# dmusbserial (choco-technologies/dmusbserial) serves the USB serial port of the chip (the USB connector: /dev/ttyACM* on the host)
-# and dmtty attaches a tty to it, so the shell runs there. Needs a release and an entry in dmod-registry.
-dmusbserial driver=board/esp32s3-lcd28.ini
+# The console is the board's (its USB connector is the USB-Serial/JTAG of the chip, or a USB-UART bridge on UART0): flash.dmd of the board.

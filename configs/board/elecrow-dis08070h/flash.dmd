@@ -1,0 +1,15 @@
+#
+# Elecrow DIS08070H (CrowPanel ESP32 HMI 7.0") flash modules - the console, the external RAM
+#
+# The clock (dmclk) is the one of the mcu (configs/mcu/esp32s3/esp32s3fn16r8/flash.dmd).
+#
+# The console: UART0 on the pads of the ROM's console (GPIO43 TX, GPIO44 RX) that the USB-UART bridge of the board is wired to, 115200 8N1
+# (mcu/esp32s3.ini of dmuart); dmtty attaches a tty to it, so the shell runs there. /dev/ttyUSB0 on the host.
+dmuart driver=mcu/esp32s3.ini
+
+#
+# The external RAM: the 8 MB octal PSRAM of the module (WROOM-1-N4R8) behind the memory SPI (dmqspi), mapped into the address space and put
+# at the end of the default heaps (it needs the clock of dmclk: driver_order). The chip and the bus are the same as on esp32s3-lcd28 (its
+# ini of dmpsram is used: nothing in it is board specific).
+dmqspi
+dmpsram driver=board/esp32s3-lcd28.ini

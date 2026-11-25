@@ -24,7 +24,10 @@
 #define IRAM                    __attribute__((section(".iram1"), noinline, used))
 
 #define FLASH_WINDOW            0x3C000000UL    /* the flash, all of it, in the data cache window (mapped by the selector) */
-#define FLASH_SIZE              0x1000000UL     /* the chip of the board: 16 MB */
+#ifndef DMBOOT_FLASH_SIZE
+#define DMBOOT_FLASH_SIZE       0x1000000UL     /* the chip of the board: 16 MB (board.cmake: DMBOOT_FLASH_SIZE) */
+#endif
+#define FLASH_SIZE              ((unsigned long)DMBOOT_FLASH_SIZE)
 #define SECTOR_SIZE             0x1000U
 #define PAGE_SIZE               0x100U
 #define FLASH_CPU_INTR          7U              /* the software interrupt of the CPU (level 1) that the work runs in */
