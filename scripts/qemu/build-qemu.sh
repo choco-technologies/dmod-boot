@@ -14,11 +14,11 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 cd "$WORK"
 fetch() { curl -fsSL --retry 4 -o "$1" "$URL/$1"; echo "$2  $1" | sha256sum -c -; }
 
-fetch qemu-esp_$TAG-src.tar.xz "$SRC_SHA256"
-fetch qemu-xtensa-softmmu-esp_$TAG-x86_64-linux-gnu.tar.xz "$BIN_SHA256"
-tar -xf qemu-esp_$TAG-src.tar.xz
-tar -xf qemu-xtensa-softmmu-esp_$TAG-x86_64-linux-gnu.tar.xz
-cd qemu-esp_$TAG-src
+fetch qemu-$TAG-src.tar.xz "$SRC_SHA256"
+fetch qemu-xtensa-softmmu-$TAG-x86_64-linux-gnu.tar.xz "$BIN_SHA256"
+tar -xf qemu-$TAG-src.tar.xz
+tar -xf qemu-xtensa-softmmu-$TAG-x86_64-linux-gnu.tar.xz
+cd qemu-$TAG-src
 for p in "$HERE"/patches/*.patch; do patch -p1 < "$p"; done
 mkdir build && cd build
 ../configure --target-list=xtensa-softmmu --disable-docs --disable-werror --disable-gtk --disable-sdl --disable-vnc \

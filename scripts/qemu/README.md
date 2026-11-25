@@ -5,7 +5,7 @@ Regression tests of the ESP32-S3 boards on CI, the counterpart of Renode for the
 
 | File | What |
 |---|---|
-| `build-qemu.sh <dir>` | builds the QEMU from the release sources with `patches/` (the ROMs come from the release binary) |
+| `build-qemu.sh <dir>` | builds (in CI it is in the Docker image, docker/Dockerfile.env, as $QEMU_ESP32S3_DIR) the QEMU from the release sources with `patches/` (the ROMs come from the release binary) |
 | `make-images.py <build> <out>` | `flash.bin` (selector + bank A, 4 MB) and `efuse.bin` (PSRAM_CAP = octal 8 MB) |
 | `test_qemu_esp32s3.py <qemu> <images>` | boot, shell, `/dev`, `ps`, format `/ext`, write, restart, read back |
 | `../run_qemu_tests.sh <build> <qemu>` | the two above together |

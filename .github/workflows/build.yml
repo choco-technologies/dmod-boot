@@ -220,7 +220,8 @@ jobs:
     name: Test ESP32-S3 in QEMU
     runs-on: ubuntu-latest
     container:
-      image: chocotechnologies/dmod:1.1
+      # the image has the patched Espressif QEMU in $QEMU_ESP32S3_DIR (docker/Dockerfile.env)
+      image: chocotechnologies/dmboot:1.1.0
 
     permissions:
       contents: read
@@ -234,23 +235,6 @@ jobs:
     - name: Set up Git safe directories
       run: git config --global --add safe.directory '*'
 
-    - name: Install the packages QEMU needs
-      run: |
-        apt-get update
-        apt-get install -y --no-install-recommends curl xz-utils patch ninja-build pkg-config python3 \
-          libglib2.0-dev libgcrypt20-dev libpixman-1-dev libslirp-dev
-
-    - name: Cache the patched QEMU
-      id: qemu-cache
-      uses: actions/cache@v4
-      with:
-        path: qemu-install
-        key: qemu-esp32s3-${{ hashFiles('scripts/qemu/build-qemu.sh', 'scripts/qemu/patches/*') }}
-
-    - name: Build the patched Espressif QEMU
-      if: steps.qemu-cache.outputs.cache-hit != 'true'
-      run: ./scripts/qemu/build-qemu.sh "$PWD/qemu-install"
-
     - name: Build the firmware of the Elecrow DIS08070H
       run: |
         cmake -S . -B build-elecrow -G Ninja -Wno-dev -DBOARD=elecrow-dis08070h -DCMAKE_BUILD_TYPE=MinSizeRel
@@ -258,7 +242,7 @@ jobs:
         cmake --build build-elecrow
 
     - name: Run the tests in QEMU
-      run: ./scripts/run_qemu_tests.sh build-elecrow "$PWD/qemu-install"
+      run: ./scripts/run_qemu_tests.sh build-elecrow "$QEMU_ESP32S3_DIR"
 
   build-all:
     name: All builds completed
