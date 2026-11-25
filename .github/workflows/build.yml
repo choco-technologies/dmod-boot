@@ -235,6 +235,10 @@ jobs:
     - name: Set up Git safe directories
       run: git config --global --add safe.directory '*'
 
+    - name: Make sure esptool is there
+      # the image has it from docker/Dockerfile.env; this covers an older image
+      run: command -v esptool || pip3 install --break-system-packages esptool
+
     - name: Patch the Xtensa port of FreeRTOS
       # the upstream FreeRTOS-Kernel does not build for the ESP32-S3 without it (lib/dmosi-freertos/patches/README.md)
       run: git -C lib/dmosi-freertos/lib/freertos apply ../../patches/freertos-xtensa-esp32.patch
