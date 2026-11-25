@@ -1,0 +1,35 @@
+--- a/hw/xtensa/esp32s3.c	2026-11-25 17:59:17.014603780 +0000
++++ b/hw/xtensa/esp32s3.c	2026-11-25 17:59:17.017883318 +0000
+@@ -462,7 +462,6 @@
+ 
+     const struct MemmapEntry *memmap = esp32s3_memmap;
+ 
+-    MemoryRegion *iram = g_new(MemoryRegion, 1);
+     MemoryRegion *rtcslow = g_new(MemoryRegion, 1);
+     MemoryRegion *rtcfast = g_new(MemoryRegion, 1);
+ 
+@@ -482,10 +481,6 @@
+     }
+ 
+ 
+-    memory_region_init_ram(iram, NULL, "esp32s3.iram",
+-                           memmap[ESP32S3_MEMREGION_IRAM].size, &error_fatal);
+-    memory_region_add_subregion(sys_mem, memmap[ESP32S3_MEMREGION_IRAM].base, iram);
+-
+     memory_region_init_ram(rtcslow, NULL, "esp32s3.rtcslow",
+                            memmap[ESP32S3_MEMREGION_RTCSLOW].size, &error_fatal);
+     memory_region_add_subregion(sys_mem, memmap[ESP32S3_MEMREGION_RTCSLOW].base, rtcslow);
+@@ -740,6 +735,13 @@
+                            memmap[ESP32S3_MEMREGION_DRAM].size, &error_fatal);
+     memory_region_add_subregion(sys_mem, memmap[ESP32S3_MEMREGION_DRAM].base, dram);
+ 
++    /* The internal SRAM is one memory seen by the instruction bus (IRAM, 0x40370000...) and by the data bus (DRAM,
++     * 0x3FC80000...): IRAM_TO_DRAM is a constant 0x6F0000. Code that is written through the data bus (the loaders
++     * of modules, the copy of the vectors at the start) is executed through the other address. */
++    MemoryRegion *iram = g_new(MemoryRegion, 1);
++    memory_region_init_alias(iram, NULL, "esp32s3.iram", dram, 0, memmap[ESP32S3_MEMREGION_IRAM].size);
++    memory_region_add_subregion(sys_mem, memmap[ESP32S3_MEMREGION_IRAM].base, iram);
++
+ 
+     memory_region_init_io(&ss->iomem, OBJECT(&ss->cpu[0]), &esp32s3_io_ops,
+                           NULL, "esp32s3.iomem", 0xd1000);
