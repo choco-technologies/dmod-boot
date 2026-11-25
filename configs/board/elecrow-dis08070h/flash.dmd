@@ -23,3 +23,20 @@ dmpsram driver=board/esp32s3-lcd28.ini
 dmflash driver=board/elecrow-dis08070h/flash.ini
 dmlittlefs
 mklittlefs
+
+#
+# The microSD card, in its SPI mode (dmsdio, bus=spi: board/elecrow-dis08070h/sdspi.ini of dmsdio): the slot is wired to the SPI lines
+# (SCK GPIO12, MOSI GPIO11, MISO GPIO13, CS GPIO10), the bus is the dmspi of the ini (GP-SPI2, all its own, the transfers go by dmdma), the chip
+# select a dmgpio output. dmsdio reports the card as a block device (/dev/dmsdio0/0, a node that appears when a card is found: there is no detect
+# line, dmdevmon looks for it every second).
+# automount (dmblock) mounts every FAT/exFAT volume dmdevfs reports as a block device at /mnt/<label> (or /mnt/<node name>) and unmounts it when the
+# card is gone; dmfatfs is the file system. A new card has none: create it once with `mkfatfs -t fat32 /dev/dmsdio0/0` (ALL DATA ON THE CARD IS LOST);
+# the volume is then /mnt/dmsdio0_0p1.
+dmdma driver=mcu/esp32s3.ini
+dmgpio
+dmspi
+dmsdio driver=board/elecrow-dis08070h/sdspi.ini
+dmfatfs
+mkfatfs
+automount service=automount@.ini
+automount rules=automount.rules
