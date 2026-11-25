@@ -1,0 +1,32 @@
+--- a/hw/sd/sd.c
++++ b/hw/sd/sd.c
+@@ -1577,7 +1577,8 @@
+ /* CMD9 */
+ static sd_rsp_type_t spi_cmd_SEND_CSD(SDState *sd, SDRequest req)
+ {
+-    if (sd->state != sd_standby_state) {
++    /* In the SPI mode a card that is ready is in the transfer state (there is no standby), and the commands are valid in idle too */
++    if (sd->state != sd_standby_state && sd->state != sd_transfer_state && sd->state != sd_idle_state) {
+         return sd_invalid_state_for_cmd(sd, req);
+     }
+     return sd_cmd_to_sendingdata(sd, req, sd_req_get_address(sd, req),
+@@ -1596,7 +1597,8 @@
+ /* CMD10 */
+ static sd_rsp_type_t spi_cmd_SEND_CID(SDState *sd, SDRequest req)
+ {
+-    if (sd->state != sd_standby_state) {
++    /* In the SPI mode a card that is ready is in the transfer state (there is no standby), and the commands are valid in idle too */
++    if (sd->state != sd_standby_state && sd->state != sd_transfer_state && sd->state != sd_idle_state) {
+         return sd_invalid_state_for_cmd(sd, req);
+     }
+     return sd_cmd_to_sendingdata(sd, req, sd_req_get_address(sd, req),
+@@ -1649,7 +1651,8 @@
+     }
+ 
+     if (sd_is_spi(sd)) {
+-        return sd_r2_s;
++        /* R2 of the SPI mode: R1 and one more byte of the status, which ssi-sd makes of the card status (R1 here, not the CSD) */
++        return sd_r1;
+     }
+ 
+     return sd_req_rca_same(sd, req) ? sd_r1 : sd_r0;
