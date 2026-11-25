@@ -1,0 +1,483 @@
+--- a/hw/xtensa/Kconfig
++++ b/hw/xtensa/Kconfig
+@@ -38,6 +38,7 @@
+     default y
+     depends on XTENSA
+     select SSI
++    select SSI_SD
+     select SSI_M25P80
+     select UNIMP
+     select OPENCORES_ETH
+--- a/hw/xtensa/esp32s3.c
++++ b/hw/xtensa/esp32s3.c
+@@ -46,6 +46,8 @@
+ #include "elf.h"
+ 
+ #include "hw/ssi/esp32s3_spi.h"
++#include "hw/ssi/esp32s3_gpspi.h"
++#include "hw/sd/sd.h"
+ #include "hw/misc/esp32s3_cache.h"
+ #include "hw/char/esp32s3_uart.h"
+ #include "hw/misc/esp32s3_rng.h"
+@@ -123,6 +125,7 @@
+     Esp32s3IntMatrixState intmatrix;
+     ESP32S3UARTState uart[ESP32S3_UART_COUNT];
+     ESP32S3GPIOState gpio;
++    ESP32S3GpSpiState gpspi2;
+     Esp32s3RngState rng;
+     Esp32S3TWAIState twai;
+ 
+@@ -401,6 +404,26 @@
+                                 qdev_get_gpio_in_named(psram, SSI_GPIO_CS, 0));
+ }
+ 
++/* An SD card (-drive if=sd,index=1) on GP-SPI2 in the SPI mode: its chip select is a GPIO (the pad of the board: 10 by default, as on the
++ * Elecrow DIS08070H) */
++static void esp32s3_machine_init_spi_sd(Esp32s3SocState* ss)
++{
++    DriveInfo *dinfo = drive_get(IF_SD, 0, 1);
++    if (dinfo) {
++        DeviceState *spi_dev = DEVICE(&ss->gpspi2);
++        BusState *spi_bus = qdev_get_child_bus(spi_dev, "spi");
++        DeviceState *sd = qdev_new("ssi-sd");
++        qdev_realize_and_unref(sd, spi_bus, &error_fatal);
++
++        DeviceState *card = qdev_new(TYPE_SD_CARD_SPI);
++        qdev_prop_set_drive_err(card, "drive", blk_by_legacy_dinfo(dinfo), &error_fatal);
++        qdev_realize_and_unref(card, qdev_get_child_bus(sd, "sd-bus"), &error_fatal);
++
++        const int cs_pad = 10;
++        qdev_connect_gpio_out_named(DEVICE(&ss->gpio), "pad", cs_pad, qdev_get_gpio_in_named(sd, SSI_GPIO_CS, 0));
++    }
++}
++
+ static void esp32s3_machine_init_sd(Esp32s3SocState* ss)
+ {
+     DriveInfo *dinfo = drive_get(IF_SD, 0, 0);
+@@ -758,6 +781,7 @@
+     object_initialize_child(OBJECT(ss), "efuse", &ss->efuse, TYPE_ESP32S3_EFUSE);
+     object_initialize_child(OBJECT(ss), "jtag", &ss->jtag, TYPE_ESP32C3_JTAG);
+     object_initialize_child(OBJECT(ss), "gpio", &ss->gpio, TYPE_ESP32S3_GPIO);
++    object_initialize_child(OBJECT(ss), "gpspi2", &ss->gpspi2, TYPE_ESP32S3_GPSPI);
+     object_initialize_child(OBJECT(ss), "rng", &ss->rng, TYPE_ESP32S3_RNG);
+ 
+     object_initialize_child(OBJECT(ss), "clock", &ss->clock, TYPE_ESP32S3_CLOCK);
+@@ -929,6 +953,17 @@
+         }
+    }
+ 
++    /* GP-SPI2 realization: the SPI bus of the SD card in the SPI mode (esp32s3_machine_init_spi_sd) */
++    {
++        ss->gpspi2.gdma = ESP_GDMA(&ss->gdma);
++        qdev_prop_set_uint32(DEVICE(&ss->gpspi2), "periph", GDMA_SPI2);
++        sysbus_realize(SYS_BUS_DEVICE(&ss->gpspi2), &error_fatal);
++        MemoryRegion *mr = sysbus_mmio_get_region(SYS_BUS_DEVICE(&ss->gpspi2), 0);
++        memory_region_add_subregion_overlap(sys_mem, DR_REG_SPI2_BASE, mr, 0);
++        sysbus_connect_irq(SYS_BUS_DEVICE(&ss->gpspi2), 0,
++                           qdev_get_gpio_in(intmatrix_dev, ETS_SPI2_INTR_SOURCE));
++    }
++
+     /* SHA realization */
+     {
+         ss->sha.parent.gdma = ESP_GDMA(&ss->gdma);
+@@ -1006,6 +1041,7 @@
+ 
+     
+     esp32s3_machine_init_sd(ss);
++    esp32s3_machine_init_spi_sd(ss);
+ 
+     /* Need MMU initialized prior to ELF loading,
+      * so that ELF gets loaded into virtual addresses
+--- a/hw/gpio/esp32_gpio.c
++++ b/hw/gpio/esp32_gpio.c
+@@ -18,6 +18,8 @@
+ #include "hw/irq.h"
+ #include "hw/qdev-properties.h"
+ #include "hw/gpio/esp32_gpio.h"
++#include "hw/irq.h"
++#include "hw/qdev-core.h"
+ 
+ 
+ 
+@@ -41,6 +43,20 @@
+     return r;
+ }
+ 
++/* The level of the pads that changed goes to what is wired to them (an undriven pad is high: the pull-up of the board) */
++static void esp32_gpio_update_pads(Esp32GpioState *s)
++{
++    const uint32_t level = (s->gpio_out & s->gpio_enable) | ~s->gpio_enable;
++    const uint32_t changed = level ^ s->pad_level;
++
++    s->pad_level = level;
++    for (int i = 0; i < 32 && i < ESP_GPIO_MAX_PINS; i++) {
++        if ((changed >> i) & 1) {
++            qemu_set_irq(s->pad_out[i], (level >> i) & 1);
++        }
++    }
++}
++
+ static void esp32_gpio_write(void *opaque, hwaddr addr,
+                        uint64_t value, unsigned int size)
+ {
+@@ -59,6 +75,7 @@
+     } else if (s->enable_w1tc_off && addr == s->enable_w1tc_off) {
+         s->gpio_enable &= ~(uint32_t)value;
+     }
++    esp32_gpio_update_pads(s);
+ }
+ 
+ static const MemoryRegionOps gpio_ops = {
+@@ -124,6 +141,8 @@
+     sysbus_init_mmio(sbd, &s->iomux);
+ 
+     sysbus_init_irq(sbd, &s->irq);
++    qdev_init_gpio_out_named(DEVICE(obj), s->pad_out, "pad", ESP_GPIO_MAX_PINS);
++    s->pad_level = 0xFFFFFFFFu;
+ }
+ 
+ static Property esp32_gpio_properties[] = {
+--- a/hw/gpio/esp32s3_gpio.c
++++ b/hw/gpio/esp32s3_gpio.c
+@@ -24,6 +24,16 @@
+ {
+     /* Set the default value for the property */
+     object_property_set_int(obj, "strap_mode", ESP32S3_STRAP_MODE_FLASH_BOOT, &error_fatal);
++
++    /* GPIO_OUT, GPIO_OUT_W1TS/W1TC, GPIO_ENABLE (+W1TS/W1TC) and GPIO_IN of the pads 0..31 */
++    Esp32GpioState *g = ESP32_GPIO(obj);
++    g->out_off = 0x04;
++    g->out_w1ts_off = 0x08;
++    g->out_w1tc_off = 0x0C;
++    g->enable_off = 0x20;
++    g->enable_w1ts_off = 0x24;
++    g->enable_w1tc_off = 0x28;
++    g->in_off = 0x3C;
+ }
+ 
+ /* If we need to override any function from the parent (reset, realize, ...), it shall be done
+--- a/include/hw/gpio/esp32_gpio.h
++++ b/include/hw/gpio/esp32_gpio.h
+@@ -41,6 +41,10 @@
+     uint32_t enable_w1tc_off;
+     uint32_t in_off;        /* GPIO_IN_REG offset */
+ 
++    /* The level of every pad (the output when enabled, else the pull-up) for the devices wired to it (named gpio out "pad") */
++    qemu_irq pad_out[ESP_GPIO_MAX_PINS];
++    uint32_t pad_level;
++
+     /* IO_MUX state */
+     uint32_t iomux_regs[ESP_GPIO_MAX_PINS];
+     uint32_t num_gpios;
+--- a/hw/dma/esp_gdma.c
++++ b/hw/dma/esp_gdma.c
+@@ -295,6 +295,38 @@
+ 
+ 
+ /**
++ * Like esp_gdma_get_channel_periph, but the channel must be both selected for the peripheral AND started: an idle channel keeps the
++ * reset value of PERI_SEL (0, the SPI2), so a peripheral that shares the GDMA with others (the SPI2 with its two channels) needs both.
++ */
++bool esp_gdma_get_started_channel_periph(ESPGdmaState *s, GdmaPeripheral periph, int dir, uint32_t* chan)
++{
++    if (s == NULL || chan == NULL || periph > GDMA_LAST || dir < 0 || dir >= ESP_GDMA_CONF_COUNT) {
++        return false;
++    }
++
++    const ESPGdmaClass* class = ESP_GDMA_GET_CLASS(s);
++
++    if (class->is_periph_invalid && class->is_periph_invalid(s, periph)) {
++        return false;
++    }
++
++    const uint32_t sel = class->periph_sel ? class->periph_sel(periph) : periph;
++
++    for (int i = 0; i < class->m_channel_count; i++) {
++        const uint32_t link = s->ch_conf[dir][i].link;
++        const bool started = (dir == ESP_GDMA_IN_IDX) ? FIELD_EX32(link, GDMA_IN_LINK, START)
++                                                      : FIELD_EX32(link, GDMA_OUT_LINK, START);
++        if (FIELD_EX32(s->ch_conf[dir][i].peripheral, GDMA_PERI_SEL, PERI_SEL) == sel && started) {
++            *chan = i;
++            return true;
++        }
++    }
++
++    return false;
++}
++
++
++/**
+  * @brief Read data from guest RAM pointed by the linked list configured in the given DmaConfigState index.
+  *        `size` bytes will be read and stored in `buffer`.
+  */
+--- a/include/hw/dma/esp_gdma.h
++++ b/include/hw/dma/esp_gdma.h
+@@ -162,6 +162,8 @@
+ bool esp_gdma_get_channel_periph(ESPGdmaState *s, GdmaPeripheral periph, int dir,
+                                      uint32_t* chan);
+ 
++bool esp_gdma_get_started_channel_periph(ESPGdmaState *s, GdmaPeripheral periph, int dir, uint32_t* chan);
++
+ bool esp_gdma_read_channel(ESPGdmaState *s, uint32_t chan, uint8_t* buffer, uint32_t size);
+ bool esp_gdma_write_channel(ESPGdmaState *s, uint32_t chan, uint8_t* buffer, uint32_t size);
+ 
+--- a/hw/ssi/meson.build
++++ b/hw/ssi/meson.build
+@@ -18,7 +18,7 @@
+ system_ss.add(when: 'CONFIG_RISCV_ESP32P4', if_true: files('esp32c3_spi.c', 'esp32p4_spi.c'))
+ system_ss.add(when: 'CONFIG_RISCV_ESP32C6', if_true: files('esp32c3_spi.c', 'esp32c6_spi.c'))
+ system_ss.add(when: 'CONFIG_RISCV_ESP32H2', if_true: files('esp32c3_spi.c', 'esp32h2_spi.c'))
+-system_ss.add(when: 'CONFIG_XTENSA_ESP32S3', if_true: files('esp32s3_spi.c'))
++system_ss.add(when: 'CONFIG_XTENSA_ESP32S3', if_true: files('esp32s3_spi.c', 'esp32s3_gpspi.c'))
+ system_ss.add(when: 'CONFIG_IBEX', if_true: files('ibex_spi_host.c'))
+ system_ss.add(when: 'CONFIG_BCM2835_SPI', if_true: files('bcm2835_spi.c'))
+ system_ss.add(when: 'CONFIG_PNV_SPI', if_true: files('pnv_spi.c'))
+--- a/hw/ssi/esp32s3_gpspi.c
++++ b/hw/ssi/esp32s3_gpspi.c
+@@ -0,0 +1,212 @@
++/*
++ * ESP32-S3 general purpose SPI (GP-SPI2) master
++ *
++ * A model of what the driver of dmod needs: the master mode, 1 bit, one transaction of up to 64 bytes from W0..W15 or any size through
++ * the GDMA (the peripheral SPI2/SPI3), the interrupt TRANS_DONE. The clock, the modes and the pins (GPIO matrix) are not modelled: the
++ * data goes to the SSI bus, the chip select of the device on it is a GPIO of the board (see the machine).
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 or
++ * (at your option) any later version.
++ */
++
++#include "qemu/osdep.h"
++#include "qemu/log.h"
++#include "qemu/module.h"
++#include "hw/hw.h"
++#include "hw/irq.h"
++#include "hw/sysbus.h"
++#include "hw/qdev-properties.h"
++#include "hw/ssi/esp32s3_gpspi.h"
++
++#define R_CMD           0x00
++#define R_CTRL          0x08
++#define R_USER          0x10
++#define R_MS_DLEN       0x1C
++#define R_DMA_CONF      0x30
++#define R_DMA_INT_ENA   0x34
++#define R_DMA_INT_CLR   0x38
++#define R_DMA_INT_RAW   0x3C
++#define R_DMA_INT_ST    0x40
++#define R_W0            0x98
++
++#define CMD_UPDATE      (1u << 23)
++#define CMD_USR         (1u << 24)
++#define CTRL_RD_BIT_ORDER (1u << 23)    /* 1: LSB first */
++#define CTRL_WR_BIT_ORDER (1u << 25)
++#define USER_USR_MOSI   (1u << 27)
++#define USER_USR_MISO   (1u << 28)
++#define DMA_CONF_RX_ENA (1u << 27)
++#define DMA_CONF_TX_ENA (1u << 28)
++#define INT_TRANS_DONE  (1u << 12)
++#define MAX_DMA_BYTES   (1u << 15)
++
++static uint8_t rev8(uint8_t b)
++{
++    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
++    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
++    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
++    return b;
++}
++
++static void esp32s3_gpspi_update_irq(ESP32S3GpSpiState *s)
++{
++    s->regs[R_DMA_INT_ST / 4] = s->regs[R_DMA_INT_RAW / 4] & s->regs[R_DMA_INT_ENA / 4];
++    qemu_set_irq(s->irq, s->regs[R_DMA_INT_ST / 4] != 0);
++}
++
++/* One transaction: MS_DLEN + 1 bits */
++static void esp32s3_gpspi_run(ESP32S3GpSpiState *s)
++{
++    const uint32_t bits = (s->regs[R_MS_DLEN / 4] & 0x3FFFF) + 1;
++    uint32_t n = (bits + 7) / 8;
++    const bool dma_tx = s->regs[R_DMA_CONF / 4] & DMA_CONF_TX_ENA;
++    const bool dma_rx = s->regs[R_DMA_CONF / 4] & DMA_CONF_RX_ENA;
++    const bool lsb_out = s->regs[R_CTRL / 4] & CTRL_WR_BIT_ORDER;
++    const bool lsb_in = s->regs[R_CTRL / 4] & CTRL_RD_BIT_ORDER;
++    uint8_t *tx = g_malloc0(MAX_DMA_BYTES);
++    uint8_t *rx = g_malloc0(MAX_DMA_BYTES);
++    uint32_t chan;
++
++    if (n > MAX_DMA_BYTES) {
++        n = MAX_DMA_BYTES;
++    }
++    if (dma_tx) {
++        if (!esp_gdma_get_started_channel_periph(s->gdma, s->periph, ESP_GDMA_OUT_IDX, &chan) ||
++            !esp_gdma_read_channel(s->gdma, chan, tx, n)) {
++            qemu_log_mask(LOG_GUEST_ERROR, "esp32s3.gpspi: no GDMA OUT channel for the transfer\n");
++            memset(tx, 0xFF, n);
++        }
++    } else {
++        if (n > ESP32S3_GPSPI_BUF_WORDS * 4) {
++            n = ESP32S3_GPSPI_BUF_WORDS * 4;
++        }
++        for (uint32_t i = 0; i < n; i++) {
++            tx[i] = s->regs[R_W0 / 4 + i / 4] >> (8 * (i % 4));
++        }
++    }
++
++    for (uint32_t i = 0; i < n; i++) {
++        uint8_t out = lsb_out ? rev8(tx[i]) : tx[i];
++        uint8_t in = ssi_transfer(s->spi, out);
++        rx[i] = lsb_in ? rev8(in) : in;
++    }
++
++    if (dma_rx) {
++        const uint32_t rn = (n + 3) & ~3u;     /* the controller writes whole words */
++        if (!esp_gdma_get_started_channel_periph(s->gdma, s->periph, ESP_GDMA_IN_IDX, &chan) ||
++            !esp_gdma_write_channel(s->gdma, chan, rx, rn)) {
++            qemu_log_mask(LOG_GUEST_ERROR, "esp32s3.gpspi: no GDMA IN channel for the transfer\n");
++        }
++    } else {
++        memset(&s->regs[R_W0 / 4], 0, ESP32S3_GPSPI_BUF_WORDS * 4);
++        for (uint32_t i = 0; i < n; i++) {
++            s->regs[R_W0 / 4 + i / 4] |= (uint32_t)rx[i] << (8 * (i % 4));
++        }
++    }
++    g_free(tx);
++    g_free(rx);
++
++    s->regs[R_DMA_INT_RAW / 4] |= INT_TRANS_DONE;
++    esp32s3_gpspi_update_irq(s);
++}
++
++static uint64_t esp32s3_gpspi_read(void *opaque, hwaddr addr, unsigned int size)
++{
++    ESP32S3GpSpiState *s = ESP32S3_GPSPI(opaque);
++
++    if (addr >= ESP32S3_GPSPI_REGS_SIZE) {
++        return 0;
++    }
++    return s->regs[addr / 4];
++}
++
++static void esp32s3_gpspi_write(void *opaque, hwaddr addr, uint64_t value, unsigned int size)
++{
++    ESP32S3GpSpiState *s = ESP32S3_GPSPI(opaque);
++    const uint32_t v = (uint32_t)value;
++
++    if (addr >= ESP32S3_GPSPI_REGS_SIZE) {
++        return;
++    }
++    switch (addr) {
++    case R_CMD:
++        /* UPDATE completes at once; USR runs the transaction (which is instantaneous here) */
++        s->regs[R_CMD / 4] = v & ~(CMD_UPDATE | CMD_USR);
++        if (v & CMD_USR) {
++            esp32s3_gpspi_run(s);
++        }
++        break;
++    case R_DMA_INT_CLR:
++        s->regs[R_DMA_INT_RAW / 4] &= ~v;
++        esp32s3_gpspi_update_irq(s);
++        break;
++    case R_DMA_INT_ENA:
++        s->regs[R_DMA_INT_ENA / 4] = v;
++        esp32s3_gpspi_update_irq(s);
++        break;
++    case R_DMA_INT_RAW:
++    case R_DMA_INT_ST:
++        break;
++    default:
++        s->regs[addr / 4] = v;
++        break;
++    }
++}
++
++static const MemoryRegionOps esp32s3_gpspi_ops = {
++    .read = esp32s3_gpspi_read,
++    .write = esp32s3_gpspi_write,
++    .endianness = DEVICE_LITTLE_ENDIAN,
++    .impl.min_access_size = 4,
++    .impl.max_access_size = 4,
++    .valid.min_access_size = 1,
++    .valid.max_access_size = 4,
++};
++
++static void esp32s3_gpspi_reset(DeviceState *dev)
++{
++    ESP32S3GpSpiState *s = ESP32S3_GPSPI(dev);
++
++    memset(s->regs, 0, sizeof(s->regs));
++    qemu_set_irq(s->irq, 0);
++}
++
++static void esp32s3_gpspi_init(Object *obj)
++{
++    ESP32S3GpSpiState *s = ESP32S3_GPSPI(obj);
++    SysBusDevice *sbd = SYS_BUS_DEVICE(obj);
++
++    memory_region_init_io(&s->iomem, obj, &esp32s3_gpspi_ops, s, TYPE_ESP32S3_GPSPI, 0x1000);
++    sysbus_init_mmio(sbd, &s->iomem);
++    sysbus_init_irq(sbd, &s->irq);
++    s->spi = ssi_create_bus(DEVICE(obj), "spi");
++}
++
++static Property esp32s3_gpspi_properties[] = {
++    DEFINE_PROP_UINT32("periph", ESP32S3GpSpiState, periph, GDMA_SPI2),
++    DEFINE_PROP_END_OF_LIST(),
++};
++
++static void esp32s3_gpspi_class_init(ObjectClass *klass, void *data)
++{
++    DeviceClass *dc = DEVICE_CLASS(klass);
++
++    device_class_set_legacy_reset(dc, esp32s3_gpspi_reset);
++    device_class_set_props(dc, esp32s3_gpspi_properties);
++}
++
++static const TypeInfo esp32s3_gpspi_info = {
++    .name = TYPE_ESP32S3_GPSPI,
++    .parent = TYPE_SYS_BUS_DEVICE,
++    .instance_size = sizeof(ESP32S3GpSpiState),
++    .instance_init = esp32s3_gpspi_init,
++    .class_init = esp32s3_gpspi_class_init,
++};
++
++static void esp32s3_gpspi_register_types(void)
++{
++    type_register_static(&esp32s3_gpspi_info);
++}
++
++type_init(esp32s3_gpspi_register_types)
+--- a/include/hw/ssi/esp32s3_gpspi.h
++++ b/include/hw/ssi/esp32s3_gpspi.h
+@@ -0,0 +1,31 @@
++/*
++ * ESP32-S3 general purpose SPI (GP-SPI2) master, enough to talk to an SPI device (an SD card) the way dmspi does:
++ * the data of up to 64 bytes in W0..W15 (CPU) or through the GDMA, one transaction per CMD.USR.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 or
++ * (at your option) any later version.
++ */
++#pragma once
++
++#include "hw/sysbus.h"
++#include "hw/ssi/ssi.h"
++#include "hw/dma/esp_gdma.h"
++
++#define TYPE_ESP32S3_GPSPI "esp32s3.gpspi"
++#define ESP32S3_GPSPI(obj) OBJECT_CHECK(ESP32S3GpSpiState, (obj), TYPE_ESP32S3_GPSPI)
++
++#define ESP32S3_GPSPI_REGS_SIZE 0x100
++#define ESP32S3_GPSPI_BUF_WORDS 16
++
++typedef struct ESP32S3GpSpiState {
++    SysBusDevice parent_obj;
++
++    MemoryRegion iomem;
++    SSIBus *spi;
++    qemu_irq irq;
++    ESPGdmaState *gdma;
++    uint32_t periph;                    /* the GDMA peripheral: GDMA_SPI2 or GDMA_SPI3 */
++
++    uint32_t regs[ESP32S3_GPSPI_REGS_SIZE / 4];
++} ESP32S3GpSpiState;
