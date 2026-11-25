@@ -90,6 +90,10 @@ set_source_files_properties(${DMBOOT_DIR}/lib/dmlog/src/dmlog.c PROPERTIES COMPI
 target_include_directories(dmsel.elf PRIVATE ../include ${DMSEL_MCU_INCLUDE_DIR}
     ${DMBOOT_DIR}/lib/dmlog/include ${DMBOOT_DIR}/lib/dmod/inc ${CMAKE_BINARY_DIR}/gen)
 target_compile_definitions(dmsel.elf PRIVATE DMOD_EXTERNAL_REGISTRATION DMOD_CURRENT_ALLOCATOR="dmsel")
+# The size of the flash chip of the board (board.cmake: DMBOOT_FLASH_SIZE; the mcu port assumes 16 MB when it is not set)
+if(DMBOOT_FLASH_SIZE)
+    target_compile_definitions(dmsel.elf PRIVATE DMSEL_FLASH_SIZE=${DMBOOT_FLASH_SIZE}u)
+endif()
 option(DMSEL_SELFTEST "Bring-up of a port: a counter of the starts kept in the store, logged (writes the flash at every start)" OFF)
 if(DMSEL_SELFTEST)
     target_compile_definitions(dmsel.elf PRIVATE DMSEL_SELFTEST)

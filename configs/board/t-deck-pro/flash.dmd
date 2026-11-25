@@ -121,3 +121,8 @@ libmeshcore service=libmeshcore@.ini
 libmeshcore rules=libmeshcore.rules
 mesh
 meshcore @screen epaper-240x320
+
+#
+# The console: dmusbserial (choco-technologies/dmusbserial) serves the USB serial port of the chip (the USB connector: /dev/ttyACM* on the host)
+# and dmtty attaches a tty to it, so the shell runs there.
+dmusbserial driver=board/esp32s3-lcd28.ini

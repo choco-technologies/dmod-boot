@@ -3,7 +3,7 @@
  * @brief The selector's port for the ESP32-S3: the flash as memory (the data cache and its MMU) and the ROM's SPI flash driver
  *
  * The selector is loaded into the RAM by the ROM, the flash is not in the memory of the chip yet: the MMU maps its 64 kB pages
- * into the window of the data bus (0x3C000000, 16 MB of the board's chip), the same sequence as the bootloader of ESP-IDF
+ * into the window of the data bus (0x3C000000, the whole flash of the board's chip: DMBOOT_FLASH_SIZE), the same sequence as the bootloader of ESP-IDF
  * (bootloader_reset_mmu, bootloader_mmap). Erasing and programming is the ROM's driver (esp_rom_spiflash_*); the cache is
  * suspended while the SPI works and what it holds is dropped afterwards.
  *
@@ -21,7 +21,10 @@
 #define EXTMEM_ICACHE_CTRL1     0x600C4064u
 #define CACHE_SHUT_CORE0_BUS    (1u << 0)
 
-#define FLASH_SIZE              0x1000000u      // the chip of the board: 16 MB
+#ifndef DMSEL_FLASH_SIZE
+#define DMSEL_FLASH_SIZE        0x1000000u      // the chip of the board: 16 MB (board.cmake: DMBOOT_FLASH_SIZE)
+#endif
+#define FLASH_SIZE              DMSEL_FLASH_SIZE
 #define MMU_PAGE_SIZE           0x10000u
 #define MMU_ACCESS_FLASH        0u
 #define SECTOR_SIZE             0x1000u

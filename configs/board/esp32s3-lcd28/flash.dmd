@@ -63,3 +63,8 @@ dmsecrets
 secrets
 wifid service=wifid@.ini
 wifid rules=wifid.rules
+
+#
+# The console: dmusbserial (choco-technologies/dmusbserial) serves the USB serial port of the chip (the USB connector: /dev/ttyACM* on the host)
+# and dmtty attaches a tty to it, so the shell runs there.
+dmusbserial driver=board/esp32s3-lcd28.ini
