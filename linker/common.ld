@@ -17,7 +17,7 @@ PROVIDE(__dma_end__   = __dma_start__ + __dma_size__);
 ENTRY(Reset_Handler);
 
 __stack_size__    = 4096;
-__logs_size__     = 8192;
+__logs_size__     = DMBOOT_LOGS_SIZE;   /* DMBOOT_LOGS_SIZE of the build (8192 unless the board says otherwise) */
 
 PROVIDE(__stack_size__ = __stack_size__);
 PROVIDE(__logs_size__  = __logs_size__ );
