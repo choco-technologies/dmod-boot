@@ -67,6 +67,7 @@ include(configs/mcu/${TARGET}.cmake)
 # drivers find a heap by (dmheap_get_context_by_name("dma")) and modules ask
 # for (Dmod_MallocTagged("fast", ...)). After the MCU configuration, which
 # says what its memories are.
+set(DMBOOT_LOGS_SIZE 8192 CACHE STRING "Bytes of the buffer of dmlog (linker region of the logs, in the internal RAM)")
 set(DMBOOT_DMA_HEAP_TAGS "dma" CACHE STRING "Tags of the DMA heap (linker region dma): dma, and e.g. fast where it is fast internal RAM")
 set(DMBOOT_MAIN_HEAP_TAGS "main" CACHE STRING "Tags of the main heap (linker region ram)")
 
@@ -356,6 +357,7 @@ target_link_options(${MODULE_NAME}.elf
     PRIVATE 
         -Wl,--defsym=DMBOOT_ROM_ORIGIN=${DMBOOT_ROM_ORIGIN}
         -Wl,--defsym=DMBOOT_ROM_LENGTH=${DMBOOT_ROM_LENGTH}
+        -Wl,--defsym=DMBOOT_LOGS_SIZE=${DMBOOT_LOGS_SIZE}
         -L${DMOD_DIR}/scripts
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/arch/${DMBOOT_ARCH}/arch.ld
         -T${CMAKE_CURRENT_SOURCE_DIR}/configs/mcu/${DMBOOT_MCU_SERIES}/${DMBOOT_MCU_NAME}/mcu.ld

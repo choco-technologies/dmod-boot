@@ -50,3 +50,7 @@ set(DMBOOT_EXT_DEVICE "/dev/dmflashx/ext" CACHE STRING "Block device of the exte
 set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
 set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
 set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
+
+# The buffer of dmlog: nothing reads the log on this board, and its internal RAM is short (the display and the SD card need DMA memory).
+# Tried: 2048 boots, 1024 does not (QEMU: no shell prompt).
+set(DMBOOT_LOGS_SIZE 2048 CACHE STRING "Bytes of the buffer of dmlog")
