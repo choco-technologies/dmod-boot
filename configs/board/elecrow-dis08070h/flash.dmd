@@ -9,10 +9,10 @@ dmuart driver=board/elecrow-dis08070h/uart0.ini
 
 #
 # The external RAM: the 8 MB octal PSRAM of the module (WROOM-1-N4R8) behind the memory SPI (dmqspi), mapped into the address space and put
-# at the end of the default heaps (it needs the clock of dmclk: driver_order). The chip and the bus are the same as on esp32s3-lcd28 (its
-# ini of dmpsram is used: nothing in it is board specific).
+# at the end of the default heaps (it needs the clock of dmclk: driver_order). The bus runs at 40 MHz DDR (board/elecrow-dis08070h.ini of dmpsram):
+# the display scans its frame buffer out of the PSRAM, 12 MHz * 2 bytes per pixel is more than the octal bus does at 20 MHz.
 dmqspi
-dmpsram driver=board/esp32s3-lcd28.ini
+dmpsram driver=board/elecrow-dis08070h.ini
 
 #
 # /ext is the last 1.9 MB of the 4 MB flash of the module (0x220000, board.cmake). dmflash exports it as the block node
@@ -40,3 +40,10 @@ dmfatfs
 mkfatfs
 automount service=automount@.ini
 automount rules=automount.rules
+
+#
+# The display: 7.0" 800x480 RGB panel on the LCD_CAM peripheral (RGB565, 12 MHz pixel clock, ~25 Hz) with the frame buffer in the PSRAM, fed by
+# the GDMA (dmdma, above) and restarted at every vertical sync (board/elecrow-dis08070h/lcd.ini of dmlcdtft). The ini also switches the
+# backlight on (IO2, dmgpio). The splash logo (board.cmake, DMBOOT_SPLASH_LOGO) is shown as soon as the driver is up. The touch panel
+# (GT911 behind the PCA9557 expander on I2C) has no driver yet.
+dmlcdtft driver=board/elecrow-dis08070h/lcd.ini
