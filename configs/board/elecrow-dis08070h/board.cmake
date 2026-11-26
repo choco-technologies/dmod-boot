@@ -50,3 +50,7 @@ set(DMBOOT_EXT_DEVICE "/dev/dmflashx/ext" CACHE STRING "Block device of the exte
 set(DMBOOT_EXT_FS "dmlittlefs" CACHE STRING "File system of the external flash")
 set(DMBOOT_EXT_MKFS "mklittlefs" CACHE STRING "Command that creates it on the device (format-ext)")
 set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
+
+# Splash logo the display driver (dmlcdtft) shows on the 800x480 panel as soon as it is up (an asset of assets/splash/, see
+# DMBOOT_SPLASH_LOGO). It is built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.
+set(DMBOOT_SPLASH_LOGO "dmodos_logo_200" CACHE STRING "Splash logo the display driver shows at start")
