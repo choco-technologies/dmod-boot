@@ -44,6 +44,13 @@ automount rules=automount.rules
 #
 # The display: 7.0" 800x480 RGB panel on the LCD_CAM peripheral (RGB565, 12 MHz pixel clock, ~25 Hz) with the frame buffer in the PSRAM, fed by
 # the GDMA (dmdma, above) and restarted at every vertical sync (board/elecrow-dis08070h/lcd.ini of dmlcdtft). The ini also switches the
-# backlight on (IO2, dmgpio). The splash logo (board.cmake, DMBOOT_SPLASH_LOGO) is shown as soon as the driver is up. The touch panel
-# (GT911 behind the PCA9557 expander on I2C) has no driver yet.
+# backlight on (IO2, dmgpio). The splash logo (board.cmake, DMBOOT_SPLASH_LOGO) is shown as soon as the driver is up.
 dmlcdtft driver=board/elecrow-dis08070h/lcd.ini
+
+#
+# The touch panel: the GT911 on the I2C bus of the board (GPIO19/20), its reset line is the pin IO0 of the PCA9557 expander on the same bus
+# (board/elecrow-dis08070h/touch.ini of dmgt911: the bus, the reset and the panel in one friends_group). The panel is polled, the interrupt
+# line is not used. It is a generic input node (/dev/dmgt9110).
+dmi2c
+dmpca9557
+dmgt911 driver=board/elecrow-dis08070h/touch.ini
