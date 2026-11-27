@@ -54,3 +54,7 @@ set(DMBOOT_EXT_MOUNT "/ext" CACHE STRING "Where the external flash is mounted")
 # The buffer of dmlog: nothing reads the log on this board, and its internal RAM is short (the display and the SD card need DMA memory).
 # Tried: 2048 boots, 1024 does not (QEMU: no shell prompt).
 set(DMBOOT_LOGS_SIZE 2048 CACHE STRING "Bytes of the buffer of dmlog")
+
+# Splash logo the display driver (dmlcdtft) shows on the 800x480 panel as soon as it is up (an asset of assets/splash/, see
+# DMBOOT_SPLASH_LOGO). It is built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.
+set(DMBOOT_SPLASH_LOGO "dmodos_logo_200" CACHE STRING "Splash logo the display driver shows at start")
