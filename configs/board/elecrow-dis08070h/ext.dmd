@@ -5,7 +5,7 @@
 
 #
 # The graphical interface: dmdevfs reports the display (dmlcdtft, flash.dmd) to libsystemd, dmview.rules starts a dmview@<name> for it,
-# which shows what the applications claim for it. The views are turned by DMBOOT_DISPLAY_ROTATION (board.cmake).
+# which shows what the applications claim for it. A view for a portrait screen variant (DMBOOT_SCREEN, board.cmake) is turned onto the landscape panel by dmview.
 #
 dmview
 dmview service=dmview@.ini

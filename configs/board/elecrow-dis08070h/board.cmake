@@ -59,6 +59,9 @@ set(DMBOOT_LOGS_SIZE 2048 CACHE STRING "Bytes of the buffer of dmlog")
 # DMBOOT_SPLASH_LOGO). It is built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.
 set(DMBOOT_SPLASH_LOGO "dmodos_logo_200" CACHE STRING "Splash logo the display driver shows at start")
 
-# The board is used upright (the connector at the bottom): the display service turns every view by 90 degrees clockwise (DMVIEW_ROTATION), so
-# a portrait view (dmodOS, 272 x 480) stands upright on the 800 x 480 panel.
-set(DMBOOT_DISPLAY_ROTATION "90" CACHE STRING "Angle in degrees clockwise the display service turns the views by")
+# The board is used upright (the connector at the bottom): the default screen variant is the portrait one. The panel itself stays 800 x 480
+# (the driver reports nothing else); the display service (dmview) turns a portrait view onto it by itself, and the splash logo is turned
+# at build time by the variant (scripts/splash.cmake). -DDMBOOT_SCREEN=800x480 gives the landscape one.
+if("${DMBOOT_SCREEN}" STREQUAL "")
+    set(DMBOOT_SCREEN "480x800" CACHE STRING "Default screen variant" FORCE)
+endif()

@@ -705,12 +705,6 @@ int main(int argc, char** argv)
         dmenv_set(dmenv_ctx, "SPLASH_LOGO", DMBOOT_SPLASH_LOGO_PATH_STRING);
     }
     
-    if(DMBOOT_DISPLAY_ROTATION_STRING[0] != '\0')
-    {
-        // The angle the display service (dmview) turns every view by
-        dmenv_set(dmenv_ctx, "DMVIEW_ROTATION", DMBOOT_DISPLAY_ROTATION_STRING);
-    }
-
     if(DMBOOT_LANGUAGE_STRING[0] != '\0')
     {
         // The language of the system (the keymap of libinput, ...); user_data below may change it
