@@ -1,0 +1,20 @@
+#
+# Elecrow DIS08070H modules of the external flash (/ext): they are too big for the 960 kB bank of the firmware.
+# They are sent by upload-ext (to /ext/bin, their units and rules to /ext/cfg) and start when the ext service has mounted /ext.
+#
+
+#
+# The graphical interface: dmdevfs reports the display (dmlcdtft, flash.dmd) to libsystemd, dmview.rules starts a dmview@<name> for it,
+# which shows what the applications claim for it. The views are turned by DMBOOT_DISPLAY_ROTATION (board.cmake).
+#
+dmview
+dmview service=dmview@.ini
+dmview rules=dmview.rules
+
+#
+# The input: dmdevfs reports the touch panel (dmgt911, flash.dmd) as an input, inputd.rules starts an inputd for it, which hands what it
+# reports to libinput, where dmview reads the events of the inputs of its display (the same friends_group) from.
+#
+inputd
+inputd service=inputd@.ini
+inputd rules=inputd.rules

@@ -58,3 +58,7 @@ set(DMBOOT_LOGS_SIZE 2048 CACHE STRING "Bytes of the buffer of dmlog")
 # Splash logo the display driver (dmlcdtft) shows on the 800x480 panel as soon as it is up (an asset of assets/splash/, see
 # DMBOOT_SPLASH_LOGO). It is built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.
 set(DMBOOT_SPLASH_LOGO "dmodos_logo_200" CACHE STRING "Splash logo the display driver shows at start")
+
+# The board is used upright (the connector at the bottom): the display service turns every view by 90 degrees clockwise (DMVIEW_ROTATION), so
+# a portrait view (dmodOS, 272 x 480) stands upright on the 800 x 480 panel.
+set(DMBOOT_DISPLAY_ROTATION "90" CACHE STRING "Angle in degrees clockwise the display service turns the views by")

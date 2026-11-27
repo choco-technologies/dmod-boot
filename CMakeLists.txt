@@ -76,6 +76,7 @@ set(DMBOOT_SPLASH_LOGO "" CACHE STRING "Splash logo the display driver shows at 
 set(DMBOOT_SPLASH_LOGO_PATH "/eviews/splash_logo.dmvir" CACHE STRING "Path of the splash logo (.dmvir) on the target, passed to the display driver in the SPLASH_LOGO environment variable; empty: not set")
 
 # The language of the system: the environment variable LANG (e.g. libinput takes the keymap of the language from it); empty: not set
+set(DMBOOT_DISPLAY_ROTATION "" CACHE STRING "Angle in degrees clockwise (0, 90, 180, 270) the display service (dmview) turns every view by, set in the DMVIEW_ROTATION environment variable; empty: not set (dmview turns a view that fits the display only turned by 90 degrees by itself)")
 set(DMBOOT_LANGUAGE "pl_PL.UTF-8" CACHE STRING "Language of the system, set in the LANG environment variable (pl_PL.UTF-8, en_US.UTF-8, ...); empty: not set")
 
 # The device secret: the root of what the system keeps encrypted at rest (dmsecrets). dmod-boot hands
@@ -306,6 +307,7 @@ target_compile_definitions(${MODULE_NAME}.elf
         DMBOOT_MAIN_MODULE_ARGS_STRING="${DMBOOT_MAIN_MODULE_ARGS}"
         DMBOOT_SPLASH_LOGO_PATH_STRING="${DMBOOT_SPLASH_LOGO_PATH}"
         DMBOOT_LANGUAGE_STRING="${DMBOOT_LANGUAGE}"
+        DMBOOT_DISPLAY_ROTATION_STRING="${DMBOOT_DISPLAY_ROTATION}"
         DMBOOT_DMSECRETS_PATH_STRING="${DMBOOT_DMSECRETS_PATH}"
         DMBOOT_DMA_HEAP_TAGS_STRING="${DMBOOT_DMA_HEAP_TAGS}"
         DMBOOT_MAIN_HEAP_TAGS_STRING="${DMBOOT_MAIN_HEAP_TAGS}"
