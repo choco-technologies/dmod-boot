@@ -16,7 +16,10 @@ PROVIDE(__dma_end__   = __dma_start__ + __dma_size__);
 
 ENTRY(Reset_Handler);
 
-__stack_size__    = 4096;
+/* The stack of main() until the scheduler starts, then of the exceptions and the interrupts (the FreeRTOS port sets the MSP
+   back to its top; the threads have their own). Measured on the STM32F746G-DISCO after the boot and the contained faults of
+   faulttest (undef, state, access, stack, stackfw): 812 bytes. */
+__stack_size__    = 2048;
 __logs_size__     = DMBOOT_LOGS_SIZE;   /* DMBOOT_LOGS_SIZE of the build (8192 unless the board says otherwise) */
 
 PROVIDE(__stack_size__ = __stack_size__);

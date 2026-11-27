@@ -32,7 +32,10 @@ PROVIDE(__dma_end__   = __dma_start__ + __dma_size__);
 
 ENTRY(Reset_Handler);
 
-__stack_size__    = 8192;
+/* The stack the startup code and main() run on, until the scheduler starts: later the interrupts use the stack of the
+   FreeRTOS port and every thread its own, and the drivers are configured in their threads. main() used 864 bytes of it
+   (painted at its start, read before the scheduler). */
+__stack_size__    = 2048;
 __logs_size__     = DMBOOT_LOGS_SIZE;   /* DMBOOT_LOGS_SIZE of the build (8192 unless the board says otherwise) */
 
 PROVIDE(__stack_size__ = __stack_size__);

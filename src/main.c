@@ -593,6 +593,27 @@ static dmheap_context_t* init_heap(void* start, void* end, const char* name, boo
 static Dmod_Context_t* startup_module;
 static dmosi_thread_t startup_thread;
 
+/* The thread that takes a crashed process down is started with the scheduler, before any external RAM exists, and its stack is the biggest
+ * one of the system. When a heap is added (the driver of the external RAM does it), a new thread is started in its place: its stack is
+ * where allocations go first now, and the one in the internal RAM is given back. */
+static void on_heap_added(dmheap_context_t* heap, void* arg)
+{
+    (void)heap;
+    (void)arg;
+
+    /* Before the scheduler the supervisor is not there yet: it is started in what is the first choice by then */
+    if(!dmosi_is_started())
+    {
+        return;
+    }
+
+    const int result = dmosi_thread_fault_supervisor_restart();
+    if(result != 0)
+    {
+        DMOD_LOG_WARN("The thread that handles faults was not moved to the new heap: %d\n", result);
+    }
+}
+
 /* What the last run left when it crashed (the targets that keep it have it) */
 extern void dmboot_report_last_crash(void) __attribute__((weak));
 extern void dmboot_start_watchdog(void) __attribute__((weak));       /* (the targets that have a watchdog for a hang with no exception) */
@@ -701,6 +722,10 @@ int main(int argc, char** argv)
      * applications only after the scheduler is running. The kernel retains the
      * handle; FreeRTOS reclaims the worker's stack after it returns. */
     startup_module = mainModule;
+    if(!dmheap_register_heap_added_callback(on_heap_added, NULL))
+    {
+        DMOD_LOG_WARN("The thread that handles faults stays where it is when a heap is added\n");
+    }
     startup_thread = dmosi_thread_create(startup_devices, NULL, 1, 8192, "boot", NULL);
     DMOD_ASSERT_MSG(startup_thread != NULL, "Cannot create boot initialization task");
     if (startup_thread == NULL) return 1;
