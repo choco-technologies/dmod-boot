@@ -6,6 +6,11 @@
 #   - DMBOOT_SPLASH_LOGO_PATH  where the driver finds the logo on the target -
 #                              dmod-boot sets $SPLASH_LOGO to it at boot
 #
+# The logo is turned to the screen variant (DMBOOT_SCREEN, "<width>x<height>"):
+# a portrait variant (taller than wide) is shown by a landscape panel turned
+# 90 degrees clockwise, and the driver draws the frame buffer as the panel scans
+# it, so the logo is turned that way at build time. The driver stays unaware of it.
+#
 # A logo under /eviews/ is built into the embedded views filesystem: the .dmvi
 # is unpacked into a .dmvir (scripts/dmvi_to_dmvir.py) - the raw pixels the
 # driver draws without decoding anything - and placed at the same path under
@@ -39,6 +44,13 @@ else()
     endif()
 endif()
 
+set(_SPLASH_ROTATE_ARGS "")
+if("${DMBOOT_SCREEN}" MATCHES "^([0-9]+)x([0-9]+)$")
+    if(CMAKE_MATCH_2 GREATER CMAKE_MATCH_1)
+        set(_SPLASH_ROTATE_ARGS --rotate 90)
+    endif()
+endif()
+
 if(DMBOOT_SPLASH_LOGO)
     if(EXISTS "${DMBOOT_SPLASH_ASSETS_DIR}/${DMBOOT_SPLASH_LOGO}.dmvi")
         set(_SPLASH_SOURCE "${DMBOOT_SPLASH_ASSETS_DIR}/${DMBOOT_SPLASH_LOGO}.dmvi")
@@ -55,7 +67,7 @@ if(DMBOOT_SPLASH_LOGO)
         add_custom_command(
             OUTPUT "${_SPLASH_OUTPUT}"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${DMBOOT_EVIEWS_DIR}"
-            COMMAND python3 "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py" "${_SPLASH_SOURCE}" "${_SPLASH_OUTPUT}"
+            COMMAND python3 "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py" ${_SPLASH_ROTATE_ARGS} "${_SPLASH_SOURCE}" "${_SPLASH_OUTPUT}"
             DEPENDS "${_SPLASH_SOURCE}" "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py"
             COMMENT "Unpacking splash logo ${_SPLASH_SOURCE} into ${DMBOOT_SPLASH_LOGO_PATH}"
             VERBATIM
@@ -67,7 +79,7 @@ if(DMBOOT_SPLASH_LOGO)
         add_custom_command(
             OUTPUT "${_SPLASH_EXT_OUTPUT}"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${_SPLASH_EXT_DIR}"
-            COMMAND python3 "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py" "${_SPLASH_SOURCE}" "${_SPLASH_EXT_OUTPUT}"
+            COMMAND python3 "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py" ${_SPLASH_ROTATE_ARGS} "${_SPLASH_SOURCE}" "${_SPLASH_EXT_OUTPUT}"
             DEPENDS "${_SPLASH_SOURCE}" "${CMAKE_SOURCE_DIR}/scripts/dmvi_to_dmvir.py"
             COMMENT "Unpacking splash logo ${_SPLASH_SOURCE} into build/ext (${DMBOOT_SPLASH_LOGO_PATH})"
             VERBATIM

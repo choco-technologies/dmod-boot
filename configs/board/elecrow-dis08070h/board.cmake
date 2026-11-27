@@ -58,3 +58,10 @@ set(DMBOOT_LOGS_SIZE 2048 CACHE STRING "Bytes of the buffer of dmlog")
 # Splash logo the display driver (dmlcdtft) shows on the 800x480 panel as soon as it is up (an asset of assets/splash/, see
 # DMBOOT_SPLASH_LOGO). It is built into the firmware (/eviews/splash_logo.dmvir): the display driver is a module of the firmware.
 set(DMBOOT_SPLASH_LOGO "dmodos_logo_200" CACHE STRING "Splash logo the display driver shows at start")
+
+# The board is used upright (the connector at the bottom): the default screen variant is the portrait one. The panel itself stays 800 x 480
+# (the driver reports nothing else); the display service (dmview) turns a portrait view onto it by itself, and the splash logo is turned
+# at build time by the variant (scripts/splash.cmake). -DDMBOOT_SCREEN=800x480 gives the landscape one.
+if("${DMBOOT_SCREEN}" STREQUAL "")
+    set(DMBOOT_SCREEN "480x800" CACHE STRING "Default screen variant" FORCE)
+endif()

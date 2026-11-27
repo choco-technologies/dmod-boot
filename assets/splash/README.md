@@ -16,6 +16,11 @@ the `SPLASH_LOGO` environment variable. The background of the splash screen
 is the display's `clear_color` (dmlcdtft's `lcd.ini`): for the dmodOS logo
 `0xFF041431`, the dark navy of the dmodOS splash background.
 
+The logo is turned to the screen variant (`DMBOOT_SCREEN`): for a portrait
+variant (e.g. `480x800`) it is turned 90 degrees clockwise while it is unpacked
+(`scripts/dmvi_to_dmvir.py --rotate 90`), because the driver draws the frame
+buffer as the panel scans it and knows nothing about orientation.
+
 ## Assets
 
 | Asset | Size | Unpacked (`.dmvir`) |
